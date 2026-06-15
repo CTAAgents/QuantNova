@@ -190,7 +190,8 @@ y = 2
 def factor(df):
     import pandas as pd
     returns = df['close'].pct_change(5)
-    # 没有 return 语句
+    # 这里没有 return 语句
+    x = returns
 '''
         
         result = self.validator.validate(invalid_code)

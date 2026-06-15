@@ -6,7 +6,7 @@
 
 ## 一句话概括
 
-五层管线（Scanner → Reasoner → Debater → Monitor → Evolver），纯 Python 脚本做计算，LLM Agent 做推理，每日自动扫描 17 个期货品种，只在有信号时触发推理，输出决策简报供人参考。
+五层管线（Scanner → Reasoner → Debater → Monitor → Evolver），纯 Python 脚本做计算，LLM Agent 做推理，每日自动扫描所有非僵尸期货品种，只在有信号时触发推理，输出决策简报供人参考。
 
 ## 快速开始
 

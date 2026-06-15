@@ -246,13 +246,16 @@ def monitor_positions(symbols: List[str] = None) -> List[Dict[str, Any]]:
 
 
 def main():
+    print("[调试] main 函数开始", flush=True)
     parser = argparse.ArgumentParser(description="持仓风险详细分析")
     parser.add_argument("--symbol", type=str, help="指定品种代码")
     parser.add_argument("--symbols", type=str, help="多个品种代码（逗号分隔）")
     parser.add_argument("--output", choices=["json", "text"], default="text", help="输出格式")
     parser.add_argument("--save", action="store_true", help="保存结果到 data/latest_monitor.json")
     
+    print("[调试] 解析参数...", flush=True)
     args = parser.parse_args()
+    print(f"[调试] 参数: {args}", flush=True)
     
     # 确定品种列表
     symbols = None

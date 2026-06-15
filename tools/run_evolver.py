@@ -63,7 +63,7 @@ def load_positions() -> List[Dict[str, Any]]:
     return data.get('positions', [])
 
 
-def record_feedback(symbol: str, result: str, pnl_pct: float, notes: str = ""):
+def record_feedback(symbol: str, result: str, pnl_pct: float, notes: str = "", memory_bridge=None):
     """
     记录交易反馈
     
@@ -72,6 +72,7 @@ def record_feedback(symbol: str, result: str, pnl_pct: float, notes: str = ""):
         result: 交易结果（profit/loss/breakeven）
         pnl_pct: 盈亏百分比
         notes: 备注
+        memory_bridge: MemoryBridge 实例（可选）
     """
     state = load_evolution_state()
     
@@ -89,15 +90,30 @@ def record_feedback(symbol: str, result: str, pnl_pct: float, notes: str = ""):
     if 'trades' not in state:
         state['trades'] = []
     
-    state['trades'].append({
+    trade = {
         'symbol': symbol,
         'result': result,
         'pnl_pct': pnl_pct,
         'notes': notes,
         'timestamp': datetime.now().isoformat()
-    })
+    }
+    state['trades'].append(trade)
     
     save_evolution_state(state)
+    
+    # 存储到记忆系统
+    if memory_bridge:
+        try:
+            memory_bridge.store_trade({
+                'symbol': symbol,
+                'direction': 'LONG',  # 简化，实际应从持仓获取
+                'pnl': pnl_pct,
+                'pnl_pct': pnl_pct,
+                'result': result,
+                'notes': notes
+            })
+        except Exception as e:
+            print(f"  [警告] 存储交易到记忆系统失败: {e}")
     
     print(f"已记录交易反馈:")
     print(f"  品种: {symbol}")
@@ -128,7 +144,7 @@ def record_feedback(symbol: str, result: str, pnl_pct: float, notes: str = ""):
     
     if should_evolve:
         print(f"\n⚠️ 触发自进化: {trigger_reason}")
-        run_evolution(trigger_reason)
+        run_evolution(trigger_reason, memory_bridge=memory_bridge)
 
 
 def run_evolution(trigger_reason: str = "手动触发"):

@@ -216,11 +216,15 @@ def monitor_positions(symbols: List[str] = None) -> List[Dict[str, Any]]:
     返回:
         分析结果列表
     """
+    print("[调试] monitor_positions 函数开始", flush=True)
+    
     # 加载持仓
+    print("[调试] 加载持仓...", flush=True)
     positions = load_positions()
+    print(f"[调试] 持仓数量: {len(positions)}", flush=True)
     
     if not positions:
-        print("当前无持仓")
+        print("当前无持仓", flush=True)
         return []
     
     # 筛选
@@ -228,20 +232,24 @@ def monitor_positions(symbols: List[str] = None) -> List[Dict[str, Any]]:
         positions = [p for p in positions if p.get('symbol') in symbols]
     
     if not positions:
-        print("无匹配的持仓")
+        print("无匹配的持仓", flush=True)
         return []
     
-    print(f"分析 {len(positions)} 个持仓品种...")
+    print(f"分析 {len(positions)} 个持仓品种...", flush=True)
     
     # 获取数据源
+    print("[调试] 创建数据源...", flush=True)
     data_source = DataSourceFactory.create()
+    print(f"[调试] 数据源创建成功: {type(data_source)}", flush=True)
     
     # 分析每个持仓
     results = []
-    for pos in positions:
+    for i, pos in enumerate(positions):
+        print(f"[调试] 分析持仓 {i+1}/{len(positions)}: {pos.get('symbol')}", flush=True)
         result = analyze_position(pos, data_source)
         results.append(result)
     
+    print(f"[调试] 分析完成", flush=True)
     return results
 
 

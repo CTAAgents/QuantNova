@@ -270,15 +270,15 @@ class OrchestratorAgent:
         result = self._run_script('scan_opportunities.py')
         
         if result['success']:
-            return f"📊 扫描完成\n\n{result['stdout']}"
+            return f"[完成] 扫描完成\n\n{result['stdout']}"
         else:
-            return f"❌ 扫描失败\n\n{result['stderr']}"
+            return f"[失败] 扫描失败\n\n{result['stderr']}"
     
     def _handle_analyze(self, intent: Dict[str, Any]) -> str:
         """处理分析意图"""
         symbol = intent.get('symbol', '')
         if not symbol:
-            return "❌ 未识别到品种代码，请指定要分析的品种"
+            return "[失败] 未识别到品种代码，请指定要分析的品种"
         
         print(f"[Orchestrator] 分析 {symbol}...", flush=True)
         
@@ -286,9 +286,9 @@ class OrchestratorAgent:
         result = self._run_script('reasoner.py', ['--symbol', symbol, '--output', 'text'])
         
         if result['success']:
-            return f"📈 {symbol} 分析完成\n\n{result['stdout']}"
+            return f"[完成] {symbol} 分析完成\n\n{result['stdout']}"
         else:
-            return f"❌ {symbol} 分析失败\n\n{result['stderr']}"
+            return f"[失败] {symbol} 分析失败\n\n{result['stderr']}"
     
     def _handle_position(self, intent: Dict[str, Any]) -> str:
         """处理持仓意图"""
@@ -297,7 +297,7 @@ class OrchestratorAgent:
         # 读取 positions.json
         positions_file = self.config_dir / 'positions.json'
         if not positions_file.exists():
-            return "📋 当前无持仓"
+            return "[持仓] 当前无持仓"
         
         try:
             with open(positions_file, 'r', encoding='utf-8') as f:
@@ -305,15 +305,15 @@ class OrchestratorAgent:
             
             positions = data.get('positions', [])
             if not positions:
-                return "📋 当前无持仓"
+                return "[持仓] 当前无持仓"
             
             # 格式化输出
-            lines = ["📋 持仓概览", ""]
+            lines = ["[持仓概览]", ""]
             lines.append(f"更新时间: {data.get('updated_at', '未知')}")
             lines.append(f"持仓数量: {len(positions)} 个")
             lines.append("")
             lines.append("品种        方向    入场价    当前价    盈亏    持仓天数")
-            lines.append("─" * 60)
+            lines.append("-" * 60)
             
             for pos in positions:
                 symbol = pos.get('symbol', '')
@@ -328,15 +328,15 @@ class OrchestratorAgent:
             return "\n".join(lines)
             
         except Exception as e:
-            return f"❌ 读取持仓失败: {e}"
+            return f"[失败] 读取持仓失败: {e}"
     
     def _handle_feedback(self, intent: Dict[str, Any]) -> str:
         """处理反馈意图"""
-        return "📝 请提供交易反馈详情（品种、方向、入场价、出场价、盈亏等）"
+        return "[反馈] 请提供交易反馈详情（品种、方向、入场价、出场价、盈亏等）"
     
     def _handle_config(self, intent: Dict[str, Any]) -> str:
         """处理配置意图"""
-        return "⚙️ 请指定要修改的配置项和新值"
+        return "[配置] 请指定要修改的配置项和新值"
     
     def _handle_evolution(self, intent: Dict[str, Any]) -> str:
         """处理进化意图"""
@@ -346,13 +346,13 @@ class OrchestratorAgent:
         result = self._run_script('evolver.py', ['--periodic'])
         
         if result['success']:
-            return f"🧬 进化完成\n\n{result['stdout']}"
+            return f"[完成] 进化完成\n\n{result['stdout']}"
         else:
-            return f"❌ 进化失败\n\n{result['stderr']}"
+            return f"[失败] 进化失败\n\n{result['stderr']}"
     
     def _handle_unknown(self, intent: Dict[str, Any]) -> str:
         """处理未知意图"""
-        return f"❓ 未识别的指令: {intent['raw_input']}\n\n可用指令:\n• 扫描 - 扫描市场机会\n• 分析 [品种] - 分析指定品种\n• 持仓 - 查看当前持仓\n• 反馈 - 提交交易反馈\n• 配置 - 修改系统配置\n• 进化 - 执行策略进化"
+        return f"[未知] 未识别的指令: {intent['raw_input']}\n\n可用指令:\n- 扫描 - 扫描市场机会\n- 分析 [品种] - 分析指定品种\n- 持仓 - 查看当前持仓\n- 反馈 - 提交交易反馈\n- 配置 - 修改系统配置\n- 进化 - 执行策略进化"
     
     def get_status(self) -> str:
         """

@@ -319,9 +319,31 @@ def main():
     args = parser.parse_args()
     
     if args.command == "feedback":
-        record_feedback(args.symbol, args.result, args.pnl, args.notes)
+        # 初始化记忆桥接器
+        memory_bridge = None
+        try:
+            from trend_scanner.memory_bridge import MemoryBridge
+            memory_bridge = MemoryBridge()
+        except Exception as e:
+            print(f"  [警告] 记忆系统初始化失败: {e}")
+        
+        record_feedback(args.symbol, args.result, args.pnl, args.notes, memory_bridge=memory_bridge)
+        
+        if memory_bridge:
+            memory_bridge.close()
     elif args.command == "evolve":
-        run_evolution(args.reason)
+        # 初始化记忆桥接器
+        memory_bridge = None
+        try:
+            from trend_scanner.memory_bridge import MemoryBridge
+            memory_bridge = MemoryBridge()
+        except Exception as e:
+            print(f"  [警告] 记忆系统初始化失败: {e}")
+        
+        run_evolution(args.reason, memory_bridge=memory_bridge)
+        
+        if memory_bridge:
+            memory_bridge.close()
     elif args.command == "status":
         show_status()
     else:

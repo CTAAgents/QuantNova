@@ -232,6 +232,10 @@ class TqSdkSource(DataSource):
                 
                 return df
                 
+        except SystemExit as e:
+            # TqSdk 可能会调用 sys.exit()，捕获并返回 None
+            print(f"TqSdk sys.exit: {e}")
+            return None
         except Exception as e:
             print(f"TqSdk 获取K线失败: {e}")
             return None

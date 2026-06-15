@@ -57,12 +57,13 @@
   },
 
   "llm": {
-    "provider": "workbuddy",
+    "provider": "auto",
     "model": "mimo-v2.5-pro",
     "base_url": "https://token-plan-cn.xiaomimimo.com/v1",
     "api_key_env": "LLM_API_KEY",
     "temperature": 0.7,
-    "max_tokens": 2000
+    "max_tokens": 2000,
+    "note": "provider=auto 时，系统优先使用宿主平台的 LLM；设置 LLM_API_KEY 后使用自定义 LLM"
   },
 
   "debater": {

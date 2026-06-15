@@ -868,8 +868,6 @@ def create_llm_client(provider: str = "auto", **kwargs) -> LLMClient:
         return LocalLLMClient(**kwargs)
     else:
         raise ValueError(f"不支持的 LLM 提供商: {provider}")
-    else:
-        raise ValueError(f"不支持的 LLM 提供商: {provider}")
 
 
 class WorkBuddyClient(LLMClient):

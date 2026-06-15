@@ -123,12 +123,27 @@ class DebaterAgent:
         print(f"[Debater] 对 {symbol} 执行辩论...", flush=True)
         
         try:
-            # 构建 MarketContext（简化版）
+            # 构建 MarketContext（简化版，只用于辩论）
+            # 注意：辩论引擎需要 MarketContext，但实际辩论主要依赖简报内容
+            from trend_scanner.models import IndicatorSnapshot, MarketStructure, MomentumState, VolatilityState, TrendPhase
+            
+            # 创建简化的 MarketContext
+            snapshot = IndicatorSnapshot(
+                timestamp=brief.get('timestamp', datetime.now().isoformat()),
+                close=0, high=0, low=0, open=0, volume=0
+            )
+            
+            trend_phase = TrendPhase(
+                phase=brief.get('trend_phase', {}).get('phase', 'UNKNOWN'),
+                confidence=brief.get('trend_phase', {}).get('confidence', 0.5)
+            )
+            
             context = MarketContext(
                 symbol=symbol,
                 timestamp=brief.get('timestamp', datetime.now().isoformat()),
-                current_price=0,  # 从简报中无法获取
-                trend_phase=brief.get('trend_phase', {}).get('phase', 'UNKNOWN')
+                current_price=0,
+                snapshot=snapshot,
+                trend_phase=trend_phase
             )
             
             # 执行辩论

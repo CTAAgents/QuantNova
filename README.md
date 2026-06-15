@@ -72,7 +72,21 @@ Trend-scanner-Agent/
 - TqSdk（期货数据源）
 - WorkBuddy（Agent 调度平台）
 
-### 2. 配置
+### 2. 安装依赖
+
+```bash
+# 克隆仓库
+git clone https://github.com/CTAAgents/Trend-scanner-Agent.git
+cd Trend-scanner-Agent
+
+# 安装依赖
+pip install -r requirements.txt
+
+# 或使用 setup.py 安装
+pip install -e .
+```
+
+### 3. 配置
 
 编辑 `config/config.json`：
 

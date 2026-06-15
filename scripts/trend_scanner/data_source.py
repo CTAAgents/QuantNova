@@ -212,7 +212,7 @@ class TqSdkSource(DataSource):
             dur_sec = period_map.get(period, 86400)
             
             print(f"[调试] 创建 TqApi...", flush=True)
-            with TqApi(auth=self._auth) as api:
+            with TqApi(auth=self._auth, disable_print=True) as api:
                 print(f"[调试] TqApi 创建成功，获取K线...", flush=True)
                 klines = api.get_kline_serial(tq_symbol, dur_sec, data_length=days)
                 print(f"[调试] wait_update...", flush=True)

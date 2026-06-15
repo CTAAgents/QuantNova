@@ -194,6 +194,34 @@ class UnifiedMemoryManager:
         results.sort(key=lambda x: x.get('adjusted_similarity', 0), reverse=True)
         return results[:top_k]
     
+    def retrieve_experiences_multi_path(
+        self,
+        context: Dict[str, Any],
+        top_k: int = 5,
+        min_similarity: float = 0.5
+    ) -> List[Dict[str, Any]]:
+        """
+        多路召回检索相似经验
+        
+        使用多种检索策略：
+        1. 向量相似度检索
+        2. 结构化条件检索
+        3. 时间范围检索
+        
+        Args:
+            context: 市场上下文
+            top_k: 返回数量
+            min_similarity: 最小相似度
+        
+        Returns:
+            相似经验列表
+        """
+        return self.retriever.retrieve(
+            context=context,
+            top_k=top_k,
+            min_similarity=min_similarity
+        )
+    
     def get_experience(self, experience_id: str) -> Optional[Dict[str, Any]]:
         """获取单条经验"""
         return self.sqlite_store.get_experience(experience_id)

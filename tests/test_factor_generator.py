@@ -99,10 +99,12 @@ class TestFactorGenerator:
         
         assert success == True
         
-        # 验证因子已保存
+        # 验证因子已保存（知识库中已有3个预置因子）
         factors = self.generator.get_factors_from_knowledge_base()
-        assert len(factors) == 1
-        assert factors[0]['name'] == '测试因子'
+        assert len(factors) == 4  # 3个预置因子 + 1个测试因子
+        # 查找测试因子
+        test_factor = next((f for f in factors if f['name'] == '测试因子'), None)
+        assert test_factor is not None
     
     def test_get_factors_from_knowledge_base(self):
         """测试从知识库获取因子"""

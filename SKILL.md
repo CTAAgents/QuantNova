@@ -135,8 +135,8 @@ E:\Trend-scanner-Agent\
 | test_rl_interface.py | 15 | 通过 |
 | test_e2e_pipeline.py（端到端） | 14 | 通过 |
 | test_full_pipeline.py（集成） | 22 | 通过 |
-| test_performance.py（基准） | 8 | 通过 |
-| **总计** | **130+** | **全部通过** |
+| test_performance.py（基准） | 20 | 通过 |
+| **总计** | **142+** | **全部通过** |
 
 ## 与 v1 Skill 的关系
 

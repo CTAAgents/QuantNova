@@ -448,7 +448,7 @@ class DataSourceFactory:
         
         # 创建新实例
         if source == "auto":
-            # 优先级：本地DB > TqSdk > CSV
+            # 优先级：本地DB > TqSdk（禁止模拟数据兜底）
             localdb = LocalDBSource()
             if localdb.is_available():
                 DataSourceFactory._instance = localdb
@@ -459,7 +459,10 @@ class DataSourceFactory:
                     DataSourceFactory._instance = tqsdk
                     DataSourceFactory._source_type = "tqsdk"
                 else:
-                    DataSourceFactory._instance = CsvSource()
+                    raise RuntimeError(
+                        "无法获取真实数据：本地数据库不可用且 TqSdk 连接失败。"
+                        "请检查：1) data/market.duckdb 是否存在；2) TqSdk 环境变量 TQ_USER/TQ_PASSWORD 是否设置。"
+                    )
                     DataSourceFactory._source_type = "csv"
         elif source == "localdb":
             DataSourceFactory._instance = LocalDBSource()

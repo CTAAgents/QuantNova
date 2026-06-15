@@ -275,6 +275,7 @@ def main():
     parser.add_argument("--symbols", type=str, help="品种列表（逗号分隔，如 RB,HC,JM）")
     parser.add_argument("--output", choices=["json", "text"], default="text", help="输出格式")
     parser.add_argument("--save", action="store_true", help="保存结果到 latest_scan.json")
+    parser.add_argument("--use-dynamic-factors", action="store_true", help="启用动态因子生成器")
     
     args = parser.parse_args()
     
@@ -285,7 +286,7 @@ def main():
     
     # 执行扫描
     print(f"[{datetime.now().strftime('%H:%M:%S')}] 开始扫描...")
-    result = scan_all(symbols)
+    result = scan_all(symbols, use_dynamic_factors=args.use_dynamic_factors)
     
     # 输出结果
     if args.output == "json":

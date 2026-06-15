@@ -53,7 +53,7 @@ def normalize_symbol(symbol: str) -> str:
     return symbol.upper()
 
 
-def scan_symbol(symbol: str, data_source, signal_filter: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+def scan_symbol(symbol: str, data_source, signal_filter: Dict[str, Any], use_dynamic_factors: bool = False) -> Optional[Dict[str, Any]]:
     """
     扫描单个品种，返回信号（如果有）
     

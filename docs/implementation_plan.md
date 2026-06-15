@@ -57,62 +57,62 @@ Orchestrator Agent（主协调）
 
 | 任务 ID | 任务描述 | 状态 | 交付物 |
 |---------|---------|------|--------|
-| 1.1 | 创建因子生成器基础框架 | 待开始 | `scripts/trend_scanner/factor_generator.py` |
-| 1.2 | 实现 LLM 因子生成接口 | 待开始 | `scripts/trend_scanner/llm_factor_client.py` |
-| 1.3 | 创建因子验证模块 | 待开始 | `scripts/trend_scanner/factor_validator.py` |
-| 1.4 | 建立因子知识库 | 待开始 | `data/factor_knowledge.json` |
-| 1.5 | 与 Scanner 脚本集成 | 待开始 | 修改 `tools/scan_opportunities.py` |
-| 1.6 | 编写单元测试 | 待开始 | `tests/test_factor_generator.py` |
+| 1.1 | 创建因子生成器基础框架 | ✅ 已完成 | `scripts/trend_scanner/factor_generator.py` |
+| 1.2 | 实现 LLM 因子生成接口 | ✅ 已完成 | `scripts/trend_scanner/llm_factor_client.py` |
+| 1.3 | 创建因子验证模块 | ✅ 已完成 | `scripts/trend_scanner/factor_validator.py` |
+| 1.4 | 建立因子知识库 | ✅ 已完成 | `data/factor_knowledge.json` |
+| 1.5 | 与 Scanner 脚本集成 | ✅ 已完成 | 修改 `tools/scan_opportunities_v4.py` |
+| 1.6 | 编写单元测试 | ✅ 已完成 | `tests/test_factor_generator.py`（22 个测试） |
 
 ### Phase 2: 轨迹感知优化器（第 2-3 周）— 高优先级
 
 | 任务 ID | 任务描述 | 状态 | 交付物 |
 |---------|---------|------|--------|
-| 2.1 | 设计轨迹分析框架 | 待开始 | `scripts/trend_scanner/trajectory_analyzer.py` |
-| 2.2 | 实现失败学习机制 | 待开始 | `scripts/trend_scanner/failure_learner.py` |
-| 2.3 | 创建优化规则生成器 | 待开始 | `scripts/trend_scanner/optimization_rule_generator.py` |
-| 2.4 | 与现有 Evolver 集成 | 待开始 | 修改 `agents/evolver.md` |
-| 2.5 | 编写单元测试 | 待开始 | `tests/test_trajectory_analyzer.py` |
+| 2.1 | 设计轨迹分析框架 | ✅ 已完成 | `scripts/trend_scanner/trajectory_analyzer.py` |
+| 2.2 | 实现失败学习机制 | ✅ 已完成 | 内置于 `trajectory_analyzer.py` |
+| 2.3 | 创建优化规则生成器 | ✅ 已完成 | 内置于 `trajectory_analyzer.py` |
+| 2.4 | 与现有 Evolver 集成 | ✅ 已完成 | `agents/evolver.md` v2.0 |
+| 2.5 | 编写单元测试 | ✅ 已完成 | `tests/test_trajectory_analyzer.py`（11 个测试） |
 
 ### Phase 3: 研报知识注入流水线（第 3-4 周）— 高优先级
 
 | 任务 ID | 任务描述 | 状态 | 交付物 |
 |---------|---------|------|--------|
-| 3.1 | 创建研报解析模块 | 待开始 | `scripts/trend_scanner/report_parser.py` |
-| 3.2 | 实现因子提取 Agent | 待开始 | `agents/factor_extractor.md` |
-| 3.3 | 建立验证流水线 | 待开始 | `scripts/trend_scanner/validation_pipeline.py` |
-| 3.4 | 与因子知识库集成 | 待开始 | 修改 `data/factor_knowledge.json` |
-| 3.5 | 编写单元测试 | 待开始 | `tests/test_report_parser.py` |
+| 3.1 | 创建研报解析模块 | ✅ 已完成 | `scripts/trend_scanner/report_parser.py` |
+| 3.2 | 实现因子提取 Agent | ✅ 已完成 | 内置于 `report_parser.py`（规则模式） |
+| 3.3 | 建立验证流水线 | ✅ 已完成 | 内置于 `report_parser.py`（ValidationPipeline） |
+| 3.4 | 与因子知识库集成 | ✅ 已完成 | 通过因子建议对接 |
+| 3.5 | 编写单元测试 | ✅ 已完成 | `tests/test_report_parser.py`（16 个测试） |
 
 ### Phase 4: 多角色 Debater 架构（第 4-5 周）— 中优先级
 
 | 任务 ID | 任务描述 | 状态 | 交付物 |
 |---------|---------|------|--------|
-| 4.1 | 重构 Debater 为多角色框架 | 待开始 | 修改 `agents/debater.md` |
-| 4.2 | 创建分析师角色 | 待开始 | `agents/analyst_role.md` |
-| 4.3 | 创建风控官角色 | 待开始 | `agents/risk_officer_role.md` |
-| 4.4 | 实现概念性语言反馈 | 待开始 | `scripts/trend_scanner/conceptual_feedback.py` |
-| 4.5 | 实现信念传播机制 | 待开始 | `scripts/trend_scanner/belief_propagation.py` |
-| 4.6 | 编写单元测试 | 待开始 | `tests/test_multi_debater.py` |
+| 4.1 | 重构 Debater 为多角色框架 | ✅ 已完成 | 修改 `agents/debater.md` |
+| 4.2 | 创建分析师角色 | ✅ 已完成 | 内置于 `debater.md` |
+| 4.3 | 创建风控官角色 | ✅ 已完成 | 内置于 `debater.md` |
+| 4.4 | 实现概念性语言反馈 | ✅ 已完成 | `scripts/trend_scanner/conceptual_feedback.py` |
+| 4.5 | 实现信念传播机制 | ✅ 已完成 | `scripts/trend_scanner/belief_propagation.py` |
+| 4.6 | 编写单元测试 | ✅ 已完成 | `tests/test_multi_debater.py`（22 个测试） |
 
 ### Phase 5: LLM 引导的 RL 接口设计（第 5-6 周）— 中优先级
 
 | 任务 ID | 任务描述 | 状态 | 交付物 |
 |---------|---------|------|--------|
-| 5.1 | 设计 RL 接口框架 | 待开始 | `scripts/trend_scanner/rl_interface_designer.py` |
-| 5.2 | 实现状态空间设计 | 待开始 | `scripts/trend_scanner/state_space_designer.py` |
-| 5.3 | 实现奖励函数设计 | 待开始 | `scripts/trend_scanner/reward_function_designer.py` |
-| 5.4 | 实现诊断引导修正 | 待开始 | `scripts/trend_scanner/diagnostic_refiner.py` |
-| 5.5 | 与现有 Evolver 集成 | 待开始 | 修改 `agents/evolver.md` |
-| 5.6 | 编写单元测试 | 待开始 | `tests/test_rl_interface.py` |
+| 5.1 | 设计 RL 接口框架 | ✅ 已完成 | `scripts/trend_scanner/rl_interface_designer.py` |
+| 5.2 | 实现状态空间设计 | ✅ 已完成 | 内置于 `rl_interface_designer.py`（StateSpaceDesigner） |
+| 5.3 | 实现奖励函数设计 | ✅ 已完成 | 内置于 `rl_interface_designer.py`（RewardFunctionDesigner） |
+| 5.4 | 实现诊断引导修正 | ✅ 已完成 | 内置于 `rl_interface_designer.py`（DiagnosticRefiner） |
+| 5.5 | 与现有 Evolver 集成 | ✅ 已完成 | `agents/evolver.md` v2.0 |
+| 5.6 | 编写单元测试 | ✅ 已完成 | `tests/test_rl_interface.py`（15 个测试） |
 
 ### Phase 6: 集成测试与优化（第 6-7 周）
 
 | 任务 ID | 任务描述 | 状态 | 交付物 |
 |---------|---------|------|--------|
-| 6.1 | 端到端集成测试 | 待开始 | `tests/integration/test_full_pipeline.py` |
-| 6.2 | 性能基准测试 | 待开始 | `tests/benchmark/test_performance.py` |
-| 6.3 | 文档更新 | 待开始 | 更新 `SKILL.md`、`README.md` |
+| 6.1 | 端到端集成测试 | ✅ 已完成 | `tests/integration/test_full_pipeline.py`（22 个测试） |
+| 6.2 | 性能基准测试 | ✅ 已完成 | `tests/benchmark/test_performance.py`（8 个测试） |
+| 6.3 | 文档更新 | ✅ 已完成 | 更新 `SKILL.md`、`README.md` |
 | 6.4 | 部署脚本 | 待开始 | `tools/deploy_v4.sh` |
 
 ---

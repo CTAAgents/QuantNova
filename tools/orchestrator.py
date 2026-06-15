@@ -1,333 +1,444 @@
+#!/usr/bin/env python3
 """
-Orchestrator 调度脚本 — 主协调流程
+Orchestrator Agent 脚本
 
-实现 Scanner → Reasoner → Debater 的完整调度流程。
-根据 Scanner 输出的信号强度，决定是否触发 Reasoner 和 Debater。
+主协调器，接收用户指令，分发任务，汇总结果。
 
-使用方式：
-    python tools/orchestrator.py scan              # 执行扫描 + 推理流程
-    python tools/orchestrator.py heartbeat         # 执行心跳检查 + 推理流程
-    python tools/orchestrator.py full              # 完整流程（扫描 + 心跳 + 推理）
+职责：
+1. 解析用户自然语言指令
+2. 分发任务给专业 Agent 或脚本
+3. 汇总结果，生成最终输出
+
+用法：
+    # 处理用户指令
+    python tools/orchestrator.py --input "帮我扫描一下黑色系"
+
+    # 查看系统状态
+    python tools/orchestrator.py --status
+
+    # 执行扫描
+    python tools/orchestrator.py --scan
 """
 
-import json
 import os
 import sys
+import json
 import argparse
+import subprocess
+from pathlib import Path
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Dict, List, Optional, Any
 
-# 导入数据格式工具
-from data_formats import load_config, read_scan_result, write_scan_result
-
-# 文件路径
-DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data')
+# 添加项目根目录到 Python 路径
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root / "scripts"))
 
 
-def run_scanner() -> Dict[str, Any]:
-    """执行 Scanner 脚本"""
-    import subprocess
-    
-    script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'scan_opportunities.py')
-    python_path = sys.executable
-    
-    print("[Scanner] 执行全品种扫描...")
-    result = subprocess.run(
-        [python_path, script_path, '--output', 'json', '--save'],
-        capture_output=True,
-        text=True,
-        timeout=300
-    )
-    
-    if result.returncode != 0:
-        print(f"[Scanner] 错误: {result.stderr}")
-        return {"signals": [], "total_scanned": 0, "signal_count": 0}
-    
-    # 读取保存的结果
-    scan_result = read_scan_result()
-    if scan_result:
-        print(f"[Scanner] 完成: {scan_result.get('total_scanned', 0)} 个品种, {scan_result.get('signal_count', 0)} 个信号")
-        return scan_result
-    else:
-        print("[Scanner] 警告: 无法读取扫描结果")
-        return {"signals": [], "total_scanned": 0, "signal_count": 0}
-
-
-def run_heartbeat() -> Dict[str, Any]:
-    """执行心跳检查"""
-    import subprocess
-    
-    script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'heartbeat.py')
-    python_path = sys.executable
-    
-    print("[Heartbeat] 执行心跳检查...")
-    result = subprocess.run(
-        [python_path, script_path, '--output', 'json', '--save'],
-        capture_output=True,
-        text=True,
-        timeout=60
-    )
-    
-    if result.returncode != 0:
-        print(f"[Heartbeat] 错误: {result.stderr}")
-        return {"has_events": False, "alerts": [], "new_signals": []}
-    
-    try:
-        heartbeat_result = json.loads(result.stdout)
-        has_events = heartbeat_result.get('has_events', False)
-        alerts = heartbeat_result.get('alerts', [])
-        new_signals = heartbeat_result.get('new_signals', [])
-        
-        print(f"[Heartbeat] 完成: {len(alerts)} 个预警, {len(new_signals)} 个新信号")
-        return heartbeat_result
-    except json.JSONDecodeError:
-        print("[Heartbeat] 警告: 无法解析输出")
-        return {"has_events": False, "alerts": [], "new_signals": []}
-
-
-def run_reasoner(signals: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """执行 Reasoner 推理"""
-    import subprocess
-    
-    if not signals:
-        print("[Reasoner] 无信号需要推理")
-        return []
-    
-    script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'run_reasoner.py')
-    python_path = sys.executable
-    
-    # 将信号保存到临时文件
-    temp_file = os.path.join(DATA_DIR, 'temp_signals.json')
-    os.makedirs(DATA_DIR, exist_ok=True)
-    with open(temp_file, 'w', encoding='utf-8') as f:
-        json.dump({"signals": signals}, f, ensure_ascii=False)
-    
-    print(f"[Reasoner] 推理 {len(signals)} 个信号...")
-    result = subprocess.run(
-        [python_path, script_path, '--output', 'json', '--save'],
-        capture_output=True,
-        text=True,
-        timeout=300
-    )
-    
-    if result.returncode != 0:
-        print(f"[Reasoner] 错误: {result.stderr}")
-        return []
-    
-    try:
-        reasoning_results = json.loads(result.stdout)
-        print(f"[Reasoner] 完成: {len(reasoning_results)} 个推理结果")
-        return reasoning_results
-    except json.JSONDecodeError:
-        print("[Reasoner] 警告: 无法解析输出")
-        return []
-
-
-def run_debater(reasoning_results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """执行 Debater 辩论"""
-    import subprocess
-    
-    if not reasoning_results:
-        print("[Debater] 无推理结果需要辩论")
-        return []
-    
-    script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'run_debater.py')
-    python_path = sys.executable
-    
-    # 将推理结果保存到临时文件
-    temp_file = os.path.join(DATA_DIR, 'temp_reasoning.json')
-    os.makedirs(DATA_DIR, exist_ok=True)
-    with open(temp_file, 'w', encoding='utf-8') as f:
-        json.dump(reasoning_results, f, ensure_ascii=False)
-    
-    print(f"[Debater] 辩论 {len(reasoning_results)} 个结果...")
-    result = subprocess.run(
-        [python_path, script_path, '--output', 'json', '--save', '--force'],
-        capture_output=True,
-        text=True,
-        timeout=300
-    )
-    
-    if result.returncode != 0:
-        print(f"[Debater] 错误: {result.stderr}")
-        return []
-    
-    try:
-        debate_results = json.loads(result.stdout)
-        print(f"[Debater] 完成: {len(debate_results)} 个辩论结果")
-        return debate_results
-    except json.JSONDecodeError:
-        print("[Debater] 警告: 无法解析输出")
-        return []
-
-
-def determine_action(scan_result: Dict[str, Any], heartbeat_result: Dict[str, Any]) -> Dict[str, Any]:
+class OrchestratorAgent:
     """
-    根据 Scanner 和 Heartbeat 结果，决定下一步动作
+    Orchestrator Agent
     
-    返回:
-        动作字典，包含需要触发的 Agent 和信号列表
+    主协调器，接收用户指令，分发任务，汇总结果。
     """
-    config = load_config()
-    reasoner_config = config.get('reasoner', {})
-    confidence_threshold = reasoner_config.get('debate_trigger_confidence', 0.7)
     
-    action = {
-        "trigger_reasoner": False,
-        "trigger_debater": False,
-        "signals_to_reason": [],
-        "alerts_to_push": []
-    }
-    
-    # 处理 Scanner 信号
-    signals = scan_result.get('signals', [])
-    if signals:
-        # 按信号强度分类
-        strong_signals = [s for s in signals if s.get('signal_strength') == 'STRONG']
-        medium_signals = [s for s in signals if s.get('signal_strength') == 'MEDIUM']
+    def __init__(self, config: Dict[str, Any] = None):
+        """
+        初始化 Orchestrator Agent
         
-        if strong_signals:
-            action["trigger_reasoner"] = True
-            action["trigger_debater"] = True
-            action["signals_to_reason"].extend(strong_signals)
-        elif medium_signals:
-            action["trigger_reasoner"] = True
-            action["signals_to_reason"].extend(medium_signals[:3])  # 最多 3 个
+        Args:
+            config: 配置字典
+        """
+        self.config = config or {}
+        self.orchestrator_config = self.config.get('orchestrator', {})
+        
+        # 工具路径
+        self.tools_dir = project_root / 'tools'
+        self.data_dir = project_root / 'data'
+        self.config_dir = project_root / 'config'
+        
+        # 确保数据目录存在
+        self.data_dir.mkdir(parents=True, exist_ok=True)
     
-    # 处理 Heartbeat 预警
-    alerts = heartbeat_result.get('alerts', [])
-    high_alerts = [a for a in alerts if a.get('severity') == 'HIGH']
-    medium_alerts = [a for a in alerts if a.get('severity') == 'MEDIUM']
+    def _run_script(self, script_name: str, args: List[str] = None) -> Dict[str, Any]:
+        """
+        运行脚本
+        
+        Args:
+            script_name: 脚本名称
+            args: 脚本参数
+            
+        Returns:
+            脚本输出
+        """
+        script_path = self.tools_dir / script_name
+        cmd = [sys.executable, str(script_path)]
+        if args:
+            cmd.extend(args)
+        
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=120,
+                cwd=str(project_root)
+            )
+            
+            return {
+                'success': result.returncode == 0,
+                'stdout': result.stdout,
+                'stderr': result.stderr,
+                'returncode': result.returncode
+            }
+            
+        except subprocess.TimeoutExpired:
+            return {
+                'success': False,
+                'stdout': '',
+                'stderr': '脚本执行超时',
+                'returncode': -1
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'stdout': '',
+                'stderr': str(e),
+                'returncode': -1
+            }
     
-    if high_alerts:
-        action["trigger_reasoner"] = True
-        action["alerts_to_push"].extend(high_alerts)
-    elif medium_alerts:
-        action["alerts_to_push"].extend(medium_alerts)
+    def _parse_intent(self, user_input: str) -> Dict[str, Any]:
+        """
+        解析用户意图
+        
+        Args:
+            user_input: 用户输入
+            
+        Returns:
+            意图字典
+        """
+        user_input = user_input.strip().lower()
+        
+        # 扫描意图
+        scan_keywords = ['扫描', '看看', '有什么机会', 'scan']
+        if any(keyword in user_input for keyword in scan_keywords):
+            # 提取品种范围
+            symbol_range = 'all'
+            if '黑色' in user_input:
+                symbol_range = 'black'
+            elif '有色' in user_input:
+                symbol_range = 'metal'
+            elif '能化' in user_input:
+                symbol_range = 'energy'
+            
+            return {
+                'intent': 'scan',
+                'symbol_range': symbol_range,
+                'raw_input': user_input
+            }
+        
+        # 分析意图
+        analyze_keywords = ['分析', '怎么样', '怎么看', 'analyze']
+        if any(keyword in user_input for keyword in analyze_keywords):
+            # 提取品种代码
+            symbol = self._extract_symbol(user_input)
+            return {
+                'intent': 'analyze',
+                'symbol': symbol,
+                'raw_input': user_input
+            }
+        
+        # 持仓意图
+        position_keywords = ['持仓', '仓位', '我的仓位', 'position']
+        if any(keyword in user_input for keyword in position_keywords):
+            return {
+                'intent': 'position',
+                'raw_input': user_input
+            }
+        
+        # 反馈意图
+        feedback_keywords = ['平了', '平仓', '赚了', '亏了', '反馈']
+        if any(keyword in user_input for keyword in feedback_keywords):
+            return {
+                'intent': 'feedback',
+                'raw_input': user_input
+            }
+        
+        # 配置意图
+        config_keywords = ['调到', '改成', '设置', '配置']
+        if any(keyword in user_input for keyword in config_keywords):
+            return {
+                'intent': 'config',
+                'raw_input': user_input
+            }
+        
+        # 进化意图
+        evolution_keywords = ['进化', '反思', '学习', 'evolve']
+        if any(keyword in user_input for keyword in evolution_keywords):
+            return {
+                'intent': 'evolution',
+                'raw_input': user_input
+            }
+        
+        # 默认：未知意图
+        return {
+            'intent': 'unknown',
+            'raw_input': user_input
+        }
     
-    # 处理 Heartbeat 新信号
-    new_signals = heartbeat_result.get('new_signals', [])
-    if new_signals:
-        action["trigger_reasoner"] = True
-        action["signals_to_reason"].extend(new_signals)
+    def _extract_symbol(self, text: str) -> str:
+        """
+        从文本中提取品种代码
+        
+        Args:
+            text: 文本
+            
+        Returns:
+            品种代码
+        """
+        # 常见品种名称映射
+        symbol_map = {
+            '焦煤': 'DCE.jm',
+            '焦炭': 'DCE.j',
+            '铁矿': 'DCE.i',
+            '螺纹': 'SHFE.rb',
+            '热卷': 'SHFE.hc',
+            '棉花': 'CZCE.CF',
+            '白糖': 'CZCE.SR',
+            '豆油': 'DCE.y',
+            '豆粕': 'DCE.m',
+            '棕榈': 'DCE.p',
+            '菜油': 'CZCE.OI',
+            '沪铜': 'SHFE.cu',
+            '沪铝': 'SHFE.al',
+            '沪锌': 'SHFE.zn',
+            '沪镍': 'SHFE.ni',
+            '原油': 'INE.sc',
+            '黄金': 'SHFE.au',
+            '白银': 'SHFE.ag',
+        }
+        
+        text_lower = text.lower()
+        for name, symbol in symbol_map.items():
+            if name in text_lower:
+                return symbol
+        
+        # 尝试提取英文代码
+        import re
+        match = re.search(r'[a-z]{2,3}\d{3,4}', text_lower)
+        if match:
+            return match.group().upper()
+        
+        return ''
     
-    return action
-
-
-def format_output(scan_result: Dict[str, Any], heartbeat_result: Dict[str, Any],
-                  reasoning_results: List[Dict[str, Any]], 
-                  debate_results: List[Dict[str, Any]]) -> str:
-    """格式化输出结果"""
-    lines = []
-    lines.append(f"趋势跟踪 Agent 运行报告")
-    lines.append(f"时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    lines.append("=" * 60)
+    def process_user_input(self, user_input: str) -> str:
+        """
+        处理用户输入
+        
+        Args:
+            user_input: 用户输入
+            
+        Returns:
+            响应文本
+        """
+        print(f"[Orchestrator] 处理用户输入: {user_input}", flush=True)
+        
+        # 解析意图
+        intent = self._parse_intent(user_input)
+        print(f"[Orchestrator] 识别意图: {intent['intent']}", flush=True)
+        
+        # 根据意图分发任务
+        if intent['intent'] == 'scan':
+            return self._handle_scan(intent)
+        elif intent['intent'] == 'analyze':
+            return self._handle_analyze(intent)
+        elif intent['intent'] == 'position':
+            return self._handle_position(intent)
+        elif intent['intent'] == 'feedback':
+            return self._handle_feedback(intent)
+        elif intent['intent'] == 'config':
+            return self._handle_config(intent)
+        elif intent['intent'] == 'evolution':
+            return self._handle_evolution(intent)
+        else:
+            return self._handle_unknown(intent)
     
-    # Scanner 结果
-    lines.append(f"\n[Scanner]")
-    lines.append(f"  扫描品种: {scan_result.get('total_scanned', 0)} 个")
-    lines.append(f"  发现信号: {scan_result.get('signal_count', 0)} 个")
+    def _handle_scan(self, intent: Dict[str, Any]) -> str:
+        """处理扫描意图"""
+        print("[Orchestrator] 执行扫描...", flush=True)
+        
+        # 运行 Scanner 脚本
+        result = self._run_script('scan_opportunities.py')
+        
+        if result['success']:
+            return f"📊 扫描完成\n\n{result['stdout']}"
+        else:
+            return f"❌ 扫描失败\n\n{result['stderr']}"
     
-    # Heartbeat 结果
-    lines.append(f"\n[Heartbeat]")
-    lines.append(f"  预警: {len(heartbeat_result.get('alerts', []))} 个")
-    lines.append(f"  新信号: {len(heartbeat_result.get('new_signals', []))} 个")
+    def _handle_analyze(self, intent: Dict[str, Any]) -> str:
+        """处理分析意图"""
+        symbol = intent.get('symbol', '')
+        if not symbol:
+            return "❌ 未识别到品种代码，请指定要分析的品种"
+        
+        print(f"[Orchestrator] 分析 {symbol}...", flush=True)
+        
+        # 运行 Reasoner 脚本
+        result = self._run_script('reasoner.py', ['--symbol', symbol, '--output', 'text'])
+        
+        if result['success']:
+            return f"📈 {symbol} 分析完成\n\n{result['stdout']}"
+        else:
+            return f"❌ {symbol} 分析失败\n\n{result['stderr']}"
     
-    # Reasoner 结果
-    if reasoning_results:
-        lines.append(f"\n[Reasoner]")
-        lines.append(f"  推理结果: {len(reasoning_results)} 个")
-        for r in reasoning_results:
-            symbol = r.get('symbol', '')
-            confidence = r.get('confidence', 0)
-            lines.append(f"    {symbol}: 置信度 {confidence:.2f}")
+    def _handle_position(self, intent: Dict[str, Any]) -> str:
+        """处理持仓意图"""
+        print("[Orchestrator] 查看持仓...", flush=True)
+        
+        # 读取 positions.json
+        positions_file = self.config_dir / 'positions.json'
+        if not positions_file.exists():
+            return "📋 当前无持仓"
+        
+        try:
+            with open(positions_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            positions = data.get('positions', [])
+            if not positions:
+                return "📋 当前无持仓"
+            
+            # 格式化输出
+            lines = ["📋 持仓概览", ""]
+            lines.append(f"更新时间: {data.get('updated_at', '未知')}")
+            lines.append(f"持仓数量: {len(positions)} 个")
+            lines.append("")
+            lines.append("品种        方向    入场价    当前价    盈亏    持仓天数")
+            lines.append("─" * 60)
+            
+            for pos in positions:
+                symbol = pos.get('symbol', '')
+                direction = pos.get('direction', '')
+                entry_price = pos.get('entry_price', 0)
+                current_price = pos.get('current_price', 0)
+                pnl_pct = pos.get('pnl_pct', 0)
+                holding_days = pos.get('holding_days', 0)
+                
+                lines.append(f"{symbol:12} {direction:8} {entry_price:8} {current_price:8} {pnl_pct:+.2f}%  {holding_days}")
+            
+            return "\n".join(lines)
+            
+        except Exception as e:
+            return f"❌ 读取持仓失败: {e}"
     
-    # Debater 结果
-    if debate_results:
-        lines.append(f"\n[Debater]")
-        lines.append(f"  辩论结果: {len(debate_results)} 个")
-        for d in debate_results:
-            symbol = d.get('symbol', '')
-            orig = d.get('original_confidence', 0)
-            revised = d.get('revised_confidence', 0)
-            divergence = d.get('debate_result', {}).get('divergence_level', 'N/A')
-            lines.append(f"    {symbol}: 置信度 {orig:.2f} → {revised:.2f} (分歧: {divergence})")
+    def _handle_feedback(self, intent: Dict[str, Any]) -> str:
+        """处理反馈意图"""
+        return "📝 请提供交易反馈详情（品种、方向、入场价、出场价、盈亏等）"
     
-    return '\n'.join(lines)
-
-
-def run_full_flow():
-    """执行完整流程"""
-    print("趋势跟踪 Agent 启动")
-    print("=" * 60)
+    def _handle_config(self, intent: Dict[str, Any]) -> str:
+        """处理配置意图"""
+        return "⚙️ 请指定要修改的配置项和新值"
     
-    # Step 1: 执行 Scanner
-    scan_result = run_scanner()
+    def _handle_evolution(self, intent: Dict[str, Any]) -> str:
+        """处理进化意图"""
+        print("[Orchestrator] 执行进化...", flush=True)
+        
+        # 运行 Evolver 脚本
+        result = self._run_script('evolver.py', ['--periodic'])
+        
+        if result['success']:
+            return f"🧬 进化完成\n\n{result['stdout']}"
+        else:
+            return f"❌ 进化失败\n\n{result['stderr']}"
     
-    # Step 2: 执行 Heartbeat
-    heartbeat_result = run_heartbeat()
+    def _handle_unknown(self, intent: Dict[str, Any]) -> str:
+        """处理未知意图"""
+        return f"❓ 未识别的指令: {intent['raw_input']}\n\n可用指令:\n• 扫描 - 扫描市场机会\n• 分析 [品种] - 分析指定品种\n• 持仓 - 查看当前持仓\n• 反馈 - 提交交易反馈\n• 配置 - 修改系统配置\n• 进化 - 执行策略进化"
     
-    # Step 3: 决定下一步动作
-    action = determine_action(scan_result, heartbeat_result)
+    def get_status(self) -> str:
+        """
+        获取系统状态
+        
+        Returns:
+            状态文本
+        """
+        lines = ["📊 系统状态", ""]
+        
+        # 检查数据源
+        lines.append("数据源:")
+        lines.append(f"  • TqSdk: {'可用' if self._check_tqsdk() else '不可用'}")
+        lines.append(f"  • CSV: {'可用' if self._check_csv() else '不可用'}")
+        lines.append("")
+        
+        # 检查配置
+        config_file = self.config_dir / 'config.json'
+        lines.append(f"配置文件: {'存在' if config_file.exists() else '不存在'}")
+        
+        # 检查持仓
+        positions_file = self.config_dir / 'positions.json'
+        if positions_file.exists():
+            with open(positions_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            positions = data.get('positions', [])
+            lines.append(f"持仓数量: {len(positions)} 个")
+        else:
+            lines.append("持仓数量: 0 个")
+        
+        # 检查 Agent
+        lines.append("")
+        lines.append("Agent 状态:")
+        lines.append(f"  • Reasoner: {'就绪' if (self.tools_dir / 'reasoner.py').exists() else '未就绪'}")
+        lines.append(f"  • Debater: {'就绪' if (self.tools_dir / 'debater.py').exists() else '未就绪'}")
+        lines.append(f"  • Evolver: {'就绪' if (self.tools_dir / 'evolver.py').exists() else '未就绪'}")
+        
+        return "\n".join(lines)
     
-    # Step 4: 执行 Reasoner（如果需要）
-    reasoning_results = []
-    if action["trigger_reasoner"]:
-        reasoning_results = run_reasoner(action["signals_to_reason"])
+    def _check_tqsdk(self) -> bool:
+        """检查 TqSdk 是否可用"""
+        try:
+            sys.path.insert(0, str(project_root / "scripts"))
+            from trend_scanner.data_source import TqSdkSource
+            source = TqSdkSource()
+            return source.is_available()
+        except:
+            return False
     
-    # Step 5: 执行 Debater（如果需要）
-    debate_results = []
-    if action["trigger_debater"] and reasoning_results:
-        debate_results = run_debater(reasoning_results)
-    
-    # Step 6: 格式化输出
-    output = format_output(scan_result, heartbeat_result, reasoning_results, debate_results)
-    print("\n" + output)
-    
-    # Step 7: 保存完整报告
-    report = {
-        "timestamp": datetime.now().isoformat(),
-        "scan_result": scan_result,
-        "heartbeat_result": heartbeat_result,
-        "action": action,
-        "reasoning_results": reasoning_results,
-        "debate_results": debate_results
-    }
-    
-    report_path = os.path.join(DATA_DIR, 'latest_orchestrator_report.json')
-    os.makedirs(DATA_DIR, exist_ok=True)
-    with open(report_path, 'w', encoding='utf-8') as f:
-        json.dump(report, f, ensure_ascii=False, indent=2)
-    print(f"\n完整报告已保存到 data/latest_orchestrator_report.json")
+    def _check_csv(self) -> bool:
+        """检查 CSV 数据源是否可用"""
+        try:
+            sys.path.insert(0, str(project_root / "scripts"))
+            from trend_scanner.data_source import CsvSource
+            source = CsvSource()
+            return source.is_available()
+        except:
+            return False
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Orchestrator 调度脚本")
-    parser.add_argument("mode", choices=["scan", "heartbeat", "full"], 
-                       help="运行模式: scan=扫描+推理, heartbeat=心跳+推理, full=完整流程")
-    parser.add_argument("--output", choices=["json", "text"], default="text", help="输出格式")
+    parser = argparse.ArgumentParser(description='Orchestrator Agent 脚本')
+    parser.add_argument('--input', type=str, help='用户输入')
+    parser.add_argument('--status', action='store_true', help='查看系统状态')
+    parser.add_argument('--scan', action='store_true', help='执行扫描')
+    parser.add_argument('--output', choices=['json', 'text'], default='text', help='输出格式')
     
     args = parser.parse_args()
     
-    if args.mode == "scan":
-        scan_result = run_scanner()
-        action = determine_action(scan_result, {"alerts": [], "new_signals": []})
-        if action["trigger_reasoner"]:
-            reasoning_results = run_reasoner(action["signals_to_reason"])
-            if action["trigger_debater"]:
-                run_debater(reasoning_results)
+    # 创建 Orchestrator Agent
+    agent = OrchestratorAgent()
     
-    elif args.mode == "heartbeat":
-        heartbeat_result = run_heartbeat()
-        action = determine_action({"signals": []}, heartbeat_result)
-        if action["trigger_reasoner"]:
-            reasoning_results = run_reasoner(action["signals_to_reason"])
-            if action["trigger_debater"]:
-                run_debater(reasoning_results)
-    
-    elif args.mode == "full":
-        run_full_flow()
+    # 执行操作
+    if args.status:
+        result = agent.get_status()
+        print(result)
+    elif args.scan:
+        result = agent.process_user_input("扫描")
+        print(result)
+    elif args.input:
+        result = agent.process_user_input(args.input)
+        print(result)
+    else:
+        print("[错误] 请指定 --input, --status 或 --scan", flush=True)
+        sys.exit(1)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

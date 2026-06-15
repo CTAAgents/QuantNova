@@ -782,7 +782,7 @@ pip install -r requirements.txt
 # 配置环境变量
 export TQ_USER=your_username
 export TQ_PASSWORD=your_password
-export WORKBUDDY_API_KEY=your_api_key
+export LLM_API_KEY=your_api_key
 
 # 运行扫描
 python tools/scan_opportunities.py --output text --save

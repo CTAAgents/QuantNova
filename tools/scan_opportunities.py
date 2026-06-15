@@ -221,12 +221,14 @@ def scan_symbol(symbol: str, data_source, signal_filter: Dict[str, Any], use_dyn
         return None
 
 
-def scan_all(symbols: List[str] = None, use_dynamic_factors: bool = False) -> Dict[str, Any]:
+def scan_all(symbols: List[str] = None, use_dynamic_factors: bool = False, use_memory: bool = True) -> Dict[str, Any]:
     """
     扫描所有品种
     
     参数:
         symbols: 品种列表，None 则从配置读取
+        use_dynamic_factors: 是否使用动态因子
+        use_memory: 是否使用记忆系统存储结果
     
     返回:
         扫描结果字典
@@ -264,6 +266,16 @@ def scan_all(symbols: List[str] = None, use_dynamic_factors: bool = False) -> Di
         signals=signals,
         no_signal_symbols=no_signal_symbols
     )
+    
+    # 存储到记忆系统
+    if use_memory:
+        try:
+            from trend_scanner.memory_bridge import MemoryBridge
+            bridge = MemoryBridge()
+            bridge.store_scan_result(scan_result)
+            bridge.close()
+        except Exception as e:
+            logger.warning(f"存储扫描结果到记忆系统失败: {e}")
     
     return scan_result
 

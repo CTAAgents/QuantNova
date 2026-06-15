@@ -833,35 +833,41 @@ def factor(df: pd.DataFrame) -> pd.Series:
 
 
 # 工厂函数
-def create_llm_client(provider: str = "workbuddy", **kwargs) -> LLMClient:
+def create_llm_client(provider: str = "auto", **kwargs) -> LLMClient:
     """
     创建 LLM 客户端
     
+    系统优先使用宿主平台（WorkBuddy/TRAE/QoderWork）的大模型，
+    用户也可通过 LLM_API_KEY 环境变量配置自己的大模型。
+    
+    当未配置 LLM_API_KEY 时，返回 None，FactorGenerator 降级为规则模式。
+    
     Args:
         provider: LLM 提供商名称
-            - "workbuddy": WorkBuddy 内置 LLM（默认，推荐）
-            - "openai": OpenAI API
+            - "auto": 自动检测（默认）
+            - "workbuddy"/"openai": OpenAI 兼容接口
             - "anthropic": Anthropic API
             - "local": 本地 LLM（Ollama）
         **kwargs: 其他参数
         
     Returns:
-        LLMClient: LLM 客户端实例
+        LLMClient 或 None（未配置时）
     """
-    if provider == "workbuddy":
+    # 自动检测：检查环境变量
+    if provider == "auto":
+        api_key = kwargs.get('api_key') or os.getenv("LLM_API_KEY")
+        if not api_key:
+            return None  # 未配置，返回 None，由调用方决定降级策略
+        provider = "workbuddy"  # 有 key 则默认用 OpenAI 兼容接口
+    
+    if provider == "workbuddy" or provider == "openai":
         return WorkBuddyClient(**kwargs)
-    elif provider == "openai":
-        return OpenAIClient(**kwargs)
     elif provider == "anthropic":
         return AnthropicClient(**kwargs)
     elif provider == "local":
         return LocalLLMClient(**kwargs)
-    elif provider == "mock":
-        raise ValueError(
-            "禁止使用模拟 LLM 客户端。请配置真实的 LLM API：\n"
-            "1. 设置环境变量 LLM_API_KEY\n"
-            "2. 或在 config/config.json 中配置 llm.provider 和 llm.base_url"
-        )
+    else:
+        raise ValueError(f"不支持的 LLM 提供商: {provider}")
     else:
         raise ValueError(f"不支持的 LLM 提供商: {provider}")
 

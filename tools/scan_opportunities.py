@@ -18,6 +18,7 @@ from datetime import datetime
 from typing import Optional, List, Dict, Any
 import pandas as pd
 import numpy as np
+import logging
 
 # 添加模块路径
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'scripts'))

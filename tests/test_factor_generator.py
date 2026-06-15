@@ -80,6 +80,10 @@ class TestFactorGenerator:
     
     def test_save_factor_to_knowledge_base(self):
         """测试保存因子到知识库"""
+        # 记录保存前的因子数量
+        factors_before = self.generator.get_factors_from_knowledge_base()
+        initial_count = len(factors_before)
+        
         # 创建测试因子结果
         factor_result = FactorResult(
             code="def factor(df): return df['close'].pct_change(5)",
@@ -99,9 +103,10 @@ class TestFactorGenerator:
         
         assert success == True
         
-        # 验证因子已保存（知识库中已有3个预置因子）
+        # 验证因子已保存（数量应该增加1）
         factors = self.generator.get_factors_from_knowledge_base()
-        assert len(factors) == 4  # 3个预置因子 + 1个测试因子
+        assert len(factors) == initial_count + 1
+        
         # 查找测试因子
         test_factor = next((f for f in factors if f['name'] == '测试因子'), None)
         assert test_factor is not None

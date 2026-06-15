@@ -260,9 +260,6 @@ def scan_all(symbols: List[str] = None, use_dynamic_factors: bool = False, use_m
         print("错误: 未配置扫描品种列表且数据源无可用合约", file=sys.stderr)
         return create_scan_result(0, [])
     
-    # 获取数据源
-    data_source = DataSourceFactory.create()
-    
     # 扫描每个品种
     signals = []
     no_signal_symbols = []

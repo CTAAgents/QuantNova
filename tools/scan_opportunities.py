@@ -32,6 +32,26 @@ from data_formats import (
 )
 
 
+def normalize_symbol(symbol: str) -> str:
+    """
+    将配置格式的品种代码转换为数据源可识别的格式
+    
+    配置格式：SHFE.rb, DCE.jm, CZCE.CF, INE.sc
+    数据源格式：RB, JM, CF, SC（大写品种代码）
+    """
+    symbol = symbol.strip()
+    
+    # 如果包含交易所前缀，提取品种代码
+    if '.' in symbol:
+        parts = symbol.split('.')
+        if len(parts) == 2:
+            code = parts[1].upper()
+            return code
+    
+    # 直接返回大写形式
+    return symbol.upper()
+
+
 def scan_symbol(symbol: str, data_source, signal_filter: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """
     扫描单个品种，返回信号（如果有）

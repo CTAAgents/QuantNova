@@ -131,10 +131,32 @@ Orchestrator Agent（主协调）
 |------|------|------|
 | 推理重于规则 | 所有"规则"由推理层动态生成 | 不存在独立的规则层 |
 | 计算用脚本，推理用 Agent | 确定性计算不调 LLM | Scanner/Monitor 是纯 Python |
+| Agent 默认用宿主 LLM | Reasoner/Debater/Evolver 由宿主平台驱动 | 无需配置即可运行 |
 | 数据本地化 | TqSdk 数据写入本地 DuckDB | 避免重复 API 调用 |
 | 因子即代码 | 因子是 LLM 生成的可执行代码 | FactorEngine 思想 |
 | 概念性语言反馈 | Agent 间用自然语言互相教学 | FinCon 思想 |
 | RL 接口自设计 | LLM 设计状态空间和奖励函数 | GIFT 思想 |
+
+### 1.4 LLM 使用策略
+
+```
+宿主平台（WorkBuddy/TRAE/QoderWork/OpenClaw/...）
+    │
+    ├── Agent 角色（默认使用宿主平台 LLM）
+    │     ├── Reasoner Agent → 市场推理
+    │     ├── Debater Agent → 多角色辩论
+    │     └── Evolver Agent → 策略进化
+    │
+    └── 直接调用（可选配置）
+          └── FactorGenerator → 因子代码生成
+                │
+                ├── LLM_API_KEY 已设置 → 调用自定义 LLM
+                └── LLM_API_KEY 未设置 → 规则模式（预置因子）
+```
+
+**配置方式**：
+- **不配置**：系统开箱即用，Agent 角色由宿主平台 LLM 驱动
+- **配置 LLM_API_KEY**：FactorGenerator 使用自定义 LLM 生成因子代码
 
 ---
 

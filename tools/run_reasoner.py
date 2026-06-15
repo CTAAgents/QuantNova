@@ -95,13 +95,14 @@ def brief_to_dict(brief: TradingBrief) -> Dict[str, Any]:
     return result
 
 
-def run_reasoner_for_signal(signal: Dict[str, Any], assistant: TradingAssistant) -> Optional[Dict[str, Any]]:
+def run_reasoner_for_signal(signal: Dict[str, Any], assistant: TradingAssistant, memory_bridge=None) -> Optional[Dict[str, Any]]:
     """
     对单个信号执行推理
     
     参数:
         signal: Scanner 输出的信号字典
         assistant: TradingAssistant 实例
+        memory_bridge: MemoryBridge 实例（可选）
     
     返回:
         推理结果字典
@@ -120,6 +121,21 @@ def run_reasoner_for_signal(signal: Dict[str, Any], assistant: TradingAssistant)
             print(f" 数据不足")
             return None
         
+        # 检索相似经验（如果记忆系统可用）
+        similar_experiences = []
+        if memory_bridge:
+            try:
+                market_context = {
+                    'symbol': symbol,
+                    'feature_vector': signal.get('feature_vector', []),
+                    'timestamp': signal.get('scan_time', datetime.now().isoformat())
+                }
+                similar_experiences = memory_bridge.retrieve_similar_experiences(symbol, market_context)
+                if similar_experiences:
+                    print(f" [检索到 {len(similar_experiences)} 条经验]", end="", flush=True)
+            except Exception as e:
+                logger.warning(f"检索经验失败: {e}")
+        
         # 执行推理
         brief = assistant.analyze(df, symbol=symbol)
         
@@ -130,9 +146,17 @@ def run_reasoner_for_signal(signal: Dict[str, Any], assistant: TradingAssistant)
         result["signal_strength"] = signal.get('signal_strength', '')
         result["trigger_reason"] = signal.get('trigger_reason', '')
         result["reasoning_time"] = datetime.now().isoformat()
+        result["similar_experiences"] = similar_experiences
         
         confidence = result.get('confidence', 0)
         print(f" 完成 (置信度: {confidence:.2f})")
+        
+        # 存储推理结果到记忆系统
+        if memory_bridge:
+            try:
+                memory_bridge.store_reasoning_result(result)
+            except Exception as e:
+                logger.warning(f"存储推理结果失败: {e}")
         
         return result
     

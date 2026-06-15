@@ -366,7 +366,8 @@ class TestFullPipeline:
     ):
         """流程 2: 交易记录 → 轨迹分析 → 概念反馈 → 信念更新"""
         # Step 1: 轨迹分析
-        analyzer = TrajectoryAnalyzer(trades=sample_trade_records)
+        analyzer = TrajectoryAnalyzer()
+        analyzer.load_trade_history(sample_trade_records)
         report = analyzer.analyze()
         assert report["summary"]["total_trades"] == 3
 
@@ -392,7 +393,8 @@ class TestFullPipeline:
     def test_rl_design_with_trajectory_context(self, sample_trade_records):
         """流程 3: 轨迹分析结果 → RL 接口设计"""
         # Step 1: 轨迹分析
-        analyzer = TrajectoryAnalyzer(trades=sample_trade_records)
+        analyzer = TrajectoryAnalyzer()
+        analyzer.load_trade_history(sample_trade_records)
         report = analyzer.analyze()
 
         # Step 2: 用轨迹分析结果构建 RL 接口设计输入

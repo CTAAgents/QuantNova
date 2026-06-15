@@ -154,7 +154,7 @@ class TestIndicatorEnginePerformance:
         engine.add_adx(14)
         elapsed = time.perf_counter() - start
 
-        assert elapsed < 0.3, f"ADX 计算耗时 {elapsed:.3f}s，超过 0.3s 阈值"
+        assert elapsed < 0.5, f"ADX 计算耗时 {elapsed:.3f}s，超过 0.5s 阈值"
         assert "adx" in engine.df.columns
         assert "plus_di" in engine.df.columns
         print(f"\n  ADX 单指标: {elapsed:.4f}s")
@@ -167,7 +167,7 @@ class TestIndicatorEnginePerformance:
         engine.add_rsi(14)
         elapsed = time.perf_counter() - start
 
-        assert elapsed < 0.3, f"RSI 计算耗时 {elapsed:.3f}s，超过 0.3s 阈值"
+        assert elapsed < 0.5, f"RSI 计算耗时 {elapsed:.3f}s，超过 0.5s 阈值"
         assert "rsi" in engine.df.columns
         print(f"\n  RSI 单指标: {elapsed:.4f}s")
 

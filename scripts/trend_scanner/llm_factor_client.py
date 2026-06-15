@@ -859,7 +859,7 @@ def create_llm_client(provider: str = "workbuddy", **kwargs) -> LLMClient:
     elif provider == "mock":
         raise ValueError(
             "禁止使用模拟 LLM 客户端。请配置真实的 LLM API：\n"
-            "1. 设置环境变量 WORKBUDDY_API_KEY\n"
+            "1. 设置环境变量 LLM_API_KEY\n"
             "2. 或在 config/config.json 中配置 llm.provider 和 llm.base_url"
         )
     else:
@@ -895,7 +895,7 @@ class WorkBuddyClient(LLMClient):
         
         if not self.api_key:
             raise ValueError(
-                "WorkBuddy API key 未设置。请设置环境变量 WORKBUDDY_API_KEY，"
+                "LLM API key 未设置。请设置环境变量 LLM_API_KEY，"
                 "或在初始化时传入 api_key 参数。"
             )
         

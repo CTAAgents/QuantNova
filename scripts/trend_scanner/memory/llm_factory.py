@@ -189,23 +189,22 @@ class LocalLLMProvider(LLMProvider):
 
 class WorkBuddyProvider(LLMProvider):
     """
-    WorkBuddy 内置 LLM 提供者（默认）
+    LLM 提供者（默认）
     
-    使用 WorkBuddy 平台配置的 LLM（Mimo-V2.5-Pro），
-    通过 OpenAI 兼容接口调用。
+    通过 OpenAI 兼容接口调用大模型，支持任意兼容服务商。
     
     环境变量：
-        WORKBUDDY_API_KEY: API 密钥
-        WORKBUDDY_BASE_URL: API 端点（可选）
+        LLM_API_KEY: API 密钥（必需）
+        LLM_BASE_URL: API 端点（可选）
     """
     
     DEFAULT_BASE_URL = "https://token-plan-cn.xiaomimimo.com/v1"
     DEFAULT_MODEL = "mimo-v2.5-pro"
     
     def __init__(self, api_key: str = None, model: str = None, base_url: str = None):
-        self._api_key = api_key or os.getenv("WORKBUDDY_API_KEY")
-        self._model = model or os.getenv("WORKBUDDY_MODEL", self.DEFAULT_MODEL)
-        self._base_url = base_url or os.getenv("WORKBUDDY_BASE_URL", self.DEFAULT_BASE_URL)
+        self._api_key = api_key or os.getenv("LLM_API_KEY")
+        self._model = model or os.getenv("LLM_MODEL", self.DEFAULT_MODEL)
+        self._base_url = base_url or os.getenv("LLM_BASE_URL", self.DEFAULT_BASE_URL)
         self._client = None
         
         if self._api_key:
@@ -221,7 +220,7 @@ class WorkBuddyProvider(LLMProvider):
     def generate(self, prompt: str, **kwargs) -> str:
         if not self._client:
             raise RuntimeError(
-                "LLM 客户端未初始化。请设置环境变量 WORKBUDDY_API_KEY。"
+                "LLM 客户端未初始化。请设置环境变量 LLM_API_KEY。"
             )
         try:
             response = self._client.chat.completions.create(
@@ -240,7 +239,7 @@ class WorkBuddyProvider(LLMProvider):
     def chat(self, messages: List[Dict[str, str]], **kwargs) -> str:
         if not self._client:
             raise RuntimeError(
-                "LLM 客户端未初始化。请设置环境变量 WORKBUDDY_API_KEY。"
+                "LLM 客户端未初始化。请设置环境变量 LLM_API_KEY。"
             )
         try:
             response = self._client.chat.completions.create(

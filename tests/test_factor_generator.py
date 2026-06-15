@@ -124,14 +124,13 @@ class TestFactorGenerator:
         
         self.generator.save_factor_to_knowledge_base(factor_result)
         
-        # 获取所有因子
+        # 获取所有因子（知识库中已有3个预置因子）
         factors = self.generator.get_factors_from_knowledge_base()
-        assert len(factors) == 1
+        assert len(factors) == 4  # 3个预置因子 + 1个测试因子
         
-        # 根据市场状态获取因子
-        # 注意：由于测试因子没有 regime_effectiveness，这里返回空列表
+        # 根据市场状态获取因子（预置因子有 regime_effectiveness）
         factors_by_regime = self.generator.get_factors_from_knowledge_base(regime='trending')
-        assert len(factors_by_regime) == 0
+        assert len(factors_by_regime) > 0  # 预置因子应该有 trending 效果
 
 
 class TestFactorValidator:

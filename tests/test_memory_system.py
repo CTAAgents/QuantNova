@@ -267,8 +267,8 @@ class TestMemorySystem(unittest.TestCase):
     def test_11_llm_call(self):
         """测试 LLM 调用"""
         import os
-        if not os.getenv("WORKBUDDY_API_KEY"):
-            pytest.skip("WORKBUDDY_API_KEY 未设置，跳过 LLM 调用测试")
+        if not os.getenv("LLM_API_KEY"):
+            pytest.skip("LLM_API_KEY 未设置，跳过 LLM 调用测试")
         
         response = self.memory.llm_generate('测试提示')
         self.assertIsInstance(response, str)

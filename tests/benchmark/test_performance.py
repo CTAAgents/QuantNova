@@ -452,7 +452,7 @@ class TestFactorGeneratorPerformance:
             from scripts.trend_scanner.llm_factor_client import create_llm_client
             
             llm_client = None
-            if os.getenv("WORKBUDDY_API_KEY"):
+            if os.getenv("LLM_API_KEY"):
                 try:
                     llm_client = create_llm_client("workbuddy")
                 except Exception:

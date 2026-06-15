@@ -206,6 +206,15 @@ class DuckDBStore:
     
     # ========== 因子库操作 ==========
     
+    def insert_trade(self, trade: Dict[str, Any]):
+        """插入一笔交易（用于分析）"""
+        if not self.conn:
+            return
+        
+        # DuckDB 主要用于时序数据分析，交易数据主要存在 SQLite
+        # 这里只是记录，不做实际存储
+        pass
+    
     def insert_factor(self, factor: Dict[str, Any]):
         """插入一个因子"""
         if not self.conn:

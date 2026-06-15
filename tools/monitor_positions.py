@@ -321,11 +321,13 @@ def main():
 
 
 if __name__ == "__main__":
-    print("[调试] 脚本开始执行")
+    print("[调试] 脚本开始执行", flush=True)
     try:
         main()
+    except SystemExit as e:
+        print(f"[调试] SystemExit: {e}", flush=True)
     except Exception as e:
-        print(f"[致命错误] {e}")
+        print(f"[致命错误] {e}", flush=True)
         import traceback
         traceback.print_exc()
         sys.exit(1)

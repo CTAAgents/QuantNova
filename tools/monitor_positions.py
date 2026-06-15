@@ -246,21 +246,8 @@ def monitor_positions(symbols: List[str] = None) -> List[Dict[str, Any]]:
     
     print(f"分析 {len(positions)} 个持仓品种...")
     
-    # 获取数据源（先尝试 CSV，避免 TqSdk 的 sys.exit 问题）
-    data_source = None
-    try:
-        data_source = CsvSource()
-        if not data_source.is_available():
-            data_source = None
-    except:
-        pass
-    
-    # 如果 CSV 不可用，尝试 TqSdk
-    if data_source is None:
-        try:
-            data_source = DataSourceFactory.create()
-        except:
-            pass
+    # 获取数据源（TqSDK > 通达信MCP > CSV）
+    data_source = DataSourceFactory.create()
     
     if data_source is None:
         print("[错误] 没有可用的数据源")

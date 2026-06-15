@@ -86,8 +86,17 @@ def analyze_position(pos: Dict[str, Any], data_source) -> Dict[str, Any]:
     try:
         # 获取数据
         print(f"[调试] 获取K线数据: {data_symbol}", flush=True)
-        df = data_source.get_kline(data_symbol, days=120)
-        print(f"[调试] K线数据获取完成，长度: {len(df) if df is not None else 0}", flush=True)
+        try:
+            df = data_source.get_kline(data_symbol, days=120)
+            print(f"[调试] K线数据获取完成，长度: {len(df) if df is not None else 0}", flush=True)
+        except Exception as e:
+            print(f"[错误] 获取K线数据失败: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
+            result['status'] = 'ERROR'
+            result['alerts'].append(f'获取数据失败: {e}')
+            return result
+        
         if df is None or len(df) < 60:
             result['status'] = 'DATA_INSUFFICIENT'
             result['alerts'].append('数据不足，无法分析')

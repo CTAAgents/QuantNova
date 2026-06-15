@@ -59,9 +59,11 @@ Trend-scanner-Agent/
 │   └── positions.json          # 持仓数据
 ├── data/                       # 运行时数据
 ├── logs/                       # 日志文件
-└── docs/                       # 文档
-    ├── ARCHITECTURE.md         # 架构设计
-    └── OPERATIONS.md           # 运维文档
+├── docs/                       # 文档
+│   ├── ARCHITECTURE.md         # 架构设计
+│   └── OPERATIONS.md           # 运维文档
+├── requirements.txt            # 依赖列表
+└── setup.py                    # 安装配置
 ```
 
 ## 快速开始

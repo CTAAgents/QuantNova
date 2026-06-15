@@ -165,6 +165,7 @@ Orchestrator Agent（主协调）
   │     └── 持仓风险监控
   │
   ├── 记忆系统
+  │     ├── MemoryBridge（集成桥接器）
   │     ├── SQLite（经验/规则/日志）
   │     └── DuckDB（K线/指标/因子库）
   │

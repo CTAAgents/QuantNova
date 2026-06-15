@@ -833,18 +833,25 @@ def factor(df: pd.DataFrame) -> pd.Series:
 
 
 # 工厂函数
-def create_llm_client(provider: str = "mock", **kwargs) -> LLMClient:
+def create_llm_client(provider: str = "workbuddy", **kwargs) -> LLMClient:
     """
     创建 LLM 客户端
     
     Args:
         provider: LLM 提供商名称
+            - "workbuddy": WorkBuddy 内置 LLM（默认，推荐）
+            - "openai": OpenAI API
+            - "anthropic": Anthropic API
+            - "local": 本地 LLM（Ollama）
+            - "mock": 模拟客户端（测试用）
         **kwargs: 其他参数
         
     Returns:
         LLMClient: LLM 客户端实例
     """
-    if provider == "openai":
+    if provider == "workbuddy":
+        return WorkBuddyClient(**kwargs)
+    elif provider == "openai":
         return OpenAIClient(**kwargs)
     elif provider == "anthropic":
         return AnthropicClient(**kwargs)
@@ -854,6 +861,135 @@ def create_llm_client(provider: str = "mock", **kwargs) -> LLMClient:
         return MockLLMClient(**kwargs)
     else:
         raise ValueError(f"不支持的 LLM 提供商: {provider}")
+
+
+class WorkBuddyClient(LLMClient):
+    """
+    WorkBuddy 内置 LLM 客户端
+    
+    使用 WorkBuddy 平台配置的 LLM（Mimo-V2.5-Pro），
+    通过 OpenAI 兼容接口调用。
+    
+    环境变量：
+        WORKBUDDY_API_KEY: API 密钥（可选，默认从配置读取）
+        WORKBUDDY_BASE_URL: API 端点（可选，默认使用国内端点）
+    """
+    
+    DEFAULT_BASE_URL = "https://token-plan-cn.xiaomimimo.com/v1"
+    DEFAULT_MODEL = "mimo-v2.5-pro"
+    
+    def __init__(self, api_key: str = None, model: str = None, base_url: str = None):
+        """
+        初始化 WorkBuddy LLM 客户端
+        
+        Args:
+            api_key: API 密钥
+            model: 模型名称
+            base_url: API 端点
+        """
+        self.api_key = api_key or os.getenv("WORKBUDDY_API_KEY")
+        self.model = model or self.DEFAULT_MODEL
+        self.base_url = base_url or os.getenv("WORKBUDDY_BASE_URL", self.DEFAULT_BASE_URL)
+        
+        if not self.api_key:
+            raise ValueError(
+                "WorkBuddy API key 未设置。请设置环境变量 WORKBUDDY_API_KEY，"
+                "或在初始化时传入 api_key 参数。"
+            )
+        
+        # 使用 OpenAI 兼容接口
+        try:
+            import openai
+            self.client = openai.OpenAI(
+                api_key=self.api_key,
+                base_url=self.base_url
+            )
+            logger.info(f"WorkBuddy LLM 客户端初始化成功，模型: {self.model}，端点: {self.base_url}")
+        except ImportError:
+            logger.error("openai 库未安装，请运行: pip install openai")
+            raise
+    
+    def generate(self, prompt: str, **kwargs) -> str:
+        """
+        生成文本
+        
+        Args:
+            prompt: 输入 prompt
+            **kwargs: 其他参数
+                - temperature: 温度参数（默认 0.7）
+                - max_tokens: 最大 token 数（默认 2000）
+                - system_prompt: 系统 prompt
+                
+        Returns:
+            str: 生成的文本
+        """
+        temperature = kwargs.get('temperature', 0.7)
+        max_tokens = kwargs.get('max_tokens', 2000)
+        system_prompt = kwargs.get('system_prompt', '你是一个量化因子挖掘专家。')
+        
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=temperature,
+                max_tokens=max_tokens
+            )
+            
+            return response.choices[0].message.content
+            
+        except Exception as e:
+            logger.error(f"WorkBuddy LLM API 调用失败: {e}")
+            raise
+    
+    def generate_with_json_output(self, prompt: str, **kwargs) -> Dict[str, Any]:
+        """
+        生成 JSON 格式的输出
+        
+        Args:
+            prompt: 输入 prompt
+            **kwargs: 其他参数
+            
+        Returns:
+            dict: 解析后的 JSON
+        """
+        json_prompt = f"""
+{prompt}
+
+请以 JSON 格式输出结果，确保输出是有效的 JSON。
+"""
+        
+        response = self.generate(json_prompt, **kwargs)
+        
+        try:
+            json_str = self._extract_json_from_response(response)
+            return json.loads(json_str)
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON 解析失败: {e}")
+            logger.error(f"原始响应: {response}")
+            raise
+    
+    def _extract_json_from_response(self, response: str) -> str:
+        """从响应中提取 JSON"""
+        import re
+        
+        # 尝试从 markdown 代码块中提取
+        json_block_pattern = r'```json\s*\n(.*?)```'
+        match = re.search(json_block_pattern, response, re.DOTALL)
+        
+        if match:
+            return match.group(1).strip()
+        
+        # 尝试提取 { 开始的 JSON
+        json_pattern = r'(\{.*\})'
+        match = re.search(json_pattern, response, re.DOTALL)
+        
+        if match:
+            return match.group(1).strip()
+        
+        return response.strip()
 
 
 # 示例用法

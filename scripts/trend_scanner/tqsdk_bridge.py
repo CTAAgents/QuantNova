@@ -342,6 +342,14 @@ class TqSdkDataSource:
         """获取实时行情"""
         return self.bridge.get_quote(symbol)
     
+    def get_all_symbols(self, exchanges: list = None) -> List[Dict[str, Any]]:
+        """获取所有主力合约品种"""
+        return self.bridge.get_all_symbols(exchanges)
+    
+    def get_quotes_batch(self, tq_symbols: List[str]) -> Dict[str, Dict[str, Any]]:
+        """批量获取行情数据"""
+        return self.bridge.get_quotes_batch(tq_symbols)
+    
     def is_available(self) -> bool:
         """检查是否可用"""
         return self.bridge.is_available()

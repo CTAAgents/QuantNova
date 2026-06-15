@@ -200,6 +200,8 @@ def main():
     
     args = parser.parse_args()
     
+    print(f"[调试] 参数: debounce={args.debounce}, branch={args.branch}, path={args.path}")
+    
     # 确定监控路径
     if args.path:
         repo_path = Path(args.path).resolve()

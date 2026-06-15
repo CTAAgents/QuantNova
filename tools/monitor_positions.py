@@ -464,8 +464,15 @@ def main():
                         help='持仓文件路径')
     parser.add_argument('--output', type=str, default='data/latest_monitor.json',
                         help='输出文件路径')
+    parser.add_argument('--debug', action='store_true',
+                        help='启用调试模式')
     
     args = parser.parse_args()
+    
+    if args.debug:
+        print(f"[调试] 配置文件: {args.config}")
+        print(f"[调试] 持仓文件: {args.positions}")
+        print(f"[调试] 输出文件: {args.output}")
     
     # 转换为绝对路径
     project_root = Path(__file__).parent.parent

@@ -199,14 +199,18 @@ class GitAutoPushHandler(FileSystemEventHandler):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='文件监控自动 Git 推送')
-    parser.add_argument('--debounce', type=int, default=5, help='防抖时间（秒），默认 5 秒')
-    parser.add_argument('--branch', type=str, default='main', help='推送的分支名，默认 main')
-    parser.add_argument('--path', type=str, default=None, help='监控的目录路径，默认当前目录')
-    
-    args = parser.parse_args()
-    
-    print(f"[调试] 参数: debounce={args.debounce}, branch={args.branch}, path={args.path}")
+    try:
+        parser = argparse.ArgumentParser(description='文件监控自动 Git 推送')
+        parser.add_argument('--debounce', type=int, default=5, help='防抖时间（秒），默认 5 秒')
+        parser.add_argument('--branch', type=str, default='main', help='推送的分支名，默认 main')
+        parser.add_argument('--path', type=str, default=None, help='监控的目录路径，默认当前目录')
+        
+        args = parser.parse_args()
+        
+        print(f"[调试] 参数: debounce={args.debounce}, branch={args.branch}, path={args.path}")
+    except Exception as e:
+        print(f"[错误] 参数解析失败: {e}")
+        sys.exit(1)
     
     # 确定监控路径
     if args.path:

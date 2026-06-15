@@ -113,6 +113,10 @@ class TestFactorGenerator:
     
     def test_get_factors_from_knowledge_base(self):
         """测试从知识库获取因子"""
+        # 记录保存前的因子数量
+        factors_before = self.generator.get_factors_from_knowledge_base()
+        initial_count = len(factors_before)
+        
         # 添加测试因子
         factor_result = FactorResult(
             code="def factor(df): return df['close'].pct_change(5)",
@@ -129,9 +133,9 @@ class TestFactorGenerator:
         
         self.generator.save_factor_to_knowledge_base(factor_result)
         
-        # 获取所有因子（知识库中已有3个预置因子）
+        # 获取所有因子（数量应该增加1）
         factors = self.generator.get_factors_from_knowledge_base()
-        assert len(factors) == 4  # 3个预置因子 + 1个测试因子
+        assert len(factors) == initial_count + 1
         
         # 根据市场状态获取因子（预置因子有 regime_effectiveness）
         factors_by_regime = self.generator.get_factors_from_knowledge_base(regime='trending')

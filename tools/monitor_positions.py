@@ -321,6 +321,7 @@ def main():
 
 
 if __name__ == "__main__":
+    print("[调试] 脚本开始执行")
     try:
         main()
     except Exception as e:

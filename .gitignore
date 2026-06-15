@@ -17,3 +17,10 @@ data/
 # OS
 .DS_Store
 Thumbs.db
+
+# Logs
+*.log
+.workbuddy/memory/auto_git_push.log
+
+# WorkBuddy internal
+.workbuddy/

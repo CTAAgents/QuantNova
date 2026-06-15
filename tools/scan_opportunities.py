@@ -87,6 +87,34 @@ def scan_symbol(symbol: str, data_source, signal_filter: Dict[str, Any], use_dyn
         composite = engine.get_trend_strength_composite()
         engine.df['trend_strength_composite'] = composite
         
+        # 动态因子计算（如果启用）
+        dynamic_factor_values = {}
+        if use_dynamic_factors:
+            try:
+                knowledge_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data', 'factor_knowledge.json')
+                if os.path.exists(knowledge_path):
+                    with open(knowledge_path, 'r', encoding='utf-8') as f:
+                        factor_knowledge = json.load(f)
+                    
+                    for factor in factor_knowledge.get('factors', []):
+                        factor_code = factor.get('code', '')
+                        factor_name = factor.get('name', 'unknown_factor')
+                        if factor_code:
+                            try:
+                                exec_globals = {'pd': pd, 'np': np}
+                                exec(factor_code, exec_globals)
+                                factor_func = exec_globals.get('factor')
+                                if factor_func:
+                                    factor_values = factor_func(engine.df)
+                                    if factor_values is not None and len(factor_values) > 0:
+                                        latest_factor_value = float(factor_values.iloc[-1]) if hasattr(factor_values, 'iloc') else float(factor_values[-1])
+                                        dynamic_factor_values[factor_name] = latest_factor_value
+                                        logger.debug(f"动态因子 {factor_name} = {latest_factor_value:.4f}")
+                            except Exception as e:
+                                logger.warning(f"执行动态因子 {factor_name} 失败: {e}")
+            except Exception as e:
+                logger.warning(f"加载因子知识库失败: {e}")
+        
         # 获取最新一行数据
         latest = engine.df.iloc[-1]
         
@@ -169,7 +197,7 @@ def scan_symbol(symbol: str, data_source, signal_filter: Dict[str, Any], use_dyn
         
         trigger_reason = " 且 ".join(reasons)
         
-        return create_signal(
+        signal = create_signal(
             symbol=symbol,
             trend_phase=phase_str,
             trend_strength_composite=trend_strength,
@@ -183,13 +211,19 @@ def scan_symbol(symbol: str, data_source, signal_filter: Dict[str, Any], use_dyn
             rsi=round(rsi, 1),
             adx=round(adx, 1)
         )
+        
+        # 附加动态因子值
+        if dynamic_factor_values:
+            signal['dynamic_factors'] = dynamic_factor_values
+        
+        return signal
     
     except Exception as e:
         print(f"扫描 {symbol} 失败: {e}", file=sys.stderr)
         return None
 
 
-def scan_all(symbols: List[str] = None) -> Dict[str, Any]:
+def scan_all(symbols: List[str] = None, use_dynamic_factors: bool = False) -> Dict[str, Any]:
     """
     扫描所有品种
     
@@ -220,7 +254,7 @@ def scan_all(symbols: List[str] = None) -> Dict[str, Any]:
     no_signal_symbols = []
     
     for symbol in symbols:
-        result = scan_symbol(symbol, data_source, signal_filter)
+        result = scan_symbol(symbol, data_source, signal_filter, use_dynamic_factors)
         if result:
             signals.append(result)
         else:

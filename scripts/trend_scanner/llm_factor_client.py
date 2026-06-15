@@ -837,30 +837,35 @@ def create_llm_client(provider: str = "auto", **kwargs) -> LLMClient:
     """
     创建 LLM 客户端
     
-    系统优先使用宿主平台（WorkBuddy/TRAE/QoderWork）的大模型，
-    用户也可通过 LLM_API_KEY 环境变量配置自己的大模型。
-    
-    当未配置 LLM_API_KEY 时，返回 None，FactorGenerator 降级为规则模式。
+    LLM 降级链：
+    1. 用户自定义 LLM（LLM_API_KEY）— 优先
+    2. 宿主平台 LLM（WORKBUDDY_API_KEY 等）— 次选
+    3. 规则模式（返回 None）— 兜底
     
     Args:
         provider: LLM 提供商名称
-            - "auto": 自动检测（默认）
-            - "workbuddy"/"openai": OpenAI 兼容接口
+            - "auto": 自动检测（默认，按降级链选择）
+            - "openai": OpenAI 兼容接口
             - "anthropic": Anthropic API
             - "local": 本地 LLM（Ollama）
         **kwargs: 其他参数
         
     Returns:
-        LLMClient 或 None（未配置时）
+        LLMClient 或 None（所有 LLM 都不可用时）
     """
-    # 自动检测：检查环境变量
     if provider == "auto":
-        api_key = kwargs.get('api_key') or os.getenv("LLM_API_KEY")
+        # 降级链：LLM_API_KEY → 宿主平台 KEY → None
+        api_key = (
+            kwargs.get('api_key')
+            or os.getenv("LLM_API_KEY")
+            or os.getenv("WORKBUDDY_API_KEY")  # 宿主平台兼容
+        )
         if not api_key:
-            return None  # 未配置，返回 None，由调用方决定降级策略
-        provider = "workbuddy"  # 有 key 则默认用 OpenAI 兼容接口
+            return None  # 所有 LLM 都不可用，由调方降级为规则模式
+        kwargs['api_key'] = api_key
+        provider = "openai"
     
-    if provider == "workbuddy" or provider == "openai":
+    if provider == "openai":
         return WorkBuddyClient(**kwargs)
     elif provider == "anthropic":
         return AnthropicClient(**kwargs)

@@ -1,9 +1,10 @@
 ---
 name: evolver
 description: "期货趋势跟踪进化 Agent —— 从交易结果中学习，优化策略"
-version: "1.0.0"
+version: "1.1.0"
 author: "Trend-scanner-Agent"
 created: "2026-06-15"
+updated: "2026-06-15"
 tags: ["trading", "futures", "evolution", "agent"]
 ---
 
@@ -14,6 +15,8 @@ tags: ["trading", "futures", "evolution", "agent"]
 Evolver Agent 是 Trend-scanner-Agent 系统的自进化组件。它从交易结果中学习，分析交易轨迹，归因故障，检测模式，优化策略。
 
 ## 核心理念
+
+参见 [共享架构文档 - 持续进化](../shared/ARCHITECTURE.md#23-持续进化)
 
 **从错误中学习，从成功中提炼。**
 
@@ -32,6 +35,8 @@ Evolver Agent 是 Trend-scanner-Agent 系统的自进化组件。它从交易结
 6. **过拟合审计**：审计规则是否过拟合
 
 ## 输入格式
+
+参见 [统一数据格式 - 交易反馈](../shared/DATA_FORMATS.md#15-交易反馈tradefeedback)
 
 ```json
 {
@@ -54,6 +59,8 @@ Evolver Agent 是 Trend-scanner-Agent 系统的自进化组件。它从交易结
 ```
 
 ## 输出格式
+
+参见 [统一数据格式 - 进化报告](../shared/DATA_FORMATS.md#16-进化报告evolutionreport)
 
 ```json
 {
@@ -163,6 +170,8 @@ Evolver Agent 是 Trend-scanner-Agent 系统的自进化组件。它从交易结
 
 ## 配置参数
 
+参见 [统一数据格式 - 配置数据格式](../shared/DATA_FORMATS.md#三配置数据格式)
+
 ```json
 {
   "evolver": {
@@ -180,10 +189,11 @@ Evolver Agent 是 Trend-scanner-Agent 系统的自进化组件。它从交易结
 
 ## 使用方式
 
+参见 [共享章节 - 使用方式](../shared/COMMON_SECTIONS.md#一使用方式)
+
 ### 作为 WorkBuddy Agent
 
 ```python
-# 通过 WorkBuddy Agent 系统调用
 from tools.evolver import EvolverAgent
 
 agent = EvolverAgent()
@@ -202,9 +212,17 @@ python tools/evolver.py --history
 
 # 执行定期进化
 python tools/evolver.py --periodic
+
+# 输出 JSON 格式
+python tools/evolver.py --feedback data/trade_feedback.json --output json
+
+# 保存结果到文件
+python tools/evolver.py --feedback data/trade_feedback.json --save
 ```
 
 ## 依赖模块
+
+参见 [依赖模块文档](../shared/DEPENDENCIES.md)
 
 - `scripts/trend_scanner/evolution_manager.py` - 进化管理器
 - `scripts/trend_scanner/experience.py` - 经验记忆池
@@ -213,6 +231,8 @@ python tools/evolver.py --periodic
 - `scripts/trend_scanner/overfitting_audit.py` - 过拟合审计
 
 ## 错误处理
+
+参见 [共享章节 - 错误处理](../shared/COMMON_SECTIONS.md#二错误处理)
 
 - **数据不足**：跳过轨迹分析，只记录经验
 - **模式检测失败**：跳过模式检测，继续其他流程

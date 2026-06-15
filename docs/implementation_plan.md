@@ -61,7 +61,7 @@ Orchestrator Agent（主协调）
 | 1.2 | 实现 LLM 因子生成接口 | ✅ 已完成 | `scripts/trend_scanner/llm_factor_client.py` |
 | 1.3 | 创建因子验证模块 | ✅ 已完成 | `scripts/trend_scanner/factor_validator.py` |
 | 1.4 | 建立因子知识库 | ✅ 已完成 | `data/factor_knowledge.json` |
-| 1.5 | 与 Scanner 脚本集成 | ✅ 已完成 | 修改 `tools/scan_opportunities_v4.py` |
+| 1.5 | 与 Scanner 脚本集成 | ✅ 已完成 | 修改 `tools/scan_opportunities.py`（支持 `--use-dynamic-factors`） |
 | 1.6 | 编写单元测试 | ✅ 已完成 | `tests/test_factor_generator.py`（22 个测试） |
 
 ### Phase 2: 轨迹感知优化器（第 2-3 周）— 高优先级
@@ -88,9 +88,9 @@ Orchestrator Agent（主协调）
 
 | 任务 ID | 任务描述 | 状态 | 交付物 |
 |---------|---------|------|--------|
-| 4.1 | 重构 Debater 为多角色框架 | ✅ 已完成 | 修改 `agents/debater.md` |
-| 4.2 | 创建分析师角色 | ✅ 已完成 | 内置于 `debater.md` |
-| 4.3 | 创建风控官角色 | ✅ 已完成 | 内置于 `debater.md` |
+| 4.1 | 重构 Debater 为多角色框架 | ✅ 已完成 | `agents/debater.md` v2.0（多角色协作框架） |
+| 4.2 | 创建分析师角色 | ✅ 已完成 | `agents/analyst_role.md` |
+| 4.3 | 创建风控官角色 | ✅ 已完成 | `agents/risk_officer_role.md` |
 | 4.4 | 实现概念性语言反馈 | ✅ 已完成 | `scripts/trend_scanner/conceptual_feedback.py` |
 | 4.5 | 实现信念传播机制 | ✅ 已完成 | `scripts/trend_scanner/belief_propagation.py` |
 | 4.6 | 编写单元测试 | ✅ 已完成 | `tests/test_multi_debater.py`（22 个测试） |
@@ -113,7 +113,7 @@ Orchestrator Agent（主协调）
 | 6.1 | 端到端集成测试 | ✅ 已完成 | `tests/integration/test_full_pipeline.py`（22 个测试） |
 | 6.2 | 性能基准测试 | ✅ 已完成 | `tests/benchmark/test_performance.py`（8 个测试） |
 | 6.3 | 文档更新 | ✅ 已完成 | 更新 `SKILL.md`、`README.md` |
-| 6.4 | 部署脚本 | 待开始 | `tools/deploy_v4.sh` |
+| 6.4 | 部署脚本 | ✅ 已完成 | `tools/deploy_v4.sh` |
 
 ---
 

@@ -65,8 +65,11 @@ def scan_symbol(symbol: str, data_source, signal_filter: Dict[str, Any]) -> Opti
         信号字典，无信号返回 None
     """
     try:
+        # 标准化品种代码
+        data_symbol = normalize_symbol(symbol)
+        
         # 获取 K 线数据
-        df = data_source.get_kline(symbol, days=120)
+        df = data_source.get_kline(data_symbol, days=120)
         if df is None or len(df) < 60:
             return None
         
@@ -215,7 +218,7 @@ def scan_all(symbols: List[str] = None) -> Dict[str, Any]:
         if result:
             signals.append(result)
         else:
-            no_signal_symbols.append(symbol)
+            no_signal_symbols.append(symbol)  # 保留原始格式
     
     # 创建扫描结果
     scan_result = create_scan_result(

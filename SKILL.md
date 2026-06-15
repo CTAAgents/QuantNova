@@ -174,20 +174,32 @@ python tools/orchestrator.py full
 | Evolver | `agents/evolver.md` | 宿主平台 LLM |
 | FactorGenerator | `scripts/trend_scanner/factor_generator.py` | `LLM_API_KEY` 或规则模式 |
 
-#### LLM 配置
+#### LLM 降级链
 
 ```
-LLM_API_KEY 环境变量
+用户自定义 LLM（LLM_API_KEY）
     │
-    ├── 已设置 → FactorGenerator 调用自定义 LLM 生成因子
+    ├── 已设置 → 使用自定义 LLM
     │
-    └── 未设置 → FactorGenerator 降级为规则模式（预置因子）
+    └── 未设置
+          │
+          ▼
+宿主平台 LLM（WORKBUDDY_API_KEY 等）
+    │
+    ├── 可用 → 使用宿主平台 LLM
+    │
+    └── 不可用
+          │
+          ▼
+规则模式（预置因子，无需 LLM）
 ```
 
-| 场景 | 配置 |
-|------|------|
-| 独立运行 | 设置 `LLM_API_KEY` |
-| 宿主平台驱动 | 可选，不设置则 FactorGenerator 用规则模式 |
+| 场景 | 配置 | FactorGenerator LLM 来源 |
+|------|------|--------------------------|
+| 独立运行 | 设置 `LLM_API_KEY` | 自定义 LLM |
+| 宿主平台驱动，自定义 LLM | 设置 `LLM_API_KEY` | 自定义 LLM |
+| 宿主平台驱动，用宿主 LLM | 不设置 | 宿主平台 LLM |
+| 无 LLM | 不设置 | 规则模式 |
 
 ---
 

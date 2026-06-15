@@ -191,7 +191,7 @@ class TestPhase3ReportParsing:
         analysis = parser.parse_report(sample_report_content, sample_report_metadata)
 
         assert isinstance(analysis, ReportAnalysis)
-        assert analysis.report_source == "test_research"
+        assert analysis.source == "test_research"
         assert len(analysis.key_viewpoints) > 0
         assert len(analysis.data_logic) > 0
 
@@ -452,7 +452,8 @@ class TestFullPipeline:
         assert len(factor_suggestions) > 0, "研报未产生因子建议"
 
         # === Phase 2: 轨迹分析 ===
-        analyzer = TrajectoryAnalyzer(trades=sample_trade_records)
+        analyzer = TrajectoryAnalyzer()
+        analyzer.load_trade_history(sample_trade_records)
         trajectory_report = analyzer.analyze()
 
         assert trajectory_report["summary"]["total_trades"] == 3

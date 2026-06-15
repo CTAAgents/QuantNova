@@ -229,15 +229,11 @@ def monitor_positions(symbols: List[str] = None) -> List[Dict[str, Any]]:
     返回:
         分析结果列表
     """
-    print("[调试] monitor_positions 函数开始", flush=True)
-    
     # 加载持仓
-    print("[调试] 加载持仓...", flush=True)
     positions = load_positions()
-    print(f"[调试] 持仓数量: {len(positions)}", flush=True)
     
     if not positions:
-        print("当前无持仓", flush=True)
+        print("当前无持仓")
         return []
     
     # 筛选
@@ -245,24 +241,37 @@ def monitor_positions(symbols: List[str] = None) -> List[Dict[str, Any]]:
         positions = [p for p in positions if p.get('symbol') in symbols]
     
     if not positions:
-        print("无匹配的持仓", flush=True)
+        print("无匹配的持仓")
         return []
     
-    print(f"分析 {len(positions)} 个持仓品种...", flush=True)
+    print(f"分析 {len(positions)} 个持仓品种...")
     
-    # 获取数据源
-    print("[调试] 创建数据源...", flush=True)
-    data_source = DataSourceFactory.create()
-    print(f"[调试] 数据源创建成功: {type(data_source)}", flush=True)
+    # 获取数据源（先尝试 CSV，避免 TqSdk 的 sys.exit 问题）
+    data_source = None
+    try:
+        data_source = CsvSource()
+        if not data_source.is_available():
+            data_source = None
+    except:
+        pass
+    
+    # 如果 CSV 不可用，尝试 TqSdk
+    if data_source is None:
+        try:
+            data_source = DataSourceFactory.create()
+        except:
+            pass
+    
+    if data_source is None:
+        print("[错误] 没有可用的数据源")
+        return []
     
     # 分析每个持仓
     results = []
-    for i, pos in enumerate(positions):
-        print(f"[调试] 分析持仓 {i+1}/{len(positions)}: {pos.get('symbol')}", flush=True)
+    for pos in positions:
         result = analyze_position(pos, data_source)
         results.append(result)
     
-    print(f"[调试] 分析完成", flush=True)
     return results
 
 
@@ -307,7 +316,7 @@ def main():
             indicators = r.get('indicators', {})
             
             # 风险级别标记
-            risk_mark = {'HIGH': '🔴', 'MEDIUM': '🟡', 'LOW': '🟢'}.get(risk_level, '⚪')
+            risk_mark = {'HIGH': '[HIGH]', 'MEDIUM': '[MEDIUM]', 'LOW': '[LOW]'}.get(risk_level, '[UNKNOWN]')
             
             print(f"\n{risk_mark} 【{symbol}】{direction} 方向")
             print(f"  风险级别: {risk_level}")
@@ -320,14 +329,14 @@ def main():
             # 预警
             alerts = r.get('alerts', [])
             if alerts:
-                print(f"  ⚠️ 预警:")
+                print(f"  [预警]:")
                 for alert in alerts:
                     print(f"    - {alert}")
             
             # 建议
             recommendations = r.get('recommendations', [])
             if recommendations:
-                print(f"  💡 建议:")
+                print(f"  [建议]:")
                 for rec in recommendations:
                     print(f"    - {rec}")
         
@@ -336,7 +345,7 @@ def main():
         medium_count = sum(1 for r in results if r.get('risk_level') == 'MEDIUM')
         low_count = sum(1 for r in results if r.get('risk_level') == 'LOW')
         
-        print(f"\n汇总: 🔴 高风险 {high_count} | 🟡 中风险 {medium_count} | 🟢 低风险 {low_count}")
+        print(f"\n汇总: [HIGH] 高风险 {high_count} | [MEDIUM] 中风险 {medium_count} | [LOW] 低风险 {low_count}")
     
     # 保存结果
     if args.save and results:

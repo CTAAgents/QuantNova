@@ -843,7 +843,6 @@ def create_llm_client(provider: str = "workbuddy", **kwargs) -> LLMClient:
             - "openai": OpenAI API
             - "anthropic": Anthropic API
             - "local": 本地 LLM（Ollama）
-            - "mock": 模拟客户端（测试用）
         **kwargs: 其他参数
         
     Returns:
@@ -858,7 +857,11 @@ def create_llm_client(provider: str = "workbuddy", **kwargs) -> LLMClient:
     elif provider == "local":
         return LocalLLMClient(**kwargs)
     elif provider == "mock":
-        return MockLLMClient(**kwargs)
+        raise ValueError(
+            "禁止使用模拟 LLM 客户端。请配置真实的 LLM API：\n"
+            "1. 设置环境变量 WORKBUDDY_API_KEY\n"
+            "2. 或在 config/config.json 中配置 llm.provider 和 llm.base_url"
+        )
     else:
         raise ValueError(f"不支持的 LLM 提供商: {provider}")
 

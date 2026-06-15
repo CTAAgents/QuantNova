@@ -219,34 +219,42 @@ class WorkBuddyProvider(LLMProvider):
                 pass
     
     def generate(self, prompt: str, **kwargs) -> str:
-        if self._client:
-            try:
-                response = self._client.chat.completions.create(
-                    model=self._model,
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=kwargs.get('temperature', 0.3),
-                    max_tokens=kwargs.get('max_tokens', 2000)
-                )
-                return response.choices[0].message.content
-            except Exception as e:
-                return self._fallback(prompt, str(e))
-        return self._fallback(prompt, "API key 未配置")
+        if not self._client:
+            raise RuntimeError(
+                "LLM 客户端未初始化。请设置环境变量 WORKBUDDY_API_KEY。"
+            )
+        try:
+            response = self._client.chat.completions.create(
+                model=self._model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=kwargs.get('temperature', 0.3),
+                max_tokens=kwargs.get('max_tokens', 2000)
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            raise RuntimeError(
+                f"LLM API 调用失败: {e}\n"
+                f"请检查：1) API Key 是否有效；2) 网络连接是否正常；3) 端点 {self._base_url} 是否可达。"
+            )
     
     def chat(self, messages: List[Dict[str, str]], **kwargs) -> str:
-        if self._client:
-            try:
-                response = self._client.chat.completions.create(
-                    model=self._model,
-                    messages=messages,
-                    temperature=kwargs.get('temperature', 0.3),
-                    max_tokens=kwargs.get('max_tokens', 2000)
-                )
-                return response.choices[0].message.content
-            except Exception as e:
-                prompt = "\n".join([f"{m['role']}: {m['content']}" for m in messages])
-                return self._fallback(prompt, str(e))
-        prompt = "\n".join([f"{m['role']}: {m['content']}" for m in messages])
-        return self._fallback(prompt, "API key 未配置")
+        if not self._client:
+            raise RuntimeError(
+                "LLM 客户端未初始化。请设置环境变量 WORKBUDDY_API_KEY。"
+            )
+        try:
+            response = self._client.chat.completions.create(
+                model=self._model,
+                messages=messages,
+                temperature=kwargs.get('temperature', 0.3),
+                max_tokens=kwargs.get('max_tokens', 2000)
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            raise RuntimeError(
+                f"LLM API 调用失败: {e}\n"
+                f"请检查：1) API Key 是否有效；2) 网络连接是否正常；3) 端点 {self._base_url} 是否可达。"
+            )
     
     def _fallback(self, prompt: str, reason: str = "LLM 不可用") -> str:
         """降级响应"""

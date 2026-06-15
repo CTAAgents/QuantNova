@@ -1,9 +1,10 @@
 ---
 name: debater
 description: "期货趋势跟踪辩论 Agent —— 通过鹰派/鸽派辩论修正决策偏差"
-version: "1.0.0"
+version: "1.1.0"
 author: "Trend-scanner-Agent"
 created: "2026-06-15"
+updated: "2026-06-15"
 tags: ["trading", "futures", "debate", "agent"]
 ---
 
@@ -14,6 +15,8 @@ tags: ["trading", "futures", "debate", "agent"]
 Debater Agent 是 Trend-scanner-Agent 系统的偏差修正组件。它通过鹰派/鸽派双视角辩论，修正 Reasoner Agent 的初始方案，提升决策质量。
 
 ## 核心理念
+
+参见 [共享架构文档 - 辩论修正](../shared/ARCHITECTURE.md#22-辩论修正)
 
 **辩论 = 偏差修正**
 
@@ -40,6 +43,8 @@ Debater Agent 是 Trend-scanner-Agent 系统的偏差修正组件。它通过鹰
 - 简化系统复杂度
 
 ## 输入格式
+
+参见 [统一数据格式 - 交易决策简报](../shared/DATA_FORMATS.md#12-交易决策简报tradingbrief)
 
 ```json
 {
@@ -71,6 +76,8 @@ Debater Agent 是 Trend-scanner-Agent 系统的偏差修正组件。它通过鹰
 
 ## 输出格式
 
+参见 [统一数据格式 - 辩论结果](../shared/DATA_FORMATS.md#13-辩论结果debateresult)
+
 ```json
 {
   "symbol": "DCE.jm2609",
@@ -94,24 +101,7 @@ Debater Agent 是 Trend-scanner-Agent 系统的偏差修正组件。它通过鹰
       "如果价格跌破 EMA20，建议止损"
     ]
   },
-  "revised_brief": {
-    "routes": [
-      {
-        "route_id": "A",
-        "name": "顺势做多（修正）",
-        "action": "等待 RSI 回落至 60 以下后入场做多",
-        "confidence": 0.65,
-        "reasoning": "趋势健康，但短期存在回调风险",
-        "constraints": [
-          {"type": "stop_loss", "value": 1310, "reason": "收紧止损"},
-          {"type": "position_size", "value": 0.25, "reason": "降低仓位"}
-        ],
-        "risks": ["RSI 超买", "波动率扩张"]
-      }
-    ],
-    "recommended_route": "A",
-    "warnings": ["辩论修正：降低仓位，收紧止损"]
-  },
+  "revised_brief": { ... },
   "revision_summary": "辩论修正：降低仓位（0.3→0.25），收紧止损（1320→1310）"
 }
 ```
@@ -153,6 +143,8 @@ Debater Agent 是 Trend-scanner-Agent 系统的偏差修正组件。它通过鹰
 
 ## 配置参数
 
+参见 [统一数据格式 - 配置数据格式](../shared/DATA_FORMATS.md#三配置数据格式)
+
 ```json
 {
   "debater": {
@@ -167,10 +159,11 @@ Debater Agent 是 Trend-scanner-Agent 系统的偏差修正组件。它通过鹰
 
 ## 使用方式
 
+参见 [共享章节 - 使用方式](../shared/COMMON_SECTIONS.md#一使用方式)
+
 ### 作为 WorkBuddy Agent
 
 ```python
-# 通过 WorkBuddy Agent 系统调用
 from tools.debater import DebaterAgent
 
 agent = DebaterAgent()
@@ -186,9 +179,17 @@ python tools/debater.py --brief data/latest_brief.json
 
 # 强制辩论（忽略触发条件）
 python tools/debater.py --brief data/latest_brief.json --force
+
+# 输出 JSON 格式
+python tools/debater.py --brief data/latest_brief.json --output json
+
+# 保存结果到文件
+python tools/debater.py --brief data/latest_brief.json --save
 ```
 
 ## 依赖模块
+
+参见 [依赖模块文档](../shared/DEPENDENCIES.md)
 
 - `scripts/trend_scanner/debate_engine.py` - 辩论引擎
 - `scripts/trend_scanner/reasoning.py` - LLM Provider
@@ -196,11 +197,15 @@ python tools/debater.py --brief data/latest_brief.json --force
 
 ## 错误处理
 
+参见 [共享章节 - 错误处理](../shared/COMMON_SECTIONS.md#二错误处理)
+
 - **LLM 调用失败**：跳过辩论，输出原始简报
 - **辩论超时**：跳过辩论，输出原始简报
 - **解析失败**：跳过辩论，输出原始简报
 
 ## Token 预算
+
+参见 [共享架构文档 - Token 预算](../shared/ARCHITECTURE.md#13-token-预算)
 
 - 每次辩论消耗约 3000-6000 token
 - 每日预算 200K token（约 30-60 次辩论）

@@ -307,6 +307,118 @@ class CsvSource(DataSource):
         return symbols
 
 
+class LocalDBSource(DataSource):
+    """本地数据库数据源（SQLite + DuckDB）"""
+    
+    def __init__(self, db_dir: str = "data"):
+        """
+        初始化本地数据库数据源
+        
+        Args:
+            db_dir: 数据库目录
+        """
+        self.db_dir = db_dir
+        self._sync_manager = None
+    
+    @property
+    def sync_manager(self):
+        """延迟初始化同步管理器"""
+        if self._sync_manager is None:
+            from trend_scanner.storage.data_sync import DataSyncManager
+            sqlite_path = os.path.join(self.db_dir, 'meta.db')
+            duckdb_path = os.path.join(self.db_dir, 'market.db')
+            self._sync_manager = DataSyncManager(sqlite_path=sqlite_path, duckdb_path=duckdb_path)
+        return self._sync_manager
+    
+    def get_kline(self, symbol: str, days: int = 120, period: str = "daily") -> Optional[pd.DataFrame]:
+        """
+        获取K线数据（优先从本地DB，其次从TqSdk）
+        
+        Args:
+            symbol: 品种代码
+            days: 获取天数
+            period: 周期
+        
+        Returns:
+            DataFrame
+        """
+        return self.sync_manager.get_kline(symbol, days, period)
+    
+    def get_quote(self, symbol: str) -> Optional[Dict[str, Any]]:
+        """
+        获取实时行情（从本地DB）
+        
+        Args:
+            symbol: 品种代码
+        
+        Returns:
+            行情字典
+        """
+        # 从 SQLite 获取品种信息
+        symbol_info = self.sync_manager.sqlite.get_symbol(symbol)
+        if symbol_info:
+            return {
+                'symbol': symbol,
+                'last_price': symbol_info.get('last_price'),
+                'open_interest': symbol_info.get('open_interest'),
+                'volume': symbol_info.get('volume'),
+            }
+        return None
+    
+    def get_main_contracts(self, exchange: str = None) -> List[str]:
+        """
+        获取主力合约列表
+        
+        Args:
+            exchange: 交易所
+        
+        Returns:
+            主力合约列表
+        """
+        symbols = self.sync_manager.sqlite.get_all_symbols(exchange=exchange, active_only=True)
+        return [s['symbol'] for s in symbols]
+    
+    def get_active_symbols(self, min_oi: int = 10000) -> Dict[str, Dict]:
+        """
+        获取活跃品种
+        
+        Args:
+            min_oi: 最小持仓量
+        
+        Returns:
+            活跃品种字典
+        """
+        symbols = self.sync_manager.get_active_symbols(min_oi=min_oi)
+        result = {}
+        for s in symbols:
+            result[s['symbol']] = {
+                'name': s.get('name', s['symbol']),
+                'last_price': s.get('last_price', 0),
+                'open_interest': s.get('open_interest', 0),
+                'volume': s.get('volume', 0),
+            }
+        return result
+    
+    def is_available(self) -> bool:
+        """检查数据源是否可用"""
+        try:
+            # 检查数据库文件是否存在
+            sqlite_path = os.path.join(self.db_dir, 'meta.db')
+            duckdb_path = os.path.join(self.db_dir, 'market.db')
+            
+            if os.path.exists(sqlite_path) and os.path.exists(duckdb_path):
+                # 检查是否有数据
+                stats = self.sync_manager.get_statistics()
+                sqlite_stats = stats.get('sqlite', {})
+                if sqlite_stats.get('total_symbols', 0) > 0:
+                    return True
+            
+            return False
+            
+        except:
+            return False
+
+
 class DataSourceFactory:
     """数据源工厂（单例模式，全局共享一个数据源连接）"""
     
@@ -320,7 +432,8 @@ class DataSourceFactory:
         
         参数:
             source: 数据源类型
-                - "auto": 自动选择（优先 TqSdk）
+                - "auto": 自动选择（优先本地DB，其次TqSdk，最后CSV）
+                - "localdb": 本地数据库
                 - "tqsdk": TqSdk
                 - "csv": 本地CSV
             force_new: 强制创建新实例（用于测试或连接重置）
@@ -335,13 +448,22 @@ class DataSourceFactory:
         
         # 创建新实例
         if source == "auto":
-            tqsdk = TqSdkSource()
-            if tqsdk.is_available():
-                DataSourceFactory._instance = tqsdk
-                DataSourceFactory._source_type = "tqsdk"
+            # 优先级：本地DB > TqSdk > CSV
+            localdb = LocalDBSource()
+            if localdb.is_available():
+                DataSourceFactory._instance = localdb
+                DataSourceFactory._source_type = "localdb"
             else:
-                DataSourceFactory._instance = CsvSource()
-                DataSourceFactory._source_type = "csv"
+                tqsdk = TqSdkSource()
+                if tqsdk.is_available():
+                    DataSourceFactory._instance = tqsdk
+                    DataSourceFactory._source_type = "tqsdk"
+                else:
+                    DataSourceFactory._instance = CsvSource()
+                    DataSourceFactory._source_type = "csv"
+        elif source == "localdb":
+            DataSourceFactory._instance = LocalDBSource()
+            DataSourceFactory._source_type = "localdb"
         elif source == "tqsdk":
             DataSourceFactory._instance = TqSdkSource()
             DataSourceFactory._source_type = "tqsdk"

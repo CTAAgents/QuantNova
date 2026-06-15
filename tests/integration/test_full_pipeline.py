@@ -250,8 +250,9 @@ class TestPhase2TrajectoryAnalysis:
         report = analyzer.analyze()
 
         failure = report["failure_analysis"]
-        assert failure["total_failures"] == 1
-        assert failure["trades"][0]["trade_id"] == "T002"
+        assert failure["count"] == 1
+        # 验证失败原因已记录
+        assert "入场时机偏早，趋势尚未确立" in failure["failure_reasons"]
 
 
 class TestPhase4ConceptualFeedback:

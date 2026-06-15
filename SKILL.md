@@ -84,13 +84,15 @@ E:\Trend-scanner-Agent\
 │       ├── belief_propagation.py   # Phase 4: 信念传播
 │       └── rl_interface_designer.py # Phase 5: RL 接口设计
 ├── tools/
-│   ├── scan_opportunities.py   # Scanner 脚本
-│   ├── scan_opportunities_v4.py # Scanner v4（集成动态因子）
-│   └── monitor_positions.py    # Monitor 脚本
+│   ├── scan_opportunities.py   # Scanner 脚本（支持 --use-dynamic-factors）
+│   ├── monitor_positions.py    # Monitor 脚本
+│   └── deploy_v4.sh            # v4.0 部署脚本
 ├── agents/
 │   ├── orchestrator.md         # Orchestrator Agent
 │   ├── reasoner.md             # Reasoner Agent
-│   ├── debater.md              # Debater Agent（多角色）
+│   ├── debater.md              # Debater Agent v2.0（多角色协作）
+│   ├── analyst_role.md         # 分析师角色定义
+│   ├── risk_officer_role.md    # 风控官角色定义
 │   └── evolver.md              # Evolver Agent v2.0（RL 集成）
 ├── tests/
 │   ├── test_factor_generator.py    # Phase 1 测试
@@ -131,9 +133,10 @@ E:\Trend-scanner-Agent\
 | test_report_parser.py | 16 | 通过 |
 | test_multi_debater.py | 22 | 通过 |
 | test_rl_interface.py | 15 | 通过 |
+| test_e2e_pipeline.py（端到端） | 14 | 通过 |
 | test_full_pipeline.py（集成） | 22 | 通过 |
 | test_performance.py（基准） | 8 | 通过 |
-| **总计** | **116** | **全部通过** |
+| **总计** | **130+** | **全部通过** |
 
 ## 与 v1 Skill 的关系
 
@@ -150,6 +153,6 @@ E:\Trend-scanner-Agent\
 | P0 | 研报知识注入 | ✅ 已完成 | 研报→因子→验证→入库 | 多 Agent 提取 |
 | P1 | 多角色 Debater | ✅ 已完成 | 分析师/风控/研究员对抗 | FinCon 思想 |
 | P1 | RL 接口自设计 | ✅ 已完成 | LLM 设计状态/奖励 | GIFT 思想 |
-| P2 | 集成测试 | ✅ 已完成 | 端到端+性能基准 | 116 测试全部通过 |
+| P2 | 集成测试 | ✅ 已完成 | 端到端+性能基准 | 130+ 测试全部通过 |
 | P3 | TqSdk 集成 | 待实施 | 实时数据对接 | subprocess 隔离 |
-| P3 | 部署脚本 | 待实施 | 自动化部署 | deploy_v4.sh |
+| P3 | 部署脚本 | ✅ 已完成 | 自动化部署 | deploy_v4.sh |

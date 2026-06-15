@@ -1,4 +1,23 @@
 {
-  "updated_at": null,
-  "positions": []
+  "updated_at": "2026-06-15T14:00:00",
+  "positions": [
+    {
+      "symbol": "DCE.jm2609",
+      "direction": "LONG",
+      "entry_price": 1350,
+      "current_price": 1385,
+      "holding_days": 3,
+      "pnl_pct": 2.59,
+      "notes": "焦煤多头，关注安全检查限产"
+    },
+    {
+      "symbol": "CZCE.CF609",
+      "direction": "SHORT",
+      "entry_price": 15000,
+      "current_price": 14800,
+      "holding_days": 5,
+      "pnl_pct": 1.33,
+      "notes": "棉花空头，关注供应端宽松"
+    }
+  ]
 }

@@ -294,6 +294,7 @@ python tools/scan_opportunities.py [选项]
 | `--output` | 输出格式 | `--output text` 或 `--output json` |
 | `--save` | 保存结果到文件 | `--save` |
 | `--use-dynamic-factors` | 启用动态因子 | `--use-dynamic-factors` |
+| `--reasoner` | 启用Reasoner深度分析 | `--reasoner --output text --save` |
 
 #### 因子评估与进化
 

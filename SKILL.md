@@ -32,6 +32,7 @@ python tools/scan_opportunities.py --evolve --evolve-rounds 5
 | 能力 | 命令 |
 |------|------|
 | 全品种扫描 | `--output text --save` |
+| **Reasoner深度分析** | `--reasoner --output text --save` |
 | 因子评估 | `--evaluate-factors` |
 | 因子进化 | `--evolve` |
 | 参数优化 | `--optimize-params` |

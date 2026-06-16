@@ -579,6 +579,135 @@ class FactorEvolutionEngine:
 
         return variants[:count]
 
+    def load_seeds_from_report(self, report_content: str,
+                                report_metadata: Dict = None) -> int:
+        """
+        从研报内容中提取因子并加载到种子池
+
+        Args:
+            report_content: 研报文本内容
+            report_metadata: 研报元数据（标题、来源等）
+
+        Returns:
+            提取的因子数量
+        """
+        if not self.report_parser:
+            logger.warning("研报解析器未初始化")
+            return 0
+
+        if not self.seed_pool:
+            logger.warning("种子因子池未初始化")
+            return 0
+
+        try:
+            # 解析研报
+            analysis = self.report_parser.parse_report(report_content, report_metadata)
+
+            count = 0
+            for suggestion in analysis.factor_suggestions:
+                # 将因子建议转为代码（如果解析器没有直接生成代码，则跳过）
+                if hasattr(suggestion, 'code') and suggestion.code:
+                    self.seed_pool.add_seed(
+                        name=suggestion.name,
+                        code=suggestion.code,
+                        logic=suggestion.logic,
+                        economic_rationale=suggestion.expected_effect,
+                        source=f"report:{analysis.title}",
+                    )
+                    count += 1
+
+            logger.info(f"从研报中提取 {count} 个种子因子")
+            return count
+
+        except Exception as e:
+            logger.error(f"研报解析失败: {e}")
+            return 0
+
+    def load_seeds_from_report_parser_output(self, path: str = None) -> int:
+        """
+        从 report_parser 的输出文件中加载种子因子
+
+        Args:
+            path: report_factors.json 路径
+
+        Returns:
+            加载数量
+        """
+        if not self.seed_pool:
+            return 0
+        return self.seed_pool.load_from_report_parser(path)
+
+    def analyze_trade_trajectories(self, trade_records: List[Dict]) -> Dict:
+        """
+        分析交易轨迹，提取失败/成功模式
+
+        Args:
+            trade_records: 交易记录列表
+
+        Returns:
+            分析结果
+        """
+        if not self.trajectory_analyzer:
+            logger.warning("轨迹分析器未初始化")
+            return {}
+
+        try:
+            # 转换为 TradeRecord 对象
+            from trend_scanner.trajectory_analyzer import TradeRecord
+            records = []
+            for t in trade_records:
+                record = TradeRecord(
+                    trade_id=t.get('trade_id', ''),
+                    symbol=t.get('symbol', ''),
+                    direction=t.get('direction', ''),
+                    entry_price=t.get('entry_price', 0),
+                    exit_price=t.get('exit_price', 0),
+                    entry_time=t.get('entry_time', ''),
+                    exit_time=t.get('exit_time', ''),
+                    pnl=t.get('pnl', 0),
+                    pnl_percent=t.get('pnl_percent', 0),
+                    holding_period=t.get('holding_period', 0),
+                    market_state=t.get('market_state', ''),
+                    trend_phase=t.get('trend_phase', ''),
+                    volatility=t.get('volatility', ''),
+                    er=t.get('er', 0),
+                    tsi=t.get('tsi', 0),
+                    rsi=t.get('rsi', 0),
+                    adx=t.get('adx', 0),
+                    max_drawdown=t.get('max_drawdown', 0),
+                    sharpe_ratio=t.get('sharpe_ratio', 0),
+                    failure_reason=t.get('failure_reason'),
+                )
+                records.append(record)
+
+            # 分析轨迹
+            analysis = self.trajectory_analyzer.analyze(records)
+
+            # 将分析结果注入经验数据库
+            if self.experience_db and analysis:
+                patterns = analysis.get('patterns', [])
+                for pattern in patterns:
+                    self.experience_db.record_trajectory(
+                        factor_id=f"trade_pattern_{pattern.get('type', 'unknown')}",
+                        trajectory=[{
+                            'round': 0,
+                            'factor_name': pattern.get('name', ''),
+                            'logic': pattern.get('description', ''),
+                            'params': {},
+                            'icir': 0,
+                            't_stat': 0,
+                            'decision': 'observe',
+                            'reasons': [pattern.get('insight', '')],
+                            'timestamp': datetime.now().isoformat(),
+                        }],
+                    )
+
+            return analysis
+
+        except Exception as e:
+            logger.error(f"交易轨迹分析失败: {e}")
+            return {}
+
     def generate_report(self, result: EvolutionResult) -> str:
         """
         生成进化报告

@@ -133,6 +133,62 @@ class TqSdkSource(DataSource):
         # 贵金属
         'AU': 'KQ.m@SHFE.au',
         'AG': 'KQ.m@SHFE.ag',
+
+        # 中金所 - 股指期货
+        'IF': 'KQ.m@CFFEX.if',
+        'IC': 'KQ.m@CFFEX.ic',
+        'IH': 'KQ.m@CFFEX.ih',
+        'IM': 'KQ.m@CFFEX.im',
+
+        # 中金所 - 国债期货
+        'T': 'KQ.m@CFFEX.t',
+        'TF': 'KQ.m@CFFEX.tf',
+        'TL': 'KQ.m@CFFEX.tl',
+        'TS': 'KQ.m@CFFEX.ts',
+
+        # 上期所 - 补充品种
+        'AO': 'KQ.m@SHFE.ao',
+        'BR': 'KQ.m@SHFE.br',
+        'SP': 'KQ.m@SHFE.sp',
+        'SS': 'KQ.m@SHFE.ss',
+        'WR': 'KQ.m@SHFE.wr',
+        'AD': 'KQ.m@SHFE.ad',
+        'OP': 'KQ.m@SHFE.op',
+
+        # 上期能源 - 补充品种
+        'BC': 'KQ.m@INE.bc',
+        'EC': 'KQ.m@INE.ec',
+        'LU': 'KQ.m@INE.lu',
+        'NR': 'KQ.m@INE.nr',
+
+        # 大商所 - 补充品种
+        'BB': 'KQ.m@DCE.bb',
+        'BZ': 'KQ.m@DCE.bz',
+        'FB': 'KQ.m@DCE.fb',
+        'LF': 'KQ.m@DCE.lf',
+        'LG': 'KQ.m@DCE.lg',
+        'PG': 'KQ.m@DCE.pg',
+        'PPF': 'KQ.m@DCE.ppf',
+        'RR': 'KQ.m@DCE.rr',
+        'VF': 'KQ.m@DCE.vf',
+
+        # 郑商所 - 补充品种
+        'CJ': 'KQ.m@CZCE.CJ',
+        'CY': 'KQ.m@CZCE.CY',
+        'JR': 'KQ.m@CZCE.JR',
+        'LR': 'KQ.m@CZCE.LR',
+        'PF': 'KQ.m@CZCE.PF',
+        'PK': 'KQ.m@CZCE.PK',
+        'PL': 'KQ.m@CZCE.PL',
+        'PM': 'KQ.m@CZCE.PM',
+        'PR': 'KQ.m@CZCE.PR',
+        'PX': 'KQ.m@CZCE.PX',
+        'RI': 'KQ.m@CZCE.RI',
+        'RS': 'KQ.m@CZCE.RS',
+        'SH': 'KQ.m@CZCE.SH',
+        'UR': 'KQ.m@CZCE.UR',
+        'WH': 'KQ.m@CZCE.WH',
+        'ZC': 'KQ.m@CZCE.ZC',
     }
     
     def __init__(self):

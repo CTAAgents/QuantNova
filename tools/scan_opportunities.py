@@ -58,24 +58,28 @@ def normalize_symbol(symbol: str) -> str:
     return symbol.upper()
 
 
-def scan_symbol(symbol: str, data_source, signal_filter: Dict[str, Any], use_dynamic_factors: bool = False) -> Optional[Dict[str, Any]]:
+def scan_symbol(symbol: str, data_source, signal_filter: Dict[str, Any],
+                use_dynamic_factors: bool = False,
+                allow_tqsdk_fallback: bool = True) -> Optional[Dict[str, Any]]:
     """
     扫描单个品种，返回信号（如果有）
-    
+
     参数:
         symbol: 品种代码
         data_source: 数据源实例
         signal_filter: 信号筛选条件
-    
+        allow_tqsdk_fallback: 是否允许 TqSdk 兜底（健康检查失败时为 False）
+
     返回:
         信号字典，无信号返回 None
     """
     try:
         # 标准化品种代码
         data_symbol = normalize_symbol(symbol)
-        
-        # 获取 K 线数据
-        df = data_source.get_kline(data_symbol, days=120)
+
+        # 获取 K 线数据（根据健康检查决定是否允许 TqSdk 兜底）
+        df = data_source.get_kline(data_symbol, days=120,
+                                   allow_tqsdk_fallback=allow_tqsdk_fallback)
         if df is None or len(df) < 60:
             return None
         

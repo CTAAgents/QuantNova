@@ -43,6 +43,7 @@ class TqSdkBridge:
                      15 秒超时足以覆盖绝大多数场景。
         """
         self.timeout = timeout
+        self.batch_timeout = 90  # 批量操作（行情/K线）固定 90 秒超时
         self.worker_script = Path(__file__).parent / 'tqsdk_worker.py'
     
     def get_kline(

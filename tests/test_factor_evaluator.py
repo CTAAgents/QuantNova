@@ -56,9 +56,10 @@ def generate_mock_kline(symbol: str, days: int = 120, seed: int = 42,
 def generate_mock_data(n_symbols: int = 20, days: int = 120) -> dict:
     """生成多品种模拟数据"""
     symbols = [f'TEST{i:02d}' for i in range(n_symbols)]
+    dates = pd.date_range(end=pd.Timestamp('2026-06-15'), periods=days, freq='B')
     data = {}
     for sym in symbols:
-        data[sym] = generate_mock_kline(sym, days)
+        data[sym] = generate_mock_kline(sym, days, dates=dates)
     return data
 
 

@@ -193,8 +193,11 @@ class FactorEvaluator:
         """
         self._kline_data = {}
         for symbol, df in kline_data.items():
+            df = df.copy()
             if 'date' in df.columns:
                 df = df.set_index('date')
+            # 统一日期精度到天（去掉时分秒）
+            df.index = pd.to_datetime(df.index).normalize()
             self._kline_data[symbol] = df
         self._compute_returns()
 

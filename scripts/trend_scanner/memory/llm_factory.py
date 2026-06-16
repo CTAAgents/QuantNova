@@ -201,7 +201,7 @@ class WorkBuddyProvider(LLMProvider):
     DEFAULT_BASE_URL = "https://token-plan-cn.xiaomimimo.com/v1"
     DEFAULT_MODEL = "mimo-v2.5-pro"
     
-    def __init__(self, api_key: str = None, model: str = None, base_url: str = None, timeout: int = 60):
+    def __init__(self, api_key: str = None, model: str = None, base_url: str = None, timeout: int = 120):
         self._api_key = api_key or os.getenv("LLM_API_KEY")
         self._model = model or os.getenv("LLM_MODEL", self.DEFAULT_MODEL)
         self._base_url = base_url or os.getenv("LLM_BASE_URL", self.DEFAULT_BASE_URL)

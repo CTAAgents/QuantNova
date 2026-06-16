@@ -115,7 +115,7 @@ python tools/scan_opportunities.py --evolve --evolve-rounds 5
 │                                  ▼                                   │
 │  ┌──────────────────────────────────────────────────────────────┐   │
 │  │                    推理层（Reasoning Layer）                   │   │
-│  │  Reasoner Agent（LLM 推理 → 决策简报）                       │   │
+│  │  Reasoner Agent（LLM 推理 → 决策简报）  ← v6.0 核心升级      │   │
 │  │  Debater Agent（多角色协作辩论）                              │   │
 │  │  Orchestrator Agent（主协调器）                               │   │
 │  └──────────────────────────────┬───────────────────────────────┘   │
@@ -126,6 +126,7 @@ python tools/scan_opportunities.py --evolve --evolve-rounds 5
 │  │  StopLossCalculator（动态止损）                               │   │
 │  │  ExecutionEngine（执行引擎 + 风控）                           │   │
 │  │  PortfolioManager（组合管理）                                 │   │
+│  │  PositionHealthChecker（持仓健康度）  ← v6.0 新增            │   │
 │  └──────────────────────────────┬───────────────────────────────┘   │
 │                                  ▼                                   │
 │  ┌──────────────────────────────────────────────────────────────┐   │

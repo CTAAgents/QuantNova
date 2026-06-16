@@ -447,6 +447,23 @@ def main():
             from trend_scanner.factor_evolution_engine import FactorEvolutionEngine
 
             engine = FactorEvolutionEngine()
+
+            # 从研报加载种子因子
+            if args.load_report:
+                import os
+                if os.path.exists(args.load_report):
+                    with open(args.load_report, 'r', encoding='utf-8') as f:
+                        report_content = f.read()
+                    n = engine.load_seeds_from_report(
+                        report_content,
+                        {'title': os.path.basename(args.load_report)}
+                    )
+                    print(f"从研报加载 {n} 个种子因子")
+                else:
+                    # 尝试从 report_parser 输出加载
+                    n = engine.load_seeds_from_report_parser_output(args.load_report)
+                    print(f"从报告解析结果加载 {n} 个种子因子")
+
             result = engine.evolve(
                 max_rounds=args.evolve_rounds,
                 candidates_per_round=5,

@@ -655,6 +655,55 @@ def main():
         except Exception as e:
             print(f"健康度评估失败: {e}")
 
+    # 持仓健康度评估
+    if args.position_health:
+        print(f"\n{'=' * 60}")
+        print("持仓健康度评估")
+        print(f"{'=' * 60}")
+        try:
+            from trend_scanner.position_health import PositionHealthChecker, load_positions_from_file
+
+            # 加载持仓
+            positions = load_positions_from_file()
+            if not positions:
+                print("无持仓信息，请先配置 config/positions.json")
+            else:
+                print(f"加载 {len(positions)} 个持仓")
+                checker = PositionHealthChecker()
+                
+                results = []
+                for pos in positions:
+                    symbol = pos.get('symbol', '')
+                    direction = pos.get('direction', 'LONG')
+                    print(f"\n分析 {symbol} ({direction})...", flush=True)
+                    
+                    result = checker.check(pos)
+                    results.append(result)
+                    
+                    # 显示结果
+                    score = result.get('health_score', 0)
+                    grade = result.get('health_grade', '未知')
+                    recommendation = result.get('recommendation', '')
+                    risk_factors = result.get('risk_factors', [])
+                    
+                    print(f"  健康评分: {score}/100 ({grade})")
+                    print(f"  建议: {recommendation}")
+                    
+                    if risk_factors:
+                        print(f"  风险: {', '.join(risk_factors[:3])}")
+                
+                # 保存结果
+                output_path = 'data/position_health.json'
+                import json
+                with open(output_path, 'w', encoding='utf-8') as f:
+                    json.dump(results, f, ensure_ascii=False, indent=2)
+                print(f"\n结果已保存到 {output_path}")
+                
+        except Exception as e:
+            print(f"持仓健康度评估失败: {e}")
+            import traceback
+            traceback.print_exc()
+
     # 过拟合检测
     if args.overfitting_check:
         print(f"\n{'=' * 60}")

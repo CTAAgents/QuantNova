@@ -370,6 +370,16 @@ def main():
     parser.add_argument("--use-dynamic-factors", action="store_true", help="启用动态因子生成器")
     parser.add_argument("--evaluate-factors", action="store_true",
                         help="扫描后运行截面 IC/ICIR 因子评估")
+    parser.add_argument("--evolve", action="store_true",
+                        help="运行闭环因子进化引擎")
+    parser.add_argument("--optimize-params", action="store_true",
+                        help="运行贝叶斯参数优化")
+    parser.add_argument("--evolve-rounds", type=int, default=5,
+                        help="进化轮数（默认 5）")
+    parser.add_argument("--evolve-target", type=int, default=3,
+                        help="目标晋升因子数（默认 3）")
+    parser.add_argument("--opt-trials", type=int, default=30,
+                        help="参数优化试验次数（默认 30）")
     
     args = parser.parse_args()
     

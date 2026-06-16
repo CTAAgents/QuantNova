@@ -355,4 +355,13 @@ __all__ = [
     # 数据源适配器
     "DataSource", "TqSdkSource", "CsvSource", "DataSourceFactory",
     "get_kline", "get_quote", "get_active_symbols",
+    # v5.0 因子进化子系统
+    "FactorEvaluator", "FactorEvaluationResult", "BUILTIN_FACTORS",
+    "FactorExecutor",
+    "FactorGate", "GateDecision",
+    "FactorEvolutionEngine", "EvolutionResult",
+    "FactorParamOptimizer", "OptimizationResult",
+    "SeedFactorPool",
+    "MultiFactorModel", "ModelResult",
+    "FactorExperienceDB",
 ]

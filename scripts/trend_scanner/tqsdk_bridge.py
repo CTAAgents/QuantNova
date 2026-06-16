@@ -33,17 +33,17 @@ import pandas as pd
 class TqSdkBridge:
     """TqSdk 桥接器"""
     
-    def __init__(self, timeout: int = 15):
+    def __init__(self, timeout: int = 20):
         """
         初始化桥接器
 
         Args:
             timeout: 超时时间（秒）。盘前/收盘后 TqSdk 无数据更新时，
                      wait_update(deadline) 会在 10 秒内返回，
-                     15 秒超时足以覆盖绝大多数场景。
+                     20 秒超时覆盖 K 线获取（~16 秒）等场景。
         """
         self.timeout = timeout
-        self.batch_timeout = 90  # 批量操作（行情/K线）固定 90 秒超时
+        self.batch_timeout = 120  # 批量操作（行情/K线）固定 120 秒超时
         self.worker_script = Path(__file__).parent / 'tqsdk_worker.py'
     
     def get_kline(
@@ -214,7 +214,7 @@ class TqSdkBridge:
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=self.timeout * 2,  # 获取所有品种需要更长时间
+                timeout=self.batch_timeout,  # 获取所有品种需要更长时间
                 cwd=str(Path(__file__).parent.parent.parent)
             )
             
@@ -275,7 +275,7 @@ class TqSdkBridge:
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=self.timeout * 3,  # 批量获取需要更长时间
+                timeout=self.batch_timeout,  # 批量获取需要更长时间
                 cwd=str(Path(__file__).parent.parent.parent)
             )
             

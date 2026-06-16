@@ -229,4 +229,4 @@ A: 编辑 `data/seed_factors.json`，添加因子代码：
 
 ## 完整技术文档
 
-如需了解系统架构、模块清单、工作流细节，请查看 [SKILL.md](../SKILL.md)。
+如需了解系统架构、模块清单、工作流细节，请查看 [README.md](../README.md)。

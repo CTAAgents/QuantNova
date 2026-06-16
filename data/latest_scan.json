@@ -1,27 +1,27 @@
 {
-  "scan_time": "2026-06-16T17:05:35.609824",
+  "scan_time": "2026-06-16T17:18:21.100898",
   "total_scanned": 86,
   "signals": [
     {
       "symbol": "BZ",
       "trend_phase": "UNKNOWN",
-      "trend_strength_composite": 0.36,
-      "tsi": -25.73,
+      "trend_strength_composite": 0.361,
+      "tsi": -25.47,
       "er": 0.539,
       "r_squared": 0.584,
       "direction": "SHORT",
       "signal_strength": "MEDIUM",
-      "trigger_reason": "TSI=-25.7 或 R²=0.58 [mode=or, 满足2/4项]",
+      "trigger_reason": "TSI=-25.5 或 R²=0.58 [mode=or, 满足2/4项]",
       "hurst": 0.33,
-      "rsi": 29.7,
+      "rsi": 29.4,
       "adx": 40.9,
       "position_suggestion": {
         "method": "adaptive",
-        "position_size": 0.18,
+        "position_size": 0.1803,
         "position_pct": "18.0%",
         "inputs": {
-          "trend_strength": 0.360085312862983,
-          "volatility": 0.03486886912912716,
+          "trend_strength": 0.360504524044631,
+          "volatility": 0.034742587684248406,
           "win_rate": 0.55,
           "win_loss_ratio": 1.5
         },
@@ -31,16 +31,16 @@
         }
       },
       "stop_loss": {
-        "stop_price": 7621.08,
+        "stop_price": 7618.86,
         "atr_multiplier": 2.5,
-        "risk_points": 611.08
+        "risk_points": 608.86
       }
     },
     {
       "symbol": "JD",
       "trend_phase": "UNKNOWN",
       "trend_strength_composite": 0.647,
-      "tsi": 43.78,
+      "tsi": 43.76,
       "er": 0.534,
       "r_squared": 0.776,
       "direction": "LONG",
@@ -54,8 +54,8 @@
         "position_size": 0.3235,
         "position_pct": "32.4%",
         "inputs": {
-          "trend_strength": 0.6470491832072613,
-          "volatility": 0.026197918226167898,
+          "trend_strength": 0.6470398071214792,
+          "volatility": 0.026197825280325965,
           "win_rate": 0.55,
           "win_loss_ratio": 1.5
         },
@@ -65,31 +65,31 @@
         }
       },
       "stop_loss": {
-        "stop_price": 4392.17,
+        "stop_price": 4392.18,
         "atr_multiplier": 2.5,
-        "risk_points": 307.83
+        "risk_points": 307.82
       }
     },
     {
       "symbol": "EC",
       "trend_phase": "UNKNOWN",
       "trend_strength_composite": 0.616,
-      "tsi": 53.53,
+      "tsi": 53.73,
       "er": 0.513,
       "r_squared": 0.784,
       "direction": "LONG",
       "signal_strength": "MEDIUM",
-      "trigger_reason": "TSI=53.5 或 趋势强度=0.62 或 R²=0.78 [mode=or, 满足3/4项]",
+      "trigger_reason": "TSI=53.7 或 趋势强度=0.62 或 R²=0.78 [mode=or, 满足3/4项]",
       "hurst": 0.663,
       "rsi": 70.3,
       "adx": 80.8,
       "position_suggestion": {
         "method": "adaptive",
-        "position_size": 0.308,
+        "position_size": 0.3081,
         "position_pct": "30.8%",
         "inputs": {
-          "trend_strength": 0.6160204025309389,
-          "volatility": 0.05172268961267034,
+          "trend_strength": 0.6162138505262434,
+          "volatility": 0.05159841967040766,
           "win_rate": 0.55,
           "win_loss_ratio": 1.5
         },
@@ -99,31 +99,31 @@
         }
       },
       "stop_loss": {
-        "stop_price": 3377.42,
+        "stop_price": 3378.62,
         "atr_multiplier": 2.5,
-        "risk_points": 501.58
+        "risk_points": 500.38
       }
     },
     {
       "symbol": "SC",
       "trend_phase": "UNKNOWN",
       "trend_strength_composite": 0.41,
-      "tsi": -24.46,
+      "tsi": -24.22,
       "er": 0.568,
       "r_squared": 0.722,
       "direction": "SHORT",
       "signal_strength": "MEDIUM",
-      "trigger_reason": "TSI=-24.5 或 R²=0.72 [mode=or, 满足2/4项]",
+      "trigger_reason": "TSI=-24.2 或 R²=0.72 [mode=or, 满足2/4项]",
       "hurst": 0.36,
-      "rsi": 31.6,
+      "rsi": 31.3,
       "adx": 32.0,
       "position_suggestion": {
         "method": "adaptive",
-        "position_size": 0.2048,
+        "position_size": 0.205,
         "position_pct": "20.5%",
         "inputs": {
-          "trend_strength": 0.4095152648500484,
-          "volatility": 0.05343515770795789,
+          "trend_strength": 0.4099129351856848,
+          "volatility": 0.05316424740774465,
           "win_rate": 0.55,
           "win_loss_ratio": 1.5
         },
@@ -133,31 +133,31 @@
         }
       },
       "stop_loss": {
-        "stop_price": 596.27,
+        "stop_price": 595.91,
         "atr_multiplier": 2.5,
-        "risk_points": 70.27
+        "risk_points": 69.91
       }
     },
     {
       "symbol": "BR",
       "trend_phase": "UNKNOWN",
       "trend_strength_composite": 0.435,
-      "tsi": -39.82,
+      "tsi": -39.46,
       "er": 0.567,
       "r_squared": 0.771,
       "direction": "SHORT",
       "signal_strength": "MEDIUM",
-      "trigger_reason": "TSI=-39.8 或 R²=0.77 [mode=or, 满足2/4项]",
+      "trigger_reason": "TSI=-39.5 或 R²=0.77 [mode=or, 满足2/4项]",
       "hurst": 0.35,
-      "rsi": 34.2,
+      "rsi": 34.1,
       "adx": 57.1,
       "position_suggestion": {
         "method": "adaptive",
-        "position_size": 0.2174,
-        "position_pct": "21.7%",
+        "position_size": 0.2176,
+        "position_pct": "21.8%",
         "inputs": {
-          "trend_strength": 0.4347407960063726,
-          "volatility": 0.03637951032959614,
+          "trend_strength": 0.4351687741103112,
+          "volatility": 0.03630761401116549,
           "win_rate": 0.55,
           "win_loss_ratio": 1.5
         },
@@ -167,9 +167,9 @@
         }
       },
       "stop_loss": {
-        "stop_price": 14700.53,
+        "stop_price": 14698.11,
         "atr_multiplier": 2.5,
-        "risk_points": 1225.53
+        "risk_points": 1223.11
       }
     }
   ],
@@ -280,6 +280,6 @@
       "defensive": 0.2
     },
     "recommendation": "经济衰退期，趋势跟踪为主，降低仓位",
-    "timestamp": "2026-06-16T17:05:16.100204"
+    "timestamp": "2026-06-16T17:17:57.784081"
   }
 }

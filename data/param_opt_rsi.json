@@ -1,0 +1,82 @@
+{
+  "factor_name": "rsi",
+  "best_params": {
+    "period": 21
+  },
+  "best_score": 0.44384269228354783,
+  "n_trials": 30,
+  "n_completed": 30,
+  "improvement_pct": 0.0,
+  "top_trials": [
+    {
+      "trial": 20,
+      "params": {
+        "period": 21
+      },
+      "score": 0.44384269228354783
+    },
+    {
+      "trial": 21,
+      "params": {
+        "period": 21
+      },
+      "score": 0.44384269228354783
+    },
+    {
+      "trial": 3,
+      "params": {
+        "period": 20
+      },
+      "score": 0.33620078492816163
+    },
+    {
+      "trial": 8,
+      "params": {
+        "period": 20
+      },
+      "score": 0.33620078492816163
+    },
+    {
+      "trial": 12,
+      "params": {
+        "period": 20
+      },
+      "score": 0.33620078492816163
+    },
+    {
+      "trial": 16,
+      "params": {
+        "period": 20
+      },
+      "score": 0.33620078492816163
+    },
+    {
+      "trial": 22,
+      "params": {
+        "period": 22
+      },
+      "score": 0.33135249812343076
+    },
+    {
+      "trial": 25,
+      "params": {
+        "period": 22
+      },
+      "score": 0.33135249812343076
+    },
+    {
+      "trial": 13,
+      "params": {
+        "period": 15
+      },
+      "score": 0.31834812309267724
+    },
+    {
+      "trial": 29,
+      "params": {
+        "period": 15
+      },
+      "score": 0.31834812309267724
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "seeds": [
+    {
+      "name": "adaptive_momentum",
+      "code": "def factor(df):\n    \"\"\"自适应动量因子：根据波动率调整动量窗口\"\"\"\n    import pandas as pd\n    import numpy as np\n    vol = df['close'].pct_change().rolling(20).std()\n    vol_median = vol.rolling(60).median()\n    vol_ratio = vol / vol_median.replace(0, np.nan)\n    # 高波动时缩短窗口，低波动时延长窗口\n    window = (20 / vol_ratio).clip(5, 60).fillna(20).astype(int)\n    result = pd.Series(0.0, index=df.index)\n    for i in range(60, len(df)):\n        w = window.iloc[i]\n        if w > 0 and i >= w:\n            result.iloc[i] = df['close'].iloc[i] / df['close'].iloc[i - w] - 1\n    return result.fillna(0)\n",
+      "logic": "根据波动率自适应调整动量窗口，高波动时用短窗口快速响应，低波动时用长窗口过滤噪声",
+      "economic_rationale": "期货市场波动率具有聚集性，高波动期趋势反转快，需要短窗口捕捉；低波动期趋势稳定，长窗口更可靠",
+      "source": "preset",
+      "category": "momentum",
+      "status": "pending",
+      "evaluation": {},
+      "created_at": "2026-06-16T11:40:14.948222",
+      "updated_at": "2026-06-16T11:40:14.948222"
+    },
+    {
+      "name": "volatility_adjusted_trend",
+      "code": "def factor(df):\n    \"\"\"波动率调整趋势因子：EMA 距离除以 ATR\"\"\"\n    import pandas as pd\n    import numpy as np\n    ema20 = df['close'].ewm(span=20, adjust=False).mean()\n    ema60 = df['close'].ewm(span=60, adjust=False).mean()\n    high, low, close = df['high'], df['low'], df['close']\n    tr = pd.concat([\n        high - low,\n        (high - close.shift(1)).abs(),\n        (low - close.shift(1)).abs()\n    ], axis=1).max(axis=1)\n    atr = tr.rolling(14).mean()\n    # 趋势距离 / ATR，标准化到风险单位\n    return ((ema20 - ema60) / atr.replace(0, np.nan)).fillna(0)\n",
+      "logic": "EMA20/EMA60 趋势距离除以 ATR，将趋势强度标准化到风险单位",
+      "economic_rationale": "单纯的趋势距离（EMA20-EMA60）在不同品种间不可比，除以 ATR 后可以跨品种比较趋势强度",
+      "source": "preset",
+      "category": "momentum",
+      "status": "pending",
+      "evaluation": {},
+      "created_at": "2026-06-16T11:40:14.949222",
+      "updated_at": "2026-06-16T11:40:14.949222"
+    },
+    {
+      "name": "volume_breakout",
+      "code": "def factor(df):\n    \"\"\"成交量突破因子：当日成交量 / 20日均量\"\"\"\n    import pandas as pd\n    vol_ratio = df['volume'] / df['volume'].rolling(20).mean().replace(0, 1)\n    # 成交量突破配合价格方向\n    price_change = df['close'].pct_change()\n    return (vol_ratio * price_change.apply(lambda x: 1 if x > 0 else -1)).fillna(0)\n",
+      "logic": "成交量突破（当日量/20日均量）乘以价格方向，放量上涨为正，放量下跌为负",
+      "economic_rationale": "成交量是市场参与度的直接指标，放量配合价格方向是趋势确认的经典信号",
+      "source": "preset",
+      "category": "volume",
+      "status": "pending",
+      "evaluation": {},
+      "created_at": "2026-06-16T11:40:14.951221",
+      "updated_at": "2026-06-16T11:40:14.951221"
+    },
+    {
+      "name": "regime_adaptive_rsi",
+      "code": "def factor(df):\n    \"\"\"市场状态自适应 RSI：趋势行情用 RSI 突破，震荡行情用 RSI 反转\"\"\"\n    import pandas as pd\n    import numpy as np\n    # 计算 ADX 判断市场状态\n    period = 14\n    high, low, close = df['high'], df['low'], df['close']\n    tr = pd.concat([high - low, (high - close.shift(1)).abs(), (low - close.shift(1)).abs()], axis=1).max(axis=1)\n    atr = tr.rolling(period).mean()\n    up_move = high - high.shift(1)\n    down_move = low.shift(1) - low\n    plus_dm = up_move.where((up_move > down_move) & (up_move > 0), 0)\n    minus_dm = down_move.where((down_move > up_move) & (down_move > 0), 0)\n    plus_di = 100 * plus_dm.rolling(period).mean() / atr.replace(0, np.nan)\n    minus_di = 100 * minus_dm.rolling(period).mean() / atr.replace(0, np.nan)\n    dx = 100 * (plus_di - minus_di).abs() / (plus_di + minus_di).replace(0, np.nan)\n    adx = dx.rolling(period).mean()\n    # 计算 RSI\n    delta = close.diff()\n    gain = delta.where(delta > 0, 0).rolling(14).mean()\n    loss = (-delta.where(delta < 0, 0)).rolling(14).mean()\n    rs = gain / loss.replace(0, np.nan)\n    rsi = 100 - (100 / (1 + rs))\n    # 趋势行情：RSI > 50 做多，< 50 做空\n    # 震荡行情：RSI > 70 做空，< 30 做多\n    is_trending = adx > 25\n    trend_signal = (rsi - 50) / 50\n    range_signal = -(rsi - 50) / 50\n    result = trend_signal.where(is_trending, range_signal)\n    return result.fillna(0)\n",
+      "logic": "根据 ADX 判断市场状态，趋势行情用 RSI 突破逻辑，震荡行情用 RSI 反转逻辑",
+      "economic_rationale": "RSI 在趋势和震荡行情中的有效逻辑不同：趋势中应顺势（RSI>50做多），震荡中应逆势（RSI>70做空）",
+      "source": "preset",
+      "category": "composite",
+      "status": "pending",
+      "evaluation": {},
+      "created_at": "2026-06-16T11:40:14.952221",
+      "updated_at": "2026-06-16T11:40:14.952221"
+    },
+    {
+      "name": "multi_timeframe_momentum",
+      "code": "def factor(df):\n    \"\"\"多时间框架动量因子：5日+20日+60日动量加权\"\"\"\n    import pandas as pd\n    mom5 = df['close'].pct_change(5)\n    mom20 = df['close'].pct_change(20)\n    mom60 = df['close'].pct_change(60)\n    # 短期动量权重高，长期动量权重低\n    result = 0.5 * mom5 + 0.3 * mom20 + 0.2 * mom60\n    return result.fillna(0)\n",
+      "logic": "多时间框架动量加权：5日(50%) + 20日(30%) + 60日(20%)",
+      "economic_rationale": "不同时间框架的动量信号可以互补：短期动量响应快但噪声大，长期动量稳定但滞后",
+      "source": "preset",
+      "category": "momentum",
+      "status": "pending",
+      "evaluation": {},
+      "created_at": "2026-06-16T11:40:14.953220",
+      "updated_at": "2026-06-16T11:40:14.953220"
+    }
+  ],
+  "summary": {
+    "total": 5,
+    "categories": {
+      "momentum": 3,
+      "volume": 1,
+      "composite": 1
+    },
+    "statuses": {
+      "pending": 5
+    }
+  },
+  "updated_at": "2026-06-16T11:40:14.953220"
+}

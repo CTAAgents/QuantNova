@@ -1,0 +1,82 @@
+{
+  "factor_name": "momentum",
+  "best_params": {
+    "window": 20
+  },
+  "best_score": 0.23492219021592195,
+  "n_trials": 30,
+  "n_completed": 30,
+  "improvement_pct": 0.0,
+  "top_trials": [
+    {
+      "trial": 14,
+      "params": {
+        "window": 20
+      },
+      "score": 0.23492219021592195
+    },
+    {
+      "trial": 15,
+      "params": {
+        "window": 20
+      },
+      "score": 0.23492219021592195
+    },
+    {
+      "trial": 21,
+      "params": {
+        "window": 20
+      },
+      "score": 0.23492219021592195
+    },
+    {
+      "trial": 22,
+      "params": {
+        "window": 20
+      },
+      "score": 0.23492219021592195
+    },
+    {
+      "trial": 23,
+      "params": {
+        "window": 20
+      },
+      "score": 0.23492219021592195
+    },
+    {
+      "trial": 25,
+      "params": {
+        "window": 20
+      },
+      "score": 0.23492219021592195
+    },
+    {
+      "trial": 29,
+      "params": {
+        "window": 20
+      },
+      "score": 0.23492219021592195
+    },
+    {
+      "trial": 0,
+      "params": {
+        "window": 25
+      },
+      "score": 0.15986071325708529
+    },
+    {
+      "trial": 10,
+      "params": {
+        "window": 25
+      },
+      "score": 0.15986071325708529
+    },
+    {
+      "trial": 11,
+      "params": {
+        "window": 25
+      },
+      "score": 0.15986071325708529
+    }
+  ]
+}

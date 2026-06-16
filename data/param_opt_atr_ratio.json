@@ -1,0 +1,82 @@
+{
+  "factor_name": "atr_ratio",
+  "best_params": {
+    "atr_period": 29
+  },
+  "best_score": 0.13276548927369658,
+  "n_trials": 30,
+  "n_completed": 30,
+  "improvement_pct": 0.0,
+  "top_trials": [
+    {
+      "trial": 1,
+      "params": {
+        "atr_period": 29
+      },
+      "score": 0.13276548927369658
+    },
+    {
+      "trial": 11,
+      "params": {
+        "atr_period": 29
+      },
+      "score": 0.13276548927369658
+    },
+    {
+      "trial": 23,
+      "params": {
+        "atr_period": 29
+      },
+      "score": 0.13276548927369658
+    },
+    {
+      "trial": 29,
+      "params": {
+        "atr_period": 29
+      },
+      "score": 0.13276548927369658
+    },
+    {
+      "trial": 10,
+      "params": {
+        "atr_period": 30
+      },
+      "score": 0.13006776507597026
+    },
+    {
+      "trial": 12,
+      "params": {
+        "atr_period": 30
+      },
+      "score": 0.13006776507597026
+    },
+    {
+      "trial": 14,
+      "params": {
+        "atr_period": 30
+      },
+      "score": 0.13006776507597026
+    },
+    {
+      "trial": 21,
+      "params": {
+        "atr_period": 30
+      },
+      "score": 0.13006776507597026
+    },
+    {
+      "trial": 22,
+      "params": {
+        "atr_period": 28
+      },
+      "score": 0.10155486805828239
+    },
+    {
+      "trial": 24,
+      "params": {
+        "atr_period": 28
+      },
+      "score": 0.10155486805828239
+    }
+  ]
+}

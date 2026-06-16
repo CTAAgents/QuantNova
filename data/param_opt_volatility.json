@@ -1,0 +1,82 @@
+{
+  "factor_name": "volatility",
+  "best_params": {
+    "window": 30
+  },
+  "best_score": 0.16091050961740533,
+  "n_trials": 30,
+  "n_completed": 30,
+  "improvement_pct": 0.0,
+  "top_trials": [
+    {
+      "trial": 2,
+      "params": {
+        "window": 30
+      },
+      "score": 0.16091050961740533
+    },
+    {
+      "trial": 9,
+      "params": {
+        "window": 30
+      },
+      "score": 0.16091050961740533
+    },
+    {
+      "trial": 11,
+      "params": {
+        "window": 30
+      },
+      "score": 0.16091050961740533
+    },
+    {
+      "trial": 13,
+      "params": {
+        "window": 30
+      },
+      "score": 0.16091050961740533
+    },
+    {
+      "trial": 16,
+      "params": {
+        "window": 30
+      },
+      "score": 0.16091050961740533
+    },
+    {
+      "trial": 20,
+      "params": {
+        "window": 30
+      },
+      "score": 0.16091050961740533
+    },
+    {
+      "trial": 21,
+      "params": {
+        "window": 30
+      },
+      "score": 0.16091050961740533
+    },
+    {
+      "trial": 24,
+      "params": {
+        "window": 30
+      },
+      "score": 0.16091050961740533
+    },
+    {
+      "trial": 28,
+      "params": {
+        "window": 30
+      },
+      "score": 0.16091050961740533
+    },
+    {
+      "trial": 7,
+      "params": {
+        "window": 35
+      },
+      "score": 0.15564234986594117
+    }
+  ]
+}

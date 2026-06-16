@@ -1,0 +1,93 @@
+{
+  "factor_name": "ema_cross",
+  "best_params": {
+    "fast_period": 10,
+    "slow_period": 35
+  },
+  "best_score": 0.07764650908575162,
+  "n_trials": 30,
+  "n_completed": 30,
+  "improvement_pct": 0.0,
+  "top_trials": [
+    {
+      "trial": 14,
+      "params": {
+        "fast_period": 10,
+        "slow_period": 35
+      },
+      "score": 0.07764650908575162
+    },
+    {
+      "trial": 2,
+      "params": {
+        "fast_period": 9,
+        "slow_period": 35
+      },
+      "score": 0.0773718830760944
+    },
+    {
+      "trial": 7,
+      "params": {
+        "fast_period": 9,
+        "slow_period": 35
+      },
+      "score": 0.0773718830760944
+    },
+    {
+      "trial": 29,
+      "params": {
+        "fast_period": 13,
+        "slow_period": 25
+      },
+      "score": 0.06817111650823188
+    },
+    {
+      "trial": 27,
+      "params": {
+        "fast_period": 7,
+        "slow_period": 30
+      },
+      "score": 0.06772177664510325
+    },
+    {
+      "trial": 21,
+      "params": {
+        "fast_period": 9,
+        "slow_period": 30
+      },
+      "score": 0.06662286520407242
+    },
+    {
+      "trial": 11,
+      "params": {
+        "fast_period": 10,
+        "slow_period": 40
+      },
+      "score": 0.06656914951353049
+    },
+    {
+      "trial": 22,
+      "params": {
+        "fast_period": 5,
+        "slow_period": 35
+      },
+      "score": 0.06454459206706153
+    },
+    {
+      "trial": 12,
+      "params": {
+        "fast_period": 8,
+        "slow_period": 20
+      },
+      "score": 0.062256949353112996
+    },
+    {
+      "trial": 24,
+      "params": {
+        "fast_period": 8,
+        "slow_period": 50
+      },
+      "score": 0.06096390252615482
+    }
+  ]
+}

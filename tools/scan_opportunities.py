@@ -436,6 +436,56 @@ def main():
         except Exception as e:
             print(f"因子评估失败: {e}")
 
+    # 闭环因子进化
+    if args.evolve:
+        print(f"\n{'=' * 60}")
+        print("闭环因子进化引擎")
+        print(f"{'=' * 60}")
+        try:
+            from trend_scanner.factor_evolution_engine import FactorEvolutionEngine
+
+            engine = FactorEvolutionEngine()
+            result = engine.evolve(
+                max_rounds=args.evolve_rounds,
+                candidates_per_round=5,
+                target_promoted=args.evolve_target,
+                days=120,
+            )
+            report = engine.generate_report(result)
+            print(report)
+            engine.save_result(result)
+            print("\n进化结果已保存到 data/factor_evolution.json")
+        except Exception as e:
+            print(f"因子进化失败: {e}")
+
+    # 贝叶斯参数优化
+    if args.optimize_params:
+        print(f"\n{'=' * 60}")
+        print("贝叶斯参数优化")
+        print(f"{'=' * 60}")
+        try:
+            from trend_scanner.factor_param_optimizer import (
+                FactorParamOptimizer, PARAMETRIC_FACTORS, PREDEFINED_SPACES,
+            )
+
+            optimizer = FactorParamOptimizer(metric='icir')
+
+            for name, fn in PARAMETRIC_FACTORS.items():
+                if name in PREDEFINED_SPACES:
+                    print(f"\n优化因子: {name}")
+                    result = optimizer.optimize_with_predefined_space(
+                        factor_name=name,
+                        factor_fn=fn,
+                        space_name=name,
+                        kline_data=optimizer._kline_data if hasattr(optimizer, '_kline_data') else None,
+                        n_trials=args.opt_trials,
+                    )
+                    print(f"  最优参数: {result.best_params}")
+                    print(f"  最优分数: {result.best_score:.4f}")
+                    optimizer.save_result(result)
+        except Exception as e:
+            print(f"参数优化失败: {e}")
+
 
 if __name__ == "__main__":
     main()

@@ -423,10 +423,77 @@ class LocalDBSource(DataSource):
 
 class DataSourceFactory:
     """数据源工厂（单例模式，全局共享一个数据源连接）"""
-    
+
     _instance: Optional[DataSource] = None
     _source_type: str = "auto"
-    
+    _health_cache: Optional[Dict[str, Any]] = None
+
+    @staticmethod
+    def check_health(source: str = "tqsdk", test_symbol: str = "RB") -> Dict[str, Any]:
+        """
+        快速健康检查：用一次 quote 调用验证数据源连通性。
+
+        Args:
+            source: 数据源类型（目前仅支持 tqsdk）
+            test_symbol: 用于测试的品种代码
+
+        Returns:
+            {
+                'available': bool,
+                'source': str,
+                'latency_ms': float,
+                'error': str or None
+            }
+        """
+        if source == "tqsdk":
+            try:
+                from .tqsdk_bridge import TqSdkBridge
+                bridge = TqSdkBridge(timeout=10)  # 健康检查用更短超时
+
+                t0 = time.time()
+                quote = bridge.get_quote(test_symbol)
+                latency = (time.time() - t0) * 1000
+
+                if quote and quote.get('last_price', 0) > 0:
+                    DataSourceFactory._health_cache = {
+                        'available': True,
+                        'source': 'tqsdk',
+                        'latency_ms': round(latency, 1),
+                        'error': None,
+                        'timestamp': datetime.now().isoformat()
+                    }
+                else:
+                    DataSourceFactory._health_cache = {
+                        'available': False,
+                        'source': 'tqsdk',
+                        'latency_ms': round(latency, 1),
+                        'error': 'quote 返回空数据',
+                        'timestamp': datetime.now().isoformat()
+                    }
+            except Exception as e:
+                DataSourceFactory._health_cache = {
+                    'available': False,
+                    'source': 'tqsdk',
+                    'latency_ms': 0,
+                    'error': str(e),
+                    'timestamp': datetime.now().isoformat()
+                }
+        else:
+            DataSourceFactory._health_cache = {
+                'available': False,
+                'source': source,
+                'latency_ms': 0,
+                'error': f'不支持的健康检查数据源: {source}',
+                'timestamp': datetime.now().isoformat()
+            }
+
+        return DataSourceFactory._health_cache
+
+    @staticmethod
+    def get_health() -> Optional[Dict[str, Any]]:
+        """获取最近一次健康检查结果（缓存）"""
+        return DataSourceFactory._health_cache
+
     @staticmethod
     def create(source: str = "auto", force_new: bool = False) -> DataSource:
         """

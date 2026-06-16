@@ -33,6 +33,25 @@ VERSION_METADATA = {
 # 版本历史
 VERSION_HISTORY = [
     {
+        "version": "5.0.0",
+        "date": "2026-06-16",
+        "changes": [
+            "闭环迭代因子进化引擎（Generate→Eval→Gate→Memory）",
+            "截面 IC/ICIR 因子评估体系（FactorEvaluator）",
+            "因子代码安全执行引擎（FactorExecutor）",
+            "三元门控决策器（FactorGate）",
+            "贝叶斯参数优化器（FactorParamOptimizer，基于 Optuna）",
+            "种子因子池（SeedFactorPool，含研报知识注入）",
+            "多因子组合模型（MultiFactorModel，基于 LightGBM）",
+            "失败经验库（FactorExperienceDB，轨迹感知优化）",
+            "TqSdk 数据源优化（deadline 机制，批量行情分批处理）",
+            "数据源健康检查（DataSourceFactory.check_health）",
+            "全品种扫描扩展（60 个非僵尸品种）",
+            "全部 73 个模块集成到核心系统",
+            "58 个单元测试全部通过",
+        ],
+    },
+    {
         "version": "3.2.2",
         "date": "2026-06-14",
         "changes": [

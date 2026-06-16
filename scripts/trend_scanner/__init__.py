@@ -358,6 +358,8 @@ __all__ = [
     "TrendScanner", "AdaptiveTrendSystem",
     # 风险管理
     "RiskManager", "ExitSignalGenerator",
+    # 持仓健康度评估
+    "PositionHealthChecker",
     # 进化引擎
     "SelfMonitor", "WalkForwardOptimizer", "StrategyWeightAdjuster",
     "OverfittingGuard", "EnhancedEvolutionEngine",

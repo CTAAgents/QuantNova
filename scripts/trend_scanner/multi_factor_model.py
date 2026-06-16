@@ -167,18 +167,29 @@ class MultiFactorModel:
             logger.error("模型未训练")
             return pd.DataFrame()
 
-        # 构建特征矩阵
-        X, _, dates = self._build_feature_matrix(factor_data)
+        # 构建特征矩阵（不需要 returns）
+        X, _, dates = self._build_feature_matrix(factor_data, returns=None)
 
-        if X is None:
+        if X is None or len(X) == 0:
+            logger.warning("预测数据为空")
             return pd.DataFrame()
 
         # 预测
         pred = self._predict_raw(X)
 
         # 重塑为 DataFrame
-        symbols = list(factor_data.values())[0].columns
-        result = pd.DataFrame(pred.reshape(-1, len(symbols)), index=dates, columns=symbols)
+        symbols = sorted(list(factor_data.values())[0].columns)
+        n_symbols = len(symbols)
+        n_dates = len(X) // n_symbols
+
+        if n_dates == 0:
+            return pd.DataFrame()
+
+        result = pd.DataFrame(
+            pred[:n_dates * n_symbols].reshape(n_dates, n_symbols),
+            index=dates[:n_dates],
+            columns=symbols
+        )
 
         return result
 

@@ -349,26 +349,29 @@ python tools/scan_opportunities.py --reasoner --output text --save
 # 4. 指定品种 + Reasoner分析
 python tools/scan_opportunities.py --symbols JD,EC,BZ --reasoner --output text --save
 
-# 5. 因子评估
+# 5. 持仓健康度评估
+python tools/scan_opportunities.py --position-health
+
+# 6. 因子评估
 python tools/scan_opportunities.py --evaluate-factors
 
-# 6. 因子进化（5 轮，目标 3 个晋升因子）
+# 7. 因子进化（5 轮，目标 3 个晋升因子）
 python tools/scan_opportunities.py --evolve --evolve-rounds 5 --evolve-target 3
 
-# 7. 从研报加载种子因子并进化
+# 8. 从研报加载种子因子并进化
 python tools/scan_opportunities.py --evolve --load-report data/report.txt
 
-# 8. 参数优化
+# 9. 参数优化
 python tools/scan_opportunities.py --optimize-params --opt-trials 50
 
-# 9. 策略健康度检查
+# 10. 策略健康度检查
 python tools/scan_opportunities.py --health-check
 
-# 10. 过拟合检测
+# 11. 过拟合检测
 python tools/scan_opportunities.py --overfitting-check
 
-# 11. 组合使用：扫描 + 评估 + 健康检查
-python tools/scan_opportunities.py --evaluate-factors --health-check --save
+# 12. 组合使用：扫描 + 持仓健康度 + 健康检查
+python tools/scan_opportunities.py --output text --save --position-health --health-check
 ```
 
 ### 3.3 数据同步

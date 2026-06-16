@@ -290,6 +290,18 @@ def scan_all(symbols: List[str] = None, use_dynamic_factors: bool = False, use_m
     
     # 获取数据源
     data_source = DataSourceFactory.create()
+
+    # TqSdk 健康检查：快速验证连通性，不可用时跳过 TqSdk 兜底
+    tqsdk_healthy = False
+    try:
+        health = DataSourceFactory.check_health("tqsdk")
+        if health['available']:
+            tqsdk_healthy = True
+            print(f"TqSdk 连通: {health['latency_ms']}ms")
+        else:
+            print(f"[警告] TqSdk 不可用: {health.get('error', '未知')}，将仅使用本地缓存")
+    except Exception as e:
+        print(f"[警告] TqSdk 健康检查异常: {e}，将仅使用本地缓存")
     
     # 获取品种列表：优先从数据源获取全部主力合约，其次从配置读取
     if symbols is None:
@@ -313,9 +325,10 @@ def scan_all(symbols: List[str] = None, use_dynamic_factors: bool = False, use_m
     # 扫描每个品种
     signals = []
     no_signal_symbols = []
-    
+
     for symbol in symbols:
-        result = scan_symbol(symbol, data_source, signal_filter, use_dynamic_factors)
+        result = scan_symbol(symbol, data_source, signal_filter, use_dynamic_factors,
+                            allow_tqsdk_fallback=tqsdk_healthy)
         if result:
             signals.append(result)
         else:

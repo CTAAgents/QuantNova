@@ -260,8 +260,8 @@ class MultiFactorModel:
         X = np.array(X_rows)
         y = np.array(y_rows) if y_rows else None
 
-        # 处理 NaN 收益率
-        if y is not None:
+        # 处理 NaN 收益率（仅在有 returns 时过滤）
+        if y is not None and len(y) > 0:
             valid_mask = ~np.isnan(y)
             X = X[valid_mask]
             y = y[valid_mask]

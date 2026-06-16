@@ -1,5 +1,5 @@
 {
-  "scan_time": "2026-06-16T15:18:03.295911",
+  "scan_time": "2026-06-16T15:55:13.295982",
   "total_scanned": 86,
   "signals": [
     {
@@ -34,6 +34,12 @@
         "stop_price": 7621.08,
         "atr_multiplier": 2.5,
         "risk_points": 611.08
+      },
+      "reasoner_brief": {
+        "confidence": 0,
+        "recommended_action": "分析失败",
+        "reasoning": "'ExperienceMemory' object has no attribute 'aggregate'",
+        "error": true
       }
     },
     {
@@ -68,6 +74,12 @@
         "stop_price": 4392.17,
         "atr_multiplier": 2.5,
         "risk_points": 307.83
+      },
+      "reasoner_brief": {
+        "confidence": 0,
+        "recommended_action": "分析失败",
+        "reasoning": "'ExperienceMemory' object has no attribute 'aggregate'",
+        "error": true
       }
     },
     {
@@ -102,6 +114,12 @@
         "stop_price": 3377.42,
         "atr_multiplier": 2.5,
         "risk_points": 501.58
+      },
+      "reasoner_brief": {
+        "confidence": 0,
+        "recommended_action": "分析失败",
+        "reasoning": "'ExperienceMemory' object has no attribute 'aggregate'",
+        "error": true
       }
     },
     {
@@ -136,6 +154,12 @@
         "stop_price": 596.27,
         "atr_multiplier": 2.5,
         "risk_points": 70.27
+      },
+      "reasoner_brief": {
+        "confidence": 0,
+        "recommended_action": "分析失败",
+        "reasoning": "'ExperienceMemory' object has no attribute 'aggregate'",
+        "error": true
       }
     },
     {
@@ -170,6 +194,12 @@
         "stop_price": 14700.53,
         "atr_multiplier": 2.5,
         "risk_points": 1225.53
+      },
+      "reasoner_brief": {
+        "confidence": 0,
+        "recommended_action": "分析失败",
+        "reasoning": "'ExperienceMemory' object has no attribute 'aggregate'",
+        "error": true
       }
     }
   ],
@@ -280,6 +310,7 @@
       "defensive": 0.2
     },
     "recommendation": "经济衰退期，趋势跟踪为主，降低仓位",
-    "timestamp": "2026-06-16T15:16:08.109079"
-  }
+    "timestamp": "2026-06-16T15:54:52.976098"
+  },
+  "reasoner_analyzed": true
 }

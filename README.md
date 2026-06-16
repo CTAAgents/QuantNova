@@ -418,7 +418,7 @@ python tools/run_reasoner.py --symbol DCE.jm2609
   - 更新 DuckDB K 线数据
   ↓
 [2] 全品种扫描（scan_opportunities.py）
-  - 60 个非僵尸品种
+  - 86 个主力合约（筛选非僵尸品种：持仓量≥10000，成交量≥1000）
   - 计算 35+ 技术指标
   - 宏观状态检测 → 策略权重调整
   - 信号筛选（OR 模式）

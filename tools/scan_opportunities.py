@@ -368,6 +368,8 @@ def main():
     parser.add_argument("--output", choices=["json", "text"], default="text", help="输出格式")
     parser.add_argument("--save", action="store_true", help="保存结果到 latest_scan.json")
     parser.add_argument("--use-dynamic-factors", action="store_true", help="启用动态因子生成器")
+    parser.add_argument("--evaluate-factors", action="store_true",
+                        help="扫描后运行截面 IC/ICIR 因子评估")
     
     args = parser.parse_args()
     

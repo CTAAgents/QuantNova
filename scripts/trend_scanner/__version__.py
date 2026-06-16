@@ -34,6 +34,22 @@ VERSION_METADATA = {
 # 版本历史
 VERSION_HISTORY = [
     {
+        "version": "6.0.0",
+        "date": "2026-06-16",
+        "changes": [
+            "Reasoner Agent 深度分析（LLM推理→决策简报，输出置信度评估）",
+            "持仓健康度评估（PositionHealthChecker，多维度评估持仓状态）",
+            "技术面评估（趋势强度、动量、波动率）",
+            "资金面评估（盈亏、回撤、持仓时间）",
+            "市场面评估（宏观状态、相关性）",
+            "LLM推理评估（Reasoner Agent深度分析）",
+            "持仓配置文件（config/positions.json）",
+            "DuckDB K线查询优化（获取最近N条记录而非最近N天）",
+            "LLM提供者集成（WorkBuddy内置LLM，OpenAI兼容接口）",
+            "集成到scan_opportunities.py（--position-health参数）",
+        ],
+    },
+    {
         "version": "5.0.0",
         "date": "2026-06-16",
         "changes": [

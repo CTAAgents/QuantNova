@@ -141,10 +141,11 @@ class ReasonerAgent:
             top_k = self.reasoner_config.get('experience_top_k', 5)
             threshold = self.reasoner_config.get('experience_similarity_threshold', 0.6)
             
-            experiences = self.experience_memory.search_similar(
+            # 使用retrieve方法（ExperienceMemory的标准接口）
+            experiences = self.experience_memory.retrieve(
                 context=context,
                 top_k=top_k,
-                threshold=threshold
+                min_similarity=threshold
             )
             
             return experiences

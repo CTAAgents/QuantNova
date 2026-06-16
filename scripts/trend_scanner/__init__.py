@@ -411,4 +411,33 @@ __all__ = [
     "SeedFactorPool",
     "MultiFactorModel", "ModelResult",
     "FactorExperienceDB",
+    # 因子生成与验证
+    "FactorGenerator", "FactorValidator", "FactorKnowledgeManager", "FactorResult",
+    "FactorCodeValidator",
+    "LLMClient",
+    # 研报解析
+    "ReportParser",
+    # 信念传播与概念性反馈
+    "BeliefPropagationManager",
+    "ConceptualFeedbackManager",
+    # RL 接口设计
+    "RLInterfaceDesigner",
+    # 执行引擎
+    "ExecutionEngine", "PositionState", "RiskGuard", "TradeFilter",
+    # 仓位管理
+    "PositionSizer",
+    # 止损管理
+    "StopLossCalculator",
+    # 组合管理
+    "PortfolioManager",
+    # 回测框架
+    "WalkForwardBacktester", "MonteCarloValidator",
+    # 过拟合检测
+    "OverfittingDetector",
+    # 策略健康度
+    "StrategyHealthChecker",
+    # 宏观状态检测
+    "MacroStateDetector",
+    # 记忆桥接器
+    "MemoryBridge",
 ]

@@ -98,18 +98,25 @@ def main():
     elif args.action == 'klines':
         # 同步K线
         print(f"\n开始同步K线数据（{args.days}天，持仓量≥{args.min_oi}）...")
-        
-        # 获取活跃品种
-        active_symbols = manager.get_active_symbols(min_oi=args.min_oi)
-        symbol_codes = [s['symbol'] for s in active_symbols]
-        
+
+        # 获取品种列表
+        if args.min_oi <= 0:
+            # 同步全部品种
+            all_symbols = manager.sqlite.get_all_symbols(active_only=True)
+            symbol_codes = [s['symbol'] for s in all_symbols]
+            print(f"模式: 全品种同步（忽略持仓量筛选）")
+        else:
+            # 只同步活跃品种
+            active_symbols = manager.get_active_symbols(min_oi=args.min_oi)
+            symbol_codes = [s['symbol'] for s in active_symbols]
+
         if not symbol_codes:
-            print("没有活跃品种需要同步")
+            print("没有品种需要同步")
             return
-        
+
         print(f"需要同步 {len(symbol_codes)} 个品种")
         result = manager.sync_klines(symbols=symbol_codes, days=args.days, force=args.force)
-        
+
         print(f"\n同步完成:")
         print(f"  成功: {result.get('synced', 0)}")
         print(f"  失败: {result.get('failed', 0)}")

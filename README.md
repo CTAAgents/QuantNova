@@ -403,11 +403,16 @@ python tools/run_reasoner.py --symbol DCE.jm2609
   - 信号筛选（OR 模式）
   - 仓位建议 + 止损价位
   ↓
-[3] 因子评估（--evaluate-factors）
+[3] Reasoner深度分析（--reasoner）
+  - 对每个信号进行LLM推理
+  - 生成置信度评估
+  - 输出决策简报（操作建议+风险提示）
+  ↓
+[4] 因子评估（--evaluate-factors）
   - 截面 IC/ICIR 计算
   - 门控决策（晋升/观察/淘汰）
   ↓
-[4] 信号输出
+[5] 信号输出
   - 有信号 → 推送 Reasoner Agent
   - 无信号 → 静默
 ```

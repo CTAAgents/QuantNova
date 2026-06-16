@@ -16,9 +16,10 @@
 - v3.2.1: 控制变量隔离
 - v3.2.2: 分歧度和条件层级记录
 - v5.0.0: 闭环迭代因子进化引擎
+- v6.0.0: Reasoner Agent 深度分析 + 持仓健康度评估
 """
 
-__version__ = "5.0.0"
+__version__ = "6.0.0"
 __version_info__ = tuple(int(x) for x in __version__.split("."))
 
 # 版本元数据

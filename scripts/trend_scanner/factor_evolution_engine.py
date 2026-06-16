@@ -388,8 +388,9 @@ class FactorEvolutionEngine:
         候选来源优先级：
         1. 内置因子库（第 1 轮）
         2. 种子因子池（待验证的种子）
-        3. 因子知识库
-        4. 规则变体生成
+        3. LLM 因子生成（FactorGenerator，需要 LLM 客户端）
+        4. 因子知识库
+        5. 规则变体生成
 
         Args:
             count: 候选数量
@@ -414,7 +415,6 @@ class FactorEvolutionEngine:
         if self.seed_pool and len(candidates) < count:
             pending = self.seed_pool.get_pending_seeds()
             for seed in pending[:count - len(candidates)]:
-                # 编译种子因子代码为函数
                 fn = self._compile_seed_code(seed.code)
                 if fn:
                     candidates.append({
@@ -423,7 +423,34 @@ class FactorEvolutionEngine:
                         'source': f'seed_pool:{seed.source}',
                     })
 
-        # 方式 3：从因子知识库选取
+        # 方式 3：LLM 因子生成（需要 LLM 客户端可用）
+        if self.generator and self.generator.llm_client and len(candidates) < count:
+            # 构建反馈上下文
+            feedback_prompt = ""
+            if self.experience_db:
+                feedback_prompt = self.experience_db.generate_feedback_prompt()
+
+            market_context = f"进化轮次 {round_num}，已晋升 {len(self.promoted_factors)} 个因子"
+            if feedback_prompt:
+                market_context += f"\n\n{feedback_prompt}"
+
+            try:
+                result = self.generator.generate_factor(market_context)
+                if result and result.code and 'def factor' in result.code:
+                    fn = self._compile_seed_code(result.code)
+                    if fn:
+                        name = result.metadata.get('name', f'llm_factor_r{round_num}')
+                        candidates.append({
+                            'name': name,
+                            'function': fn,
+                            'code': result.code,
+                            'source': 'llm_generated',
+                        })
+                        logger.info(f"LLM 生成因子: {name}")
+            except Exception as e:
+                logger.debug(f"LLM 因子生成失败: {e}")
+
+        # 方式 4：从因子知识库选取
         if self.knowledge_manager and len(candidates) < count:
             kb_factors = self.knowledge_manager.get_all_factors()
             for f in kb_factors[:count - len(candidates)]:
@@ -433,7 +460,7 @@ class FactorEvolutionEngine:
                     'source': 'knowledge_base',
                 })
 
-        # 方式 4：用规则生成变体因子（无 LLM 时）
+        # 方式 5：用规则生成变体因子（无 LLM 时）
         if len(candidates) < count:
             variants = self._generate_rule_variants(count - len(candidates), round_num)
             candidates.extend(variants)

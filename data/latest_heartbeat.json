@@ -1,8 +1,34 @@
 {
-  "heartbeat_time": "2026-06-16T09:00:07.922125",
-  "positions_checked": 2,
-  "symbols_checked": 17,
+  "heartbeat_time": "2026-06-16T15:29:00.110243",
+  "positions_checked": 3,
+  "symbols_checked": 0,
   "alerts": [],
   "new_signals": [],
-  "has_events": false
+  "has_events": false,
+  "realtime_quotes": {
+    "DCE.jm2609": {
+      "last_price": 1343.0,
+      "open_interest": 542246,
+      "volume": 974426,
+      "change_percent": 0,
+      "highest": 1368.5,
+      "lowest": 1336.5
+    },
+    "SHFE.ao2609": {
+      "last_price": 2907,
+      "open_interest": 272998,
+      "volume": 340094,
+      "change_percent": 0,
+      "highest": 2923,
+      "lowest": 2871
+    },
+    "SHFE.hc2610": {
+      "last_price": 3382,
+      "open_interest": 1603357,
+      "volume": 366132,
+      "change_percent": 0,
+      "highest": 3402,
+      "lowest": 3374
+    }
+  }
 }

@@ -345,42 +345,50 @@ def check_symbol_changes(symbols: List[str], data_source,
 
 def heartbeat(positions_only: bool = False) -> Dict[str, Any]:
     """
-    执行一次心跳检查
-    
+    执行一次心跳检查（混合模式）
+
     参数:
         positions_only: 是否只监控持仓
-    
+
     返回:
         心跳结果
     """
     # 加载配置
     config = load_config()
     signal_filter = get_signal_filter()
-    
+
     # 加载状态
     prev_state = load_state()
-    
-    # 获取数据源
+
+    # 获取数据源（本地K线）
     data_source = DataSourceFactory.create()
-    
+
     # 加载持仓
     positions = load_positions()
-    
-    # 检查持仓预警
+
+    # 获取持仓品种的实时行情（快速，~10秒）
+    realtime_quotes = {}
+    if positions:
+        position_symbols = [pos.get('symbol', '') for pos in positions if pos.get('symbol')]
+        if position_symbols:
+            print(f"  获取 {len(position_symbols)} 个持仓品种实时行情...", flush=True)
+            realtime_quotes = get_realtime_quotes(position_symbols)
+
+    # 检查持仓预警（使用混合模式）
     alerts = []
     if positions:
-        alerts = check_position_alerts(positions, data_source, prev_state)
-    
+        alerts = check_position_alerts(positions, data_source, prev_state, realtime_quotes)
+
     # 检查全品种变化（如果不是只监控持仓）
     new_signals = []
     if not positions_only:
         symbols = config.get('scanner', {}).get('symbols', [])
         if symbols:
             new_signals = check_symbol_changes(symbols, data_source, signal_filter, prev_state)
-    
+
     # 保存状态
     save_state(prev_state)
-    
+
     # 构建结果
     result = {
         'heartbeat_time': datetime.now().isoformat(),
@@ -388,9 +396,10 @@ def heartbeat(positions_only: bool = False) -> Dict[str, Any]:
         'symbols_checked': len(config.get('scanner', {}).get('symbols', [])) if not positions_only else 0,
         'alerts': alerts,
         'new_signals': new_signals,
-        'has_events': len(alerts) > 0 or len(new_signals) > 0
+        'has_events': len(alerts) > 0 or len(new_signals) > 0,
+        'realtime_quotes': realtime_quotes
     }
-    
+
     return result
 
 

@@ -246,7 +246,7 @@ python tools/scan_opportunities.py --evolve --evolve-rounds 5
 | DebateReasoningEngine | `debate_engine.py` | 多角色辩论引擎 |
 | TradingAssistant | `navigator.py` | 主协调器 |
 
-### 2.4 执行与风控（5 个模块）
+### 2.5 执行与风控（6 个模块）
 
 | 模块 | 文件 | 功能 |
 |------|------|------|
@@ -255,6 +255,7 @@ python tools/scan_opportunities.py --evolve --evolve-rounds 5
 | ExecutionEngine | `execution.py` | 执行引擎 + 风控 |
 | PortfolioManager | `portfolio.py` | 组合管理 |
 | RiskManager | `risk_management.py` | 风险管理 |
+| PositionHealthChecker | `position_health.py` | 持仓健康度评估 |
 
 ### 2.5 进化与健康（5 个模块）
 

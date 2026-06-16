@@ -65,18 +65,21 @@ class FactorEvolutionEngine:
 
     def __init__(self, generator=None, executor=None, evaluator=None,
                  gate=None, knowledge_manager=None,
-                 seed_pool=None, experience_db=None):
+                 seed_pool=None, experience_db=None,
+                 report_parser=None, trajectory_analyzer=None):
         """
         初始化进化引擎
 
         Args:
-            generator: FactorGenerator（因子生成器）
+            generator: FactorGenerator（因子生成器，支持 LLM 生成）
             executor: FactorExecutor（因子执行器）
             evaluator: FactorEvaluator（因子评估器）
             gate: FactorGate（门控决策器）
             knowledge_manager: FactorKnowledgeManager（知识管理器）
             seed_pool: SeedFactorPool（种子因子池）
             experience_db: FactorExperienceDB（经验数据库）
+            report_parser: ReportParser（研报解析器）
+            trajectory_analyzer: TrajectoryAnalyzer（轨迹分析器）
         """
         # 延迟导入，避免循环依赖
         if generator is None:
@@ -97,6 +100,18 @@ class FactorEvolutionEngine:
         if experience_db is None:
             from trend_scanner.factor_experience_db import FactorExperienceDB
             experience_db = FactorExperienceDB()
+        if report_parser is None:
+            try:
+                from trend_scanner.report_parser import ReportParser
+                report_parser = ReportParser()
+            except Exception:
+                report_parser = None
+        if trajectory_analyzer is None:
+            try:
+                from trend_scanner.trajectory_analyzer import TrajectoryAnalyzer
+                trajectory_analyzer = TrajectoryAnalyzer()
+            except Exception:
+                trajectory_analyzer = None
 
         self.generator = generator
         self.executor = executor
@@ -105,6 +120,8 @@ class FactorEvolutionEngine:
         self.knowledge_manager = knowledge_manager
         self.seed_pool = seed_pool
         self.experience_db = experience_db
+        self.report_parser = report_parser
+        self.trajectory_analyzer = trajectory_analyzer
 
         # 进化状态
         self.promoted_factors: List[Dict] = []

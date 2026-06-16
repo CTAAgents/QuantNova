@@ -61,9 +61,40 @@ class WorkBuddyAgentProvider(LLMProvider):
 
     def __init__(self, model: str = "default"):
         self.model = model
+        self._llm_provider = None
+        
+        # 尝试从配置加载LLM提供者
+        try:
+            self._init_llm_provider()
+        except Exception as e:
+            print(f"[警告] LLM提供者初始化失败: {e}", flush=True)
+
+    def _init_llm_provider(self):
+        """初始化LLM提供者"""
+        import os
+        import json
+        from pathlib import Path
+        
+        # 尝试加载配置文件
+        config_path = Path(__file__).parent.parent.parent / "config" / "config.json"
+        if config_path.exists():
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+            
+            llm_config = config.get('llm', {})
+            if llm_config:
+                # 尝试创建LLM提供者
+                try:
+                    from .memory.llm_factory import LLMProviderFactory
+                    self._llm_provider = LLMProviderFactory.create(llm_config)
+                    print(f"[LLM] 使用 {self._llm_provider.name} 提供者", flush=True)
+                except Exception as e:
+                    print(f"[LLM] 创建提供者失败: {e}", flush=True)
 
     @property
     def name(self) -> str:
+        if self._llm_provider:
+            return f"LLM ({self._llm_provider.name})"
         return f"WorkBuddy Agent ({self.model})"
 
     def generate(self, system_prompt: str, user_prompt: str) -> str:
@@ -73,12 +104,18 @@ class WorkBuddyAgentProvider(LLMProvider):
         注意：这个方法在实际运行时会被 WorkBuddy 的 Agent 系统接管。
         在独立运行时，它会尝试调用本地 LLM 或返回模拟响应。
         """
-        # 在 WorkBuddy 环境中，这个调用会被 Agent 系统处理
-        # 这里提供一个 fallback 实现
-        try:
-            return self._call_via_agent(system_prompt, user_prompt)
-        except Exception as e:
-            return self._fallback_response(system_prompt, user_prompt)
+        # 如果有LLM提供者，直接调用
+        if self._llm_provider:
+            try:
+                # 构建完整的提示词
+                full_prompt = f"{system_prompt}\n\n{user_prompt}"
+                return self._llm_provider.generate(full_prompt)
+            except Exception as e:
+                print(f"[LLM] 调用失败: {e}", flush=True)
+                return self._fallback_response(system_prompt, user_prompt)
+        
+        # 否则使用fallback
+        return self._fallback_response(system_prompt, user_prompt)
 
     def _call_via_agent(self, system_prompt: str, user_prompt: str) -> str:
         """

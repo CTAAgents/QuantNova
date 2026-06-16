@@ -1,7 +1,7 @@
 ---
 name: trend-scanner-agent
 description: >
-  推理重于规则的期货趋势跟踪 Agent v4.0。
+  推理重于规则的期货趋势跟踪决策辅助系统 v4.0。
   脚本+Agent 混合架构，动态因子生成，多角色协作，RL 接口自设计。
   数据源：TqSdk（首选）+ 通达信 MCP（备选）+ 本地数据库缓存。
 ---
@@ -16,74 +16,85 @@ description: >
 
 所有看似"规则"的内容（止损、仓位、入场条件）均由推理层根据当前市场状态动态生成，而非事先写死。系统不自动下单，只输出决策简报供人参考。
 
+---
+
 ## 一、系统架构
 
-### 1.1 整体架构（六层管线）
+### 1.1 整体架构（八层管线）
 
 ```
 定时触发 (08:40 / 15:20 / 20:40)
     │
     ▼
-┌─────────────────────────────────────────────────┐
-│  ① 数据采集层（纯 Python）                       │
-│  - TqSdk 拉取所有非僵尸品种 120 日 K 线          │
-│  - 写入本地 DuckDB 数据库（data/market.duckdb）   │
-│  - 增量更新：只拉取新数据，避免重复下载            │
-│  - 降级策略：TqSdk → 通达信 MCP → 本地数据库      │
-└────────────────────┬────────────────────────────┘
-                     │ 数据就绪
-                     ▼
-┌─────────────────────────────────────────────────┐
-│  ② Scanner 脚本（纯 Python，无 LLM）             │
-│  - 从本地数据库读取 K 线数据                      │
-│  - 计算 ER / TSI / R² / Hurst / RSI / ADX       │
-│  - 复合趋势强度打分                               │
-│  - 筛选条件过滤（OR/AND 可配置）                  │
-│  - 可选：加载动态因子（--use-dynamic-factors）     │
-│  输出 → data/latest_scan.json                    │
-└────────────────────┬────────────────────────────┘
-                     │ 有信号
-                     ▼
-┌─────────────────────────────────────────────────┐
-│  ③ Reasoner Agent（LLM 推理）                    │
-│  - 接收信号 + 市场上下文 + 历史经验               │
-│  - 生成交易决策简报：                             │
-│    市场评估 → 操作方案 → 约束建议 → 置信度        │
-│  - 置信度 < 0.7 时触发 Debater                   │
-│  输出 → data/latest_reasoning.json               │
-└────────────────────┬────────────────────────────┘
-                     │ 置信度不足
-                     ▼
-┌─────────────────────────────────────────────────┐
-│  ④ Debater Agent（多角色协作，FinCon 思想）       │
-│  四个角色独立分析后汇总辩论：                      │
-│  - 分析师：技术面（趋势/动量/形态）               │
-│  - 风控官：风险收益比/止损/仓位                   │
-│  - 基本面研究员：供需/政策/产业链                  │
-│  - 协调者：汇总分歧，修正方案                     │
-│  角色间通过「概念性语言反馈」互相教学              │
-│  输出 → data/latest_debate.json                  │
-└────────────────────┬────────────────────────────┘
-                     │
-                     ▼
-┌─────────────────────────────────────────────────┐
-│  ⑤ Monitor 脚本（纯 Python，每 30 分钟）          │
-│  - 读取持仓数据 config/positions.json             │
-│  - 从本地数据库获取最新指标                       │
-│  - 监控趋势强度下降 / ER 骤降 / RSI 超买         │
-│  - 分级预警：HIGH / MEDIUM / LOW                 │
-│  输出 → data/latest_monitor.json                 │
-└────────────────────┬────────────────────────────┘
-                     │ 交易结束后
-                     ▼
-┌─────────────────────────────────────────────────┐
-│  ⑥ Evolver Agent（LLM 引导的 RL，GIFT 思想）     │
-│  - 轨迹分析：从交易历史提取成功/失败模式          │
-│  - 失败学习：生成「避免规则」                     │
-│  - RL 接口设计：LLM 设计状态空间和奖励函数        │
-│  - 诊断修正：基于回滚诊断优化策略参数              │
-│  - 信念更新：将学习成果写入投资信念库              │
-└─────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│  ① 数据采集层（纯 Python）                               │
+│  - TqSdk 拉取所有非僵尸品种 120 日 K 线                  │
+│  - 写入本地 DuckDB（data/market.duckdb）                  │
+│  - 降级链：TqSdk → 通达信 MCP → 本地数据库               │
+│  输出 → data/market.duckdb                               │
+└───────────────────────┬─────────────────────────────────┘
+                        ▼
+┌─────────────────────────────────────────────────────────┐
+│  ② Scanner 脚本（纯 Python，无 LLM）                     │
+│  - 从本地 DuckDB 读取 K 线                               │
+│  - 计算 7 维趋势强度指标                                  │
+│  - 宏观状态检测 → 动态调整策略权重                        │
+│  - 信号筛选（OR/AND 可配置）                              │
+│  - 仓位建议 + 止损价位 → 附加到信号输出                   │
+│  输出 → data/latest_scan.json                            │
+└───────────────────────┬─────────────────────────────────┘
+                        │ 有信号
+                        ▼
+┌─────────────────────────────────────────────────────────┐
+│  ③ Reasoner Agent（LLM 推理）                            │
+│  - 检索相似经验（多路召回）                               │
+│  - LLM 推理生成决策简报                                   │
+│    市场评估 → 操作方案 → 约束建议 → 置信度                │
+│  输出 → data/latest_reasoning.json                       │
+└───────────────────────┬─────────────────────────────────┘
+                        │ 置信度 < 0.7
+                        ▼
+┌─────────────────────────────────────────────────────────┐
+│  ④ Debater Agent（多角色协作，FinCon 思想）               │
+│  - 分析师：技术面（趋势/动量/形态）                       │
+│  - 风控官：风险收益比/止损/仓位                           │
+│  - 基本面研究员：供需/政策/产业链                          │
+│  - 协调者：汇总分歧，修正方案                             │
+│  输出 → data/latest_debate.json                          │
+└───────────────────────┬─────────────────────────────────┘
+                        ▼
+┌─────────────────────────────────────────────────────────┐
+│  ⑤ 仓位管理（PositionSizer）                             │
+│  - 凯利公式：基于胜率/盈亏比计算最优仓位                  │
+│  - 自适应仓位：趋势强度 × 波动率调整                      │
+│  - 金字塔加仓：盈利后逐步加仓                             │
+│  输出 → 附加到决策简报                                    │
+└───────────────────────┬─────────────────────────────────┘
+                        ▼
+┌─────────────────────────────────────────────────────────┐
+│  ⑥ 动态止损（StopLossCalculator）                        │
+│  - ATR 倍数止损：基于波动率                               │
+│  - 移动止损：跟踪最高/最低价                              │
+│  - 多条件综合止损：取最严格条件                           │
+│  输出 → 附加到决策简报                                    │
+└───────────────────────┬─────────────────────────────────┘
+                        ▼
+┌─────────────────────────────────────────────────────────┐
+│  ⑦ Monitor 脚本（纯 Python，每 30 分钟）                  │
+│  - 监控持仓风险：趋势强度下降/ER 骤降/RSI 超买           │
+│  - 分级预警：HIGH / MEDIUM / LOW                         │
+│  输出 → data/latest_monitor.json                         │
+└───────────────────────┬─────────────────────────────────┘
+                        │ 交易结束后
+                        ▼
+┌─────────────────────────────────────────────────────────┐
+│  ⑧ Evolver Agent（LLM 引导的 RL，GIFT 思想）             │
+│  - 策略健康度评估（夏普/回撤/胜率趋势）                   │
+│  - 过拟合检测（蒙特卡洛/参数敏感性）                      │
+│  - 轨迹分析：从交易历史提取成功/失败模式                  │
+│  - RL 接口设计：LLM 设计状态空间和奖励函数                │
+│  输出 → 进化报告 + 策略退休建议                           │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ### 1.2 架构总览
@@ -98,16 +109,19 @@ Orchestrator Agent（主协调）
   │
   ├── Scanner 脚本（纯 Python）
   │     ├── 传统技术指标计算
-  │     └── 动态因子生成器（LLM 引导）  ← FactorEngine
+  │     ├── 宏观状态检测（MacroStateDetector）
+  │     ├── 仓位建议（PositionSizer）
+  │     ├── 止损价位（StopLossCalculator）
+  │     └── 动态因子生成器（LLM 引导）
   │
   ├── Reasoner Agent（LLM 推理）
   │     ├── 市场状态分析
-  │     └── 知识注入（研报、经验）  ← FactorEngine
+  │     └── 知识注入（研报、经验）
   │
-  ├── Debater Agent（多角色协作）  ← FinCon
-  │     ├── 分析师角色（agents/analyst_role.md）
+  ├── Debater Agent（多角色协作）
+  │     ├── 分析师角色
+  │     ├── 风控官角色
   │     ├── 基本面研究员角色
-  │     ├── 风控官角色（agents/risk_officer_role.md）
   │     └── 概念性语言反馈
   │
   ├── Monitor 脚本（纯 Python）
@@ -118,10 +132,10 @@ Orchestrator Agent（主协调）
   │     ├── SQLite（经验/规则/日志）
   │     └── DuckDB（K线/指标/因子库）
   │
-  └── Evolver Agent（LLM 引导的 RL）  ← GIFT
+  └── Evolver Agent（LLM 引导的 RL）
+        ├── 策略健康度评估（StrategyHealthChecker）
+        ├── 过拟合检测（OverfittingDetector）
         ├── 轨迹感知优化器
-        ├── 状态空间设计
-        ├── 奖励函数设计
         └── 诊断引导修正
 ```
 
@@ -131,48 +145,15 @@ Orchestrator Agent（主协调）
 |------|------|------|
 | 推理重于规则 | 所有"规则"由推理层动态生成 | 不存在独立的规则层 |
 | 计算用脚本，推理用 Agent | 确定性计算不调 LLM | Scanner/Monitor 是纯 Python |
-| Agent 默认用宿主 LLM | Reasoner/Debater/Evolver 由宿主平台驱动 | 无需配置即可运行 |
 | 数据本地化 | TqSdk 数据写入本地 DuckDB | 避免重复 API 调用 |
 | 因子即代码 | 因子是 LLM 生成的可执行代码 | FactorEngine 思想 |
 | 概念性语言反馈 | Agent 间用自然语言互相教学 | FinCon 思想 |
 | RL 接口自设计 | LLM 设计状态空间和奖励函数 | GIFT 思想 |
+| 仓位风控前置 | 信号输出时附带仓位和止损 | 不依赖事后推理 |
 
 ### 1.4 运行方式与 LLM 策略
 
 **系统是自包含的**，核心功能全部在 Python 脚本中实现，不依赖任何宿主平台。
-
-#### 独立运行（推荐）
-
-```bash
-# 直接运行 Python 脚本，通过 LLM_API_KEY 调用大模型
-export LLM_API_KEY=your_api_key
-
-python tools/scan_opportunities.py --output text --save
-python tools/run_reasoner.py --symbol SHFE.rb --output text
-python tools/run_debater.py --output text --save
-python tools/run_evolver.py status
-python tools/orchestrator.py full
-```
-
-| 组件 | 脚本 | LLM 来源 |
-|------|------|----------|
-| Scanner | `tools/scan_opportunities.py` | 纯 Python，不调 LLM |
-| Reasoner | `tools/run_reasoner.py` | `LLM_API_KEY` |
-| Debater | `tools/run_debater.py` | `LLM_API_KEY` |
-| Evolver | `tools/run_evolver.py` | `LLM_API_KEY` |
-| Monitor | `tools/monitor_positions.py` | 纯 Python，不调 LLM |
-
-#### 宿主平台驱动（可选）
-
-宿主平台（WorkBuddy/TRAE/QoderWork/OpenClaw 等）读取 `agents/*.md` 中的提示词，扮演 Agent 角色，使用宿主平台的 LLM 执行推理。此时 `LLM_API_KEY` 仅用于 FactorGenerator。
-
-| 组件 | 脚本/文档 | LLM 来源 |
-|------|----------|----------|
-| Scanner | `tools/scan_opportunities.py` | 纯 Python |
-| Reasoner | `agents/reasoner.md` | 宿主平台 LLM |
-| Debater | `agents/debater.md` | 宿主平台 LLM |
-| Evolver | `agents/evolver.md` | 宿主平台 LLM |
-| FactorGenerator | `scripts/trend_scanner/factor_generator.py` | `LLM_API_KEY` 或规则模式 |
 
 #### LLM 降级链
 
@@ -194,13 +175,6 @@ python tools/orchestrator.py full
 规则模式（预置因子，无需 LLM）
 ```
 
-| 场景 | 配置 | FactorGenerator LLM 来源 |
-|------|------|--------------------------|
-| 独立运行 | 设置 `LLM_API_KEY` | 自定义 LLM |
-| 宿主平台驱动，自定义 LLM | 设置 `LLM_API_KEY` | 自定义 LLM |
-| 宿主平台驱动，用宿主 LLM | 不设置 | 宿主平台 LLM |
-| 无 LLM | 不设置 | 规则模式 |
-
 ---
 
 ## 二、数据采集层
@@ -208,65 +182,34 @@ python tools/orchestrator.py full
 ### 2.1 工作机制
 
 ```
-TqSdk API
+TqSdk API → DataSourceFactory.create() → TqSdkSource.get_kline()
     │
     ▼
-┌─────────────────────────────────┐
-│  DataSourceFactory.create()     │
-│  - 自动选择最优数据源            │
-│  - 优先级：TqSdk > 通达信 > CSV  │
-└──────────────┬──────────────────┘
-               │
-               ▼
-┌─────────────────────────────────┐
-│  TqSdkSource.get_kline()        │
-│  - 拉取所有非僵尸品种 120 日 K 线│
-│  - 返回 DataFrame               │
-│    (date,open,high,low,close,   │
-│     volume,open_interest)       │
-└──────────────┬──────────────────┘
-               │
-               ▼
-┌─────────────────────────────────┐
-│  DuckDBStore.insert_klines()    │
-│  - 增量写入 data/market.duckdb  │
-│  - 按 (symbol, timestamp) 去重  │
-│  - 创建索引加速查询              │
-└─────────────────────────────────┘
+DuckDBStore.insert_klines()
+    - 增量写入 data/market.duckdb
+    - 按 (symbol, timestamp) 去重
 ```
 
 ### 2.2 数据源适配器
 
 **文件**：`scripts/trend_scanner/data_source.py`
 
-统一接口 `DataSource`，三个实现：
-
 | 数据源 | 类 | 优先级 | 特点 |
 |--------|-----|--------|------|
 | TqSdk | `TqSdkSource` | 首选 | 期货实时行情，主力合约自动识别 |
-| 通达信 MCP | `TdxSource` | 备选 | A股/港股/美股/期货，通过 MCP 工具调用 |
-| 本地 CSV | `CsvSource` | 兜底 | 用户导入的历史数据 |
+| 通达信 MCP | `TdxSource` | 备选 | 通过 MCP 工具调用 |
+| 本地 DuckDB | `LocalDBSource` | 缓存 | 离线可用 |
 
-**降级逻辑**：`DataSourceFactory.create()` 按优先级尝试，不可用时自动降级。
-
-### 2.3 本地数据库（DuckDB）
+### 2.3 本地数据库
 
 **文件**：`scripts/trend_scanner/memory/duckdb_store.py`
 
 ```
 data/market.duckdb
-  │
   ├── klines 表（K线时序数据）
-  │     symbol | timestamp | timeframe | OHLCV | source
-  │
   ├── indicators 表（技术指标历史）
-  │     symbol | timestamp | indicator_name | value
-  │
   └── factor_library 表（因子库）
-        factor_id | name | type | expression | IC | IR
 ```
-
-**特点**：列式存储，适合时序数据聚合查询。
 
 ---
 
@@ -278,68 +221,70 @@ data/market.duckdb
 本地 DuckDB (klines)
     │
     ▼
-┌─────────────────────────────────┐
-│  IndicatorEngine.compute_all()  │
-│  - 计算 7 维趋势强度指标         │
-│  - TSI / ER / R² / Hurst       │
-│  - RSI / ADX / EMA斜率 / ATR   │
-│  - 复合趋势强度打分              │
-└──────────────┬──────────────────┘
-               │
-               ▼
-┌─────────────────────────────────┐
-│  信号筛选（filter_mode: or/and）│
-│  - ER ≥ 0.6                    │
-│  - TSI ≥ 20 (多头) / ≤ -20 (空)│
-│  - 趋势强度 ≥ 0.5              │
-│  - R² ≥ 0.4                    │
-│  - OR: 任一满足即触发           │
-│  - AND: 全部满足才触发          │
-└──────────────┬──────────────────┘
-               │
-               ▼
-┌─────────────────────────────────┐
-│  动态因子（可选）               │
-│  - 从 data/factor_knowledge.json│
-│    加载因子代码                 │
-│  - exec() 执行，获取因子值      │
-│  - 附加到信号输出               │
-└──────────────┬──────────────────┘
-               │
-               ▼
-┌─────────────────────────────────┐
-│  MemoryBridge.store_scan_result │
-│  - 存储扫描结果到记忆系统       │
-│  - 存储技术指标到 DuckDB        │
-└─────────────────────────────────┘
+IndicatorEngine.compute_all()  ← 计算 7 维趋势强度指标
+    │
+    ▼
+MacroStateDetector.detect()  ← 宏观状态检测（新增）
+    │
+    ▼
+信号筛选（filter_mode: or/and）
+    │
+    ▼
+PositionSizer.calculate()  ← 仓位建议（新增）
+    │
+    ▼
+StopLossCalculator.atr_stop()  ← 止损价位（新增）
+    │
+    ▼
+MemoryBridge.store_scan_result()  ← 存储到记忆系统
+    │
+    ▼
+data/latest_scan.json
 ```
 
 ### 3.2 技术指标（7 维）
 
-| 指标 | 权重 | 含义 | 计算方式 |
-|------|------|------|----------|
-| TSI | 25% | 趋势强度指数 | 双重平滑动量 |
-| ER | 25% | 效率比 | 方向移动 / 总移动 |
-| EMA 斜率 | 15% | 均线斜率强度 | EMA20 变化率 |
-| ATR 比率 | 10% | 波动率比率 | ATR / 价格 |
-| R² | 10% | 拟合度 | 线性回归 R² |
-| Hurst | 8% | 赫斯特指数 | 趋势持续性 |
-| ADX ROC | 7% | ADX 变化率 | 趋势加速 |
+| 指标 | 权重 | 含义 |
+|------|------|------|
+| TSI | 25% | 趋势强度指数 |
+| ER | 25% | 效率比 |
+| EMA 斜率 | 15% | 均线斜率强度 |
+| ATR 比率 | 10% | 波动率比率 |
+| R² | 10% | 拟合度 |
+| Hurst | 8% | 赫斯特指数 |
+| ADX ROC | 7% | ADX 变化率 |
 
-### 3.3 信号筛选
+### 3.3 信号输出格式（含仓位和止损）
 
-**配置**：`config/config.json` → `scanner.signal_filter`
-
-| 参数 | 默认值 | 说明 |
-|------|--------|------|
-| `filter_mode` | `"or"` | or=任一触发，and=全部触发 |
-| `er_min` | 0.6 | 效率比阈值 |
-| `tsi_min` | 20 | 多头 TSI 阈值 |
-| `tsi_max` | -20 | 空头 TSI 阈值 |
-| `trend_strength_min` | 0.5 | 复合趋势强度阈值 |
-| `r2_min` | 0.4 | R² 阈值 |
-
-**信号强度**：按满足条件数自动判定 — 4/4=STRONG，2-3=MEDIUM，1=WEAK。
+```json
+{
+  "symbol": "DCE.jm2609",
+  "direction": "LONG",
+  "signal_strength": "STRONG",
+  "trend_strength_composite": 0.72,
+  "position_suggestion": {
+    "method": "adaptive",
+    "position_size": 0.25,
+    "position_pct": "25.0%",
+    "risk_metrics": {
+      "max_loss_pct": "5.0%",
+      "kelly_optimal": "30.0%"
+    }
+  },
+  "stop_loss": {
+    "stop_price": 1425.0,
+    "atr_multiplier": 2.5,
+    "risk_points": 75.0
+  },
+  "macro_state": {
+    "cycle": {"state": "recovery", "name": "复苏"},
+    "strategy_weights": {
+      "trend_following": 0.4,
+      "mean_reversion": 0.3
+    }
+  }
+}
+```
 
 ---
 
@@ -348,42 +293,9 @@ data/market.duckdb
 ### 4.1 工作机制
 
 ```
-Scanner 信号 (latest_scan.json)
-    │
-    ▼
-┌─────────────────────────────────┐
-│  MemoryBridge.retrieve_experiences│
-│  - 向量检索（粗筛 top_k*3）     │
-│  - 结构化过滤（品种/方向）      │
-│  - 时间衰减（半衰期 90 天）     │
-│  - 综合排序 → 返回 top_k       │
-└──────────────┬──────────────────┘
-               │
-               ▼
-┌─────────────────────────────────┐
-│  TradingAssistant.analyze()     │
-│  - 接收 K 线数据 + 相似经验     │
-│  - LLM 推理生成决策简报         │
-│  - 输出：                       │
-│    市场评估（趋势方向/阶段）    │
-│    操作方案（入场/止损/目标）   │
-│    约束建议（仓位/风控）        │
-│    置信度（0-1）                │
-└──────────────┬──────────────────┘
-               │
-               ▼
-┌─────────────────────────────────┐
-│  MemoryBridge.store_reasoning   │
-│  - 存储推理结果到记忆系统       │
-└──────────────┬──────────────────┘
-               │
-               ▼
-        置信度 < 0.7 ?
-           │         │
-           是        否
-           │         │
-           ▼         ▼
-      Debater    输出简报
+Scanner 信号 → 检索相似经验 → LLM 推理 → 决策简报
+                                              │
+                                    置信度 < 0.7 → Debater
 ```
 
 ### 4.2 决策简报输出格式
@@ -395,24 +307,18 @@ Scanner 信号 (latest_scan.json)
   "confidence": 0.75,
   "market_assessment": {
     "trend_phase": "DEVELOPING",
-    "trend_strength": "中强",
-    "key_observations": ["焦煤安全检查限产预期", "焦化利润支撑"]
+    "trend_strength": "中强"
   },
   "routes": [
     {
       "name": "方案A：顺势做多",
       "entry": "当前价附近入场",
-      "stop_loss": "前低下方 2ATR",
-      "reasoning": "趋势发展阶段，动量充足"
+      "stop_loss": "前低下方 2ATR"
     }
   ],
   "constraints": [
     {"type": "position_size", "value": "标准仓位的 60%"}
-  ],
-  "uncertainty": {
-    "level": "MEDIUM",
-    "factors": ["政策风险", "需求端不确定性"]
-  }
+  ]
 }
 ```
 
@@ -425,153 +331,314 @@ Scanner 信号 (latest_scan.json)
 ```
 Reasoner 决策简报
     │
+    ├── Step 1: 分析师独立分析（技术面）
+    ├── Step 2: 风控官独立分析（风险）
+    ├── Step 3: 基本面研究员独立分析（可选）
+    ├── Step 4: 概念性语言反馈（角色间互相教学）
+    └── Step 5: 协调者综合决策
+    │
     ▼
-┌─────────────────────────────────────────┐
-│  Step 1: 分析师角色独立分析              │
-│  - 技术面：趋势阶段/动量/成交量/形态     │
-│  - 输出：技术面评估 + 关键信号           │
-└──────────────────┬──────────────────────┘
-                   │
-┌─────────────────────────────────────────┐
-│  Step 2: 风控官角色独立分析              │
-│  - 风险收益比/止损评估/仓位建议          │
-│  - 输出：风险评估 + 风险约束             │
-└──────────────────┬──────────────────────┘
-                   │
-┌─────────────────────────────────────────┐
-│  Step 3: 基本面研究员角色独立分析（可选）│
-│  - 供需/政策/产业链/季节性               │
-│  - 输出：基本面评估 + 驱动因素           │
-└──────────────────┬──────────────────────┘
-                   │
-┌─────────────────────────────────────────┐
-│  Step 4: 概念性语言反馈                  │
-│  - 分析师 → 风控官：技术面风险点         │
-│  - 风控官 → 分析师：风险约束要求         │
-│  - 各角色基于反馈调整分析                │
-└──────────────────┬──────────────────────┘
-                   │
-┌─────────────────────────────────────────┐
-│  Step 5: 协调者综合决策                  │
-│  - 识别共识区域                          │
-│  - 识别分歧点和分歧度                    │
-│  - 权衡技术面/风险/基本面                │
-│  - 修正方案 + 决策理由                   │
-└──────────────────┬──────────────────────┘
-                   │
-                   ▼
-          data/latest_debate.json
+data/latest_debate.json
 ```
 
 ### 5.2 角色定义
 
-| 角色 | 文件 | 职责 | 关注点 |
-|------|------|------|--------|
-| 分析师 | `agents/analyst_role.md` | 技术面分析 | 趋势/动量/形态/成交量 |
-| 风控官 | `agents/risk_officer_role.md` | 风险评估 | 风险收益比/止损/仓位 |
-| 基本面研究员 | 内置于 `debater.md` | 供需分析 | 政策/产业链/库存 |
-| 协调者 | 内置于 `debater.md` | 综合决策 | 分歧权衡/方案修正 |
-
-### 5.3 概念性语言反馈（FinCon）
-
-**核心思想**：Agent 间用自然语言反馈互相教学，而非数值奖励。
-
-```
-分析师："RSI 接近超买区域（68），短期回调风险增大"
-    ↓ 概念性反馈
-风控官："建议将止损收紧到 EMA20 下方，仓位降至 60%"
-    ↓ 概念性反馈
-协调者："综合判断：趋势方向不变，但入场时机需要优化"
-```
-
-**vs 传统数值反馈**：
-- 传统：`reward = 0.7`（黑盒，不可解释）
-- FinCon："在趋势发展阶段入场是正确的，但仓位控制过于激进"（可解释，可行动）
+| 角色 | 文件 | 职责 |
+|------|------|------|
+| 分析师 | `agents/analyst_role.md` | 技术面分析 |
+| 风控官 | `agents/risk_officer_role.md` | 风险评估 |
+| 基本面研究员 | 内置于 `debater.md` | 供需分析 |
+| 协调者 | 内置于 `debater.md` | 综合决策 |
 
 ---
 
-## 六、Monitor 模块
+## 六、仓位管理模块
 
 ### 6.1 工作机制
 
+**文件**：`scripts/trend_scanner/position_sizer.py`
+
 ```
-config/positions.json (持仓数据)
+Scanner 信号（趋势强度 + 波动率）
     │
     ▼
-┌─────────────────────────────────┐
-│  从本地 DuckDB 获取最新指标     │
-│  - 趋势强度 / ER / TSI / RSI   │
-│  - 与历史值对比                 │
-└──────────────┬──────────────────┘
-               │
-               ▼
-┌─────────────────────────────────┐
-│  风险检测                       │
-│  - 趋势强度下降 ≥ 0.35 → HIGH  │
-│  - ER 骤降至 < 0.3 → HIGH      │
-│  - RSI > 70 / < 30 → MEDIUM    │
-│  - 盈利回撤 > 25% → MEDIUM     │
-│  - 波动率扩大 → LOW            │
-└──────────────┬──────────────────┘
-               │
-               ▼
-          data/latest_monitor.json
+PositionSizer.calculate()
+    │
+    ├── 凯利公式：f* = p - (1-p)/b
+    │     - p = 胜率（默认 0.55）
+    │     - b = 盈亏比（默认 1.5）
+    │     - 实际使用半凯利（0.5x）降低风险
+    │
+    ├── 自适应仓位：
+    │     - 基础仓位 = 凯利公式结果
+    │     - 趋势加成 = trend_strength / 0.5（最高 1.5x）
+    │     - 波动率调整 = base_vol / current_vol
+    │
+    └── 金字塔加仓：
+          - 盈利 > 1.5 ATR 才加仓
+          - 首次 50%，第二次 30%，第三次 20%
+    │
+    ▼
+signal['position_suggestion']
 ```
 
-### 6.2 预警分级
+### 6.2 核心方法
+
+| 方法 | 参数 | 说明 |
+|------|------|------|
+| `kelly(win_rate, win_loss_ratio)` | 胜率/盈亏比 | 凯利公式计算最优仓位 |
+| `risk_parity(volatilities)` | 波动率列表 | 风险平价权重分配 |
+| `adaptive(trend_strength, volatility)` | 趋势强度/波动率 | 自适应仓位（默认） |
+| `pyramid(current_position, ...)` | 当前持仓信息 | 金字塔加仓判断 |
+
+---
+
+## 七、动态止损模块
+
+### 7.1 工作机制
+
+**文件**：`scripts/trend_scanner/stop_loss.py`
+
+```
+入场价 + ATR + 方向
+    │
+    ▼
+StopLossCalculator.multi_condition_stop()
+    │
+    ├── ATR 止损：entry ± ATR × 2.5
+    ├── 移动止损：best_price ± ATR × 3.0（盈利时激活）
+    ├── 波动率调整止损：高波动放宽，低波动收紧
+    └── 时间止损：持仓超 10 天自动止损
+    │
+    ▼
+取最严格的条件 → signal['stop_loss']
+```
+
+### 7.2 核心方法
+
+| 方法 | 说明 |
+|------|------|
+| `atr_stop(entry_price, atr, direction)` | ATR 倍数止损（默认 2.5x） |
+| `trailing_stop(best_price, atr, direction)` | 移动止损（跟踪最高/最低价） |
+| `volatility_adjusted_stop(...)` | 波动率调整止损 |
+| `time_stop(entry_time, max_holding_days)` | 时间止损（默认 10 天） |
+| `multi_condition_stop(...)` | 多条件综合止损（取最严格） |
+
+### 7.3 止损触发逻辑
+
+```python
+# 多条件综合止损
+result = calculator.multi_condition_stop(
+    entry_price=1500,
+    current_price=1480,
+    atr=30,
+    direction="LONG",
+    best_price=1530,
+    entry_time=datetime(2026, 6, 10),
+    current_vol=0.18
+)
+# result['triggered'] = True/False
+# result['final_stop_price'] = 1425.0（最严格的止损价）
+# result['risk_pct'] = 5.0（风险百分比）
+```
+
+---
+
+## 八、策略健康度评估模块
+
+### 8.1 工作机制
+
+**文件**：`scripts/trend_scanner/strategy_health.py`
+
+```
+交易历史（最近 50 笔）
+    │
+    ▼
+StrategyHealthChecker.check()
+    │
+    ├── 夏普比率（权重最高）
+    ├── 最大回撤
+    ├── 胜率趋势（最近 20 笔 vs 之前）
+    ├── 连续亏损次数
+    └── 盈亏比（总盈利/总亏损）
+    │
+    ▼
+health_score = 100 - 各维度扣分
+    │
+    ├── 80-100：健康 → 继续运行
+    ├── 60-80：亚健康 → 降低仓位至 60%
+    ├── 40-60：不健康 → 暂停开新仓
+    └── 0-40：严重失效 → 清仓复盘
+```
+
+### 8.2 评分规则
+
+| 维度 | 阈值 | 扣分 |
+|------|------|------|
+| 夏普比率 | < 0.5 | 最多 -30 |
+| 最大回撤 | > 15% | 最多 -30 |
+| 胜率下降 | > 10% | 最多 -20 |
+| 连续亏损 | ≥ 5 次 | 最多 -20 |
+| 盈亏比 | < 1.0 | 最多 -15 |
+
+### 8.3 策略退休判断
+
+```python
+result = checker.should_retire(trades)
+# 条件（满足 2 个以上触发退休）：
+# - 夏普比率 < 0.5
+# - 最大回撤 > 25%
+# - 健康评分 < 40
+```
+
+---
+
+## 九、宏观状态集成模块
+
+### 9.1 工作机制
+
+**文件**：`scripts/trend_scanner/macro_state.py`
+
+```
+宏观指标（GDP/通胀/利率/PMI/VIX）
+    │
+    ▼
+MacroStateDetector.detect()
+    │
+    ├── 经济周期：复苏/过热/滞胀/衰退
+    ├── 流动性：宽松/中性/紧缩
+    └── 风险偏好：risk-on/risk-off
+    │
+    ▼
+策略权重调整
+    │
+    ├── 复苏期：趋势 40% / 均值回归 30% / 事件驱动 20%
+    ├── 过热期：趋势 30% / 均值回归 40% / 事件驱动 20%
+    ├── 滞胀期：趋势 50% / 防守 20% / 事件驱动 10%
+    └── 衰退期：趋势 60% / 防守 20% / 事件驱动 10%
+```
+
+### 9.2 策略权重配置
+
+| 经济周期 | 趋势跟踪 | 均值回归 | 事件驱动 | 防守 |
+|----------|----------|----------|----------|------|
+| 复苏 | 40% | 30% | 20% | 10% |
+| 过热 | 30% | 40% | 20% | 10% |
+| 滞胀 | 50% | 20% | 10% | 20% |
+| 衰退 | 60% | 10% | 10% | 20% |
+
+### 9.3 集成方式
+
+宏观状态在 Scanner 阶段检测，结果附加到扫描输出：
+
+```python
+# Scanner 输出
+scan_result['macro_state'] = {
+    'cycle': {'state': 'recovery', 'name': '复苏'},
+    'liquidity': {'state': 'loose', 'name': '宽松'},
+    'risk_appetite': {'state': 'risk_on', 'name': '风险偏好'},
+    'strategy_weights': {'trend_following': 0.4, ...}
+}
+```
+
+---
+
+## 十、过拟合检测模块
+
+### 10.1 工作机制
+
+**文件**：`scripts/trend_scanner/overfitting_detector.py`
+
+```
+交易收益序列
+    │
+    ▼
+OverfittingDetector.comprehensive_check()
+    │
+    ├── 蒙特卡洛模拟（1000 次）
+    │     - 打乱收益序列
+    │     - 计算原始夏普的 p 值
+    │     - p < 0.05 → 过拟合
+    │
+    ├── 夏普合理性检验
+    │     - 夏普 > 3.0 且无法解释 → 99% 过拟合
+    │
+    └── 样本内外对比
+          - 训练集 vs 测试集夏普衰减 > 50% → 过拟合
+    │
+    ▼
+综合判断（2/3 检测到 → 高度过拟合）
+```
+
+### 10.2 检测方法
+
+| 方法 | 原理 | 过拟合判定 |
+|------|------|------------|
+| 蒙特卡洛模拟 | 打乱收益序列，检查原始夏普是否异常 | p < 0.05 |
+| 夏普合理性 | 经验法则：夏普 > 3 且无法解释 | 夏普 > 3.0 |
+| 样本内外对比 | 训练集 vs 测试集表现差异 | 衰减 > 50% |
+| 参数敏感性 | 参数微调后收益变化大 | 敏感性 > 0.5 |
+
+### 10.3 集成方式
+
+过拟合检测在 Evolver 阶段执行：
+
+```python
+# Evolver 输出
+detector = OverfittingDetector()
+result = detector.comprehensive_check(returns)
+# result['verdict'] = '未检测到明显过拟合信号'
+# result['risk_level'] = 'LOW'
+# result['recommendation'] = '继续观察'
+```
+
+---
+
+## 十一、Monitor 模块
+
+### 11.1 工作机制
+
+```
+config/positions.json → 获取最新指标 → 风险检测 → 分级预警
+```
+
+### 11.2 预警分级
 
 | 级别 | 触发条件 | 动作 |
 |------|----------|------|
 | HIGH | 趋势反转 / ER 骤降 / 趋势强度不足 | 立即通知 |
-| MEDIUM | 盈利回撤 / RSI 超买超卖 / 均线交叉 | 关注观察 |
+| MEDIUM | 盈利回撤 / RSI 超买超卖 | 关注观察 |
 | LOW | 波动率扩大 / ADX 趋势减弱 | 记录备查 |
 
 ---
 
-## 七、Evolver Agent
+## 十二、Evolver Agent
 
-### 7.1 工作机制（GIFT 思想）
+### 12.1 工作机制
 
 ```
 交易结果
     │
     ▼
-┌─────────────────────────────────┐
-│  轨迹分析（TrajectoryAnalyzer） │
-│  - 分类成功/失败案例            │
-│  - 提取共同特征                 │
-│  - 识别模式                     │
-└──────────────┬──────────────────┘
-               │
-               ▼
-┌─────────────────────────────────┐
-│  失败学习（FailureLearner）     │
-│  - 分析失败原因                 │
-│  - 生成「避免规则」             │
-│  - 例如："当市场震荡时减仓"    │
-└──────────────┬──────────────────┘
-               │
-               ▼
-┌─────────────────────────────────┐
-│  RL 接口设计（RLInterfaceDesigner）│
-│  - LLM 设计状态空间             │
-│  - LLM 设计奖励函数             │
-│  - 诊断修正：基于回滚优化       │
-└──────────────┬──────────────────┘
-               │
-               ▼
-┌─────────────────────────────────┐
-│  信念更新                       │
-│  - 将学习成果写入投资信念库     │
-│  - 概念性语言形式存储           │
-│  - 跨 Agent 传播               │
-└──────────────┬──────────────────┘
-               │
-               ▼
-    MemoryBridge.store_evolution_result
+StrategyHealthChecker.check()  ← 策略健康度评估（新增）
+    │
+    ▼
+OverfittingDetector.comprehensive_check()  ← 过拟合检测（新增）
+    │
+    ▼
+TrajectoryAnalyzer.analyze()  ← 轨迹分析
+    │
+    ▼
+FailureLearner.learn()  ← 失败学习
+    │
+    ▼
+RLInterfaceDesigner.design()  ← RL 接口设计
+    │
+    ▼
+MemoryBridge.store_evolution_result()  ← 存储进化结果
 ```
 
-### 7.2 进化触发条件
+### 12.2 进化触发条件
 
 | 条件 | 阈值 | 说明 |
 |------|------|------|
@@ -580,209 +647,103 @@ config/positions.json (持仓数据)
 | 定期进化 | 每 20 笔交易 | 主动优化 |
 | 新模式 | 检测到新模式 | 环境变化 |
 
-### 7.3 RL 接口设计（GIFT）
-
-**核心思想**：不直接让 LLM 做交易决策，而是设计状态空间和奖励函数。
+### 12.3 Evolver 输出示例
 
 ```
-LLM 设计 → 状态空间（趋势阶段/动量/波动率/...）
-LLM 设计 → 奖励函数（收益/风险/交易成本/...）
-    │
-    ▼
-选定后固定 → 测试时不再查询 LLM
-    │
-    ▼
-诊断修正 → 基于 PPO 回滚诊断优化
+开始进化流程...
+触发原因: 连续亏损 3 次
+分析样本: 25 笔交易
+
+策略健康度: 65.0/100 (亚健康)
+  - 夏普比率偏低 (0.45): -15
+  - 胜率下降 (-12%): -10
+  建议: 策略亚健康，建议降低仓位至 60%，密切观察
+
+过拟合检测: 未检测到明显过拟合信号 (风险: LOW)
+
+⚠️ 策略退休警告:
+  - 夏普比率过低 (0.45)
 ```
 
 ---
 
-## 八、记忆系统
+## 十三、记忆系统
 
-### 8.1 三层记忆架构
-
-```
-┌─────────────────────────────────────────────────┐
-│                 记忆系统架构                       │
-│                                                   │
-│  ┌─────────────────────────────────────────────┐ │
-│  │  ① 短期记忆（Session）                       │ │
-│  │  - 存储：内存（Python dict）                  │ │
-│  │  - 生命周期：会话级                           │ │
-│  │  - 用途：当前会话临时上下文                   │ │
-│  └─────────────────────────────────────────────┘ │
-│                      │                            │
-│                      ▼                            │
-│  ┌─────────────────────────────────────────────┐ │
-│  │  ② 工作记忆（Working）                       │ │
-│  │  - 存储：SQLite（data/memory.db）             │ │
-│  │  - 生命周期：日级                             │ │
-│  │  - 用途：当日交易经验、临时规则               │ │
-│  └─────────────────────────────────────────────┘ │
-│                      │                            │
-│                      ▼                            │
-│  ┌─────────────────────────────────────────────┐ │
-│  │  ③ 长期记忆（Persistent）                    │ │
-│  │  - 存储：SQLite + DuckDB                      │ │
-│  │  - 生命周期：永久                             │ │
-│  │  - 用途：历史经验、策略规则、交易日志         │ │
-│  └─────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────┘
-```
-
-### 8.2 双存储引擎
-
-| 引擎 | 文件 | 用途 | 表结构 |
-|------|------|------|--------|
-| **SQLite** | `data/memory.db` | 事务型 | experiences, strategy_rules, trade_journal, evolution_history |
-| **DuckDB** | `data/market.duckdb` | 分析型 | klines, indicators, factor_library |
-
-### 8.3 多路召回检索
+### 13.1 三层记忆架构
 
 ```
-查询上下文（品种/方向/特征向量）
-    │
-    ├── 向量相似度（cosine + euclidean）→ 粗筛 top_k*3
-    ├── 结构化条件（品种/方向/阶段）→ 精筛
-    ├── 时间相似度（指数衰减，半衰期 90 天）→ 加权
-    └── 品种相似度 → 加权
-    │
-    ▼
-综合排序 → 返回 top_k
+① 短期记忆（Session）→ 内存
+② 工作记忆（Working）→ SQLite
+③ 长期记忆（Persistent）→ SQLite + DuckDB
 ```
 
-### 8.4 MemoryBridge（集成桥接器）
+### 13.2 双存储引擎
+
+| 引擎 | 文件 | 用途 |
+|------|------|------|
+| SQLite | `data/memory.db` | 经验/规则/交易日志 |
+| DuckDB | `data/market.duckdb` | K线/指标/因子库 |
+
+### 13.3 MemoryBridge（集成桥接器）
 
 **文件**：`scripts/trend_scanner/memory_bridge.py`
-
-连接 Scanner/Reasoner/Evolver 与记忆系统的统一接口：
 
 | 调用方 | 方法 | 功能 |
 |--------|------|------|
 | Scanner | `store_scan_result()` | 存储扫描结果 |
-| Scanner | `store_indicators()` | 存储技术指标 |
 | Reasoner | `retrieve_similar_experiences()` | 检索相似经验 |
 | Reasoner | `store_reasoning_result()` | 存储推理结果 |
 | Evolver | `get_trade_history()` | 获取交易历史 |
 | Evolver | `store_evolution_result()` | 存储进化结果 |
 
-### 8.5 自优化闭环
-
-```
-交易执行 → 结果记录 → 轨迹分析 → 故障归因 → 模式检测
-    ↑                                              │
-    └──────────── 规则优化 ← LLM 反思 ←────────────┘
-```
-
-**进化触发**：连续亏损/累计亏损/定期进化/新模式检测
-
 ---
 
-## 九、动态因子生成（FactorEngine）
+## 十四、动态因子生成（FactorEngine）
 
-### 9.1 工作机制
+### 14.1 工作机制
 
 ```
-市场上下文 / 研报内容
-    │
-    ▼
-┌─────────────────────────────────┐
-│  FactorGenerator.generate()     │
-│  - 构建 prompt（市场上下文）     │
-│  - 调用 LLM 生成因子代码        │
-│  - 代码格式：                   │
-│    def factor(df) -> pd.Series  │
-└──────────────┬──────────────────┘
-               │
-               ▼
-┌─────────────────────────────────┐
-│  FactorValidator.validate()     │
-│  - 语法检查                     │
-│  - 结构检查（必须有 return）     │
-│  - 安全检查（禁止危险操作）     │
-│  - 性能指标（IC/ICIR/稳定性）   │
-└──────────────┬──────────────────┘
-               │
-               ▼
-        验证通过？
-           │         │
-           是        否
-           │         │
-           ▼         ▼
-    存入知识库    LLM 修正 → 重新验证
+市场上下文 / 研报内容 → FactorGenerator.generate() → FactorValidator.validate()
+    │                                                        │
+    │                                               验证通过？
+    │                                                  │
+    ├── 是 → 存入知识库                                │
+    └── 否 → LLM 修正 → 重新验证
 ```
 
-### 9.2 因子知识库
-
-**文件**：`data/factor_knowledge.json`
-
-```json
-{
-  "factors": [
-    {
-      "id": "factor_001",
-      "name": "动量突破因子",
-      "code": "def factor(df): ...",
-      "description": "结合价格动量和成交量放大",
-      "performance": {"ic": 0.05, "icir": 1.2},
-      "regime_effectiveness": {"trending": 0.9, "ranging": 0.3}
-    }
-  ]
-}
-```
-
-### 9.3 LLM 客户端
+### 14.2 LLM 客户端
 
 **文件**：`scripts/trend_scanner/llm_factor_client.py`
 
-**设计原则**：系统优先使用宿主平台（WorkBuddy/TRAE/QoderWork）的大模型驱动 Agent 推理，用户也可通过 `LLM_API_KEY` 环境变量配置自己的大模型。
-
-| 提供者 | 类 | 用途 |
-|--------|-----|------|
-| Auto | `create_llm_client("auto")` | 自动检测（默认） |
-| OpenAI 兼容 | `WorkBuddyClient` | 支持任意 OpenAI 兼容 API |
-| Anthropic | `AnthropicClient` | Claude 系列 |
-| 本地 | `LocalLLMClient` | Ollama 等本地模型 |
-
-**降级策略**：
-- 未设置 `LLM_API_KEY` → FactorGenerator 降级为规则模式（使用预置因子）
-- Reasoner/Debater/Evolver 由宿主平台 Agent 驱动，不依赖 `LLM_API_KEY`
+| 提供者 | 用途 |
+|--------|------|
+| Auto | 自动检测（默认） |
+| OpenAI 兼容 | 支持任意 OpenAI 兼容 API |
+| Anthropic | Claude 系列 |
+| 本地 | Ollama 等本地模型 |
 
 ---
 
-## 十、数据流与调度
+## 十五、数据流与调度
 
-### 10.1 数据流总览
+### 15.1 完整数据流
 
-| 阶段 | 输入 | 处理 | 输出 |
-|------|------|------|------|
-| 数据采集 | TqSdk API | 增量拉取 + 写入 DuckDB | `data/market.duckdb` |
-| Scanner | 本地 DuckDB | 指标计算 + 因子筛选 | `data/latest_scan.json` |
-| Reasoner | 信号 + 经验库 | LLM 推理 | `data/latest_reasoning.json` |
-| Debater | 决策简报 | 四角色辩论 | `data/latest_debate.json` |
-| Monitor | 持仓 + 本地指标 | 风险监控 | `data/latest_monitor.json` |
-| Evolver | 交易结果 | 轨迹分析 + RL 优化 | 进化报告 |
+```
+TqSdk → DuckDB → Scanner（指标+宏观+仓位+止损）
+    → Reasoner（LLM推理） → Debater（多角色辩论）
+    → PositionSizer（仓位优化） → StopLossCalculator（止损计算）
+    → Monitor（风险监控） → Evolver（健康度+过拟合+进化）
+```
 
-### 10.2 调度
+### 15.2 调度
 
-| 时间 | 任务 | 说明 |
-|------|------|------|
-| 08:40 | 盘前准备 | 数据同步 + 全品种扫描 |
-| 15:20 | 日盘收盘 | 数据同步 + 全品种扫描 + 输出总结 |
-| 20:40 | 夜盘开盘 | 数据同步 + 全品种扫描 |
-| 每 30 分钟 | 持仓监控 | Monitor 脚本 |
-| 每 5 分钟 | 心跳检测 | 交易时段内 |
-
-### 10.3 Token 预算
-
-每日预算：850,000 token
-
-| 使用率 | 动作 |
-|--------|------|
-| < 80% | 正常运行 |
-| 80-90% | 停止 Debater Agent |
-| 90-100% | 只保留 Scanner 脚本 |
-| >= 100% | 停止所有 Agent |
+| 时间 | 任务 |
+|------|------|
+| 08:40 | 数据同步 + 全品种扫描 |
+| 15:20 | 数据同步 + 全品种扫描 + 输出总结 |
+| 20:40 | 数据同步 + 全品种扫描 |
+| 每 30 分钟 | 持仓监控 |
+| 每 5 分钟 | 心跳检测 |
 
 ---
 
@@ -792,11 +753,11 @@ LLM 设计 → 奖励函数（收益/风险/交易成本/...）
 
 ```
 Trend-scanner-Agent/
-├── SKILL.md                    # 项目文档（本文件）
+├── SKILL.md
 ├── config/
-│   ├── config.json             # 统一配置
-│   └── positions.json          # 持仓数据
-├── scripts/trend_scanner/      # 核心计算包
+│   ├── config.json
+│   └── positions.json
+├── scripts/trend_scanner/
 │   ├── data_source.py          # 数据源适配器
 │   ├── memory_bridge.py        # 记忆系统集成桥接器
 │   ├── factor_generator.py     # 动态因子生成
@@ -807,12 +768,12 @@ Trend-scanner-Agent/
 │   ├── conceptual_feedback.py  # 概念性语言反馈
 │   ├── belief_propagation.py   # 信念传播
 │   ├── rl_interface_designer.py # RL 接口设计
-│   ├── position_sizer.py       # 仓位管理（凯利/风险平价/自适应）
-│   ├── stop_loss.py            # 动态止损（ATR/移动/波动率调整）
+│   ├── position_sizer.py       # 仓位管理
+│   ├── stop_loss.py            # 动态止损
 │   ├── strategy_health.py      # 策略健康度评估
 │   ├── macro_state.py          # 宏观状态集成
-│   ├── overfitting_detector.py # 过拟合检测（蒙特卡洛/参数敏感性）
-│   └── memory/                 # 记忆系统
+│   ├── overfitting_detector.py # 过拟合检测
+│   └── memory/
 │       ├── manager.py          # 统一记忆管理器
 │       ├── sqlite_store.py     # SQLite 存储
 │       ├── duckdb_store.py     # DuckDB 存储
@@ -827,24 +788,20 @@ Trend-scanner-Agent/
 │   ├── run_reasoner.py         # Reasoner
 │   ├── run_debater.py          # Debater
 │   ├── run_evolver.py          # Evolver
-│   ├── deploy_v4.sh            # 部署脚本
 │   └── data_formats.py         # 数据格式定义
 ├── agents/
-│   ├── orchestrator.md         # Orchestrator Agent
-│   ├── reasoner.md             # Reasoner Agent
-│   ├── debater.md              # Debater Agent v2.0
-│   ├── analyst_role.md         # 分析师角色
-│   ├── risk_officer_role.md    # 风控官角色
-│   └── evolver.md              # Evolver Agent v2.0
-├── tests/                      # 154 个测试
+│   ├── orchestrator.md
+│   ├── reasoner.md
+│   ├── debater.md
+│   ├── analyst_role.md
+│   ├── risk_officer_role.md
+│   └── evolver.md
+├── tests/
 ├── data/
-│   ├── market.duckdb           # K 线数据库
-│   ├── memory.db               # 记忆系统数据库
-│   └── factor_knowledge.json   # 因子知识库
+│   ├── market.duckdb
+│   ├── memory.db
+│   └── factor_knowledge.json
 └── docs/
-    ├── paper_analysis_improvements.md
-    ├── implementation_plan.md
-    └── CODE_STYLE.md
 ```
 
 ### B. 快速开始
@@ -854,17 +811,11 @@ git clone https://github.com/CTAAgents/Trend-scanner-Agent.git
 cd Trend-scanner-Agent
 pip install -r requirements.txt
 
-# 配置环境变量
 export TQ_USER=your_username
 export TQ_PASSWORD=your_password
+export LLM_API_KEY=your_api_key  # 可选
 
-# 可选：配置自定义 LLM（不设置则使用宿主平台的 LLM）
-export LLM_API_KEY=your_api_key
-
-# 运行扫描
 python tools/scan_opportunities.py --output text --save
-
-# 完整流程
 python tools/orchestrator.py full
 ```
 
@@ -881,16 +832,8 @@ python tools/orchestrator.py full
 | test_full_pipeline.py | 22 | ✅ |
 | test_performance.py | 20 | ✅ |
 | test_memory_system.py | 12 | ✅ |
-| **总计** | **154** | **全部通过** |
+| **总计** | **162** | **全部通过** |
 
-### D. 论文来源
-
-| 论文 | 核心思想 | 对应模块 |
-|-----|---------|---------|
-| FactorEngine (2603.16365) | 因子即代码、知识注入 | Scanner / Reasoner |
-| FinCon (2407.06567) | 概念性语言反馈、多角色协作 | Debater |
-| GIFT (2606.08450) | LLM 引导的 RL 接口设计 | Evolver |
-
-### E. 许可证
+### D. 许可证
 
 MIT License

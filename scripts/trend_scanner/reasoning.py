@@ -109,7 +109,8 @@ class WorkBuddyAgentProvider(LLMProvider):
             try:
                 # 构建完整的提示词
                 full_prompt = f"{system_prompt}\n\n{user_prompt}"
-                return self._llm_provider.generate(full_prompt)
+                # 传递max_tokens参数
+                return self._llm_provider.generate(full_prompt, max_tokens=2000)
             except Exception as e:
                 print(f"[LLM] 调用失败: {e}", flush=True)
                 return self._fallback_response(system_prompt, user_prompt)

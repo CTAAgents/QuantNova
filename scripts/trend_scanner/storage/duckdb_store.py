@@ -201,7 +201,7 @@ class DuckDBStore:
         
         Args:
             symbol: 品种代码
-            days: 获取天数
+            days: 获取天数（记录条数）
             timeframe: 时间周期
             end_date: 结束日期
         
@@ -210,24 +210,21 @@ class DuckDBStore:
         """
         conn = self._get_conn()
         try:
-            if end_date is None:
-                end_date = datetime.now()
-            
-            start_date = end_date - timedelta(days=days)
-            
+            # 获取最近N条记录（不依赖日期范围）
             df = conn.execute("""
                 SELECT timestamp as date, open, high, low, close, volume, open_interest
                 FROM klines
-                WHERE symbol = ? AND timeframe = ? 
-                AND timestamp >= ? AND timestamp <= ?
-                ORDER BY timestamp
-            """, [symbol, timeframe, start_date, end_date]).fetchdf()
+                WHERE symbol = ? AND timeframe = ?
+                ORDER BY timestamp DESC
+                LIMIT ?
+            """, [symbol, timeframe, days]).fetchdf()
             
             if df.empty:
                 return None
             
-            # 转换日期格式
+            # 转换日期格式并按时间正序排列
             df['date'] = pd.to_datetime(df['date'])
+            df = df.sort_values('date').reset_index(drop=True)
             
             return df
             

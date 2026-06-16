@@ -1,15 +1,18 @@
-# Trend-scanner-Agent v4.0 实施计划
+# Trend-scanner-Agent v5.0 实施计划
 
-> 版本：v1.0 | 创建日期：2026-06-15
-> 状态：Phase 1-6 主体完成（116 个测试全部通过）
+> 版本：v2.0 | 创建日期：2026-06-15 | 更新日期：2026-06-16
+> 状态：v5.0 全部完成（58 个 v5.0 测试全部通过）
 
 ## 一、项目概述
 
 ### 1.1 目标
-基于 FactorEngine、FinCon、GIFT 三篇论文的核心思想，将 Trend-scanner-Agent 从 v3.0 升级到 v4.0，实现：
+基于 Agentic AI for Factor Investing、FactorEngine、FinCon、GIFT 四篇论文的核心思想，将 Trend-scanner-Agent 从 v3.0 升级到 v5.0，实现：
+- **闭环因子进化**：Generate→Eval→Gate→Memory 自动迭代
+- **截面 IC/ICIR 评估**：多品种截面预测能力量化
+- **贝叶斯参数优化**：Optuna TPE 自动搜索最优参数
+- **多因子组合**：LightGBM 非线性因子组合
 - **因子即代码**：Scanner 从固定指标升级为 LLM 生成的动态因子
 - **多角色协作**：Debater 从单 Agent self-debate 升级为多角色对抗
-- **RL 接口自设计**：Evolver 从规则优化升级为 LLM 引导的 RL 框架
 - **知识注入闭环**：实现研报→因子→验证→入库的自动化流水线
 
 ### 1.2 当前架构

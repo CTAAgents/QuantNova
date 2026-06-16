@@ -110,9 +110,18 @@ class DataSyncManager:
             }
         
         print(f"[同步] 获取 {len(symbols)} 个品种的行情...")
-        
-        # 批量获取行情
-        quotes = self.tqsdk.get_quotes_batch(symbols)
+
+        # 分批获取行情（每批最多 10 个，避免 TqSdk 单次订阅过多超时）
+        all_quotes = {}
+        chunk_size = 10
+        for i in range(0, len(symbols), chunk_size):
+            chunk = symbols[i:i+chunk_size]
+            print(f"  批次 {i//chunk_size + 1}: {len(chunk)} 个品种...")
+            batch_quotes = self.tqsdk.get_quotes_batch(chunk)
+            if batch_quotes:
+                all_quotes.update(batch_quotes)
+
+        quotes = all_quotes
         
         if not quotes:
             return {

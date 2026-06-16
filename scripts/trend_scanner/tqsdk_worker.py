@@ -105,10 +105,14 @@ def fetch_kline(symbol: str, days: int = 120, period: str = "daily") -> dict:
         }
         dur_sec = period_map.get(period, 86400)
         
-        # 获取数据
+        # 获取数据（deadline 限制等待时间，避免盘前无数据时无限阻塞）
         api = TqApi(auth=auth)
         klines = api.get_kline_serial(tq_symbol, dur_sec, data_length=days)
-        api.wait_update()
+        deadline = time.time() + 10  # 最多等待 10 秒
+        try:
+            api.wait_update(deadline=deadline)
+        except Exception:
+            pass  # 超时异常可忽略，klines 已有历史数据
         
         if klines is None or len(klines) == 0:
             api.close()
@@ -210,7 +214,11 @@ def fetch_quote(symbol: str) -> dict:
         
         api = TqApi(auth=auth)
         quote = api.get_quote(tq_symbol)
-        api.wait_update()
+        deadline = time.time() + 10
+        try:
+            api.wait_update(deadline=deadline)
+        except Exception:
+            pass
         
         data = {
             'symbol': symbol,
@@ -372,8 +380,11 @@ def fetch_quotes_batch(tq_symbols: list) -> dict:
                     except:
                         continue
                 
-                # 等待数据更新
-                api.wait_update()
+                # 等待数据更新（deadline 限制等待时间）
+                try:
+                    api.wait_update(deadline=time.time() + 10)
+                except Exception:
+                    pass
                 
                 # 提取数据
                 for tq_symbol, quote in quote_objs.items():

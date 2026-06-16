@@ -31,10 +31,10 @@ class DataSource(ABC):
     """数据源基类"""
     
     @abstractmethod
-    def get_kline(self, symbol: str, days: int = 120, period: str = "daily") -> Optional[pd.DataFrame]:
+    def get_kline(self, symbol: str, days: int = 120, period: str = "daily", **kwargs) -> Optional[pd.DataFrame]:
         """
         获取K线数据
-        
+
         参数:
             symbol: 品种代码（如 "RB", "I", "AU"）
             days: 获取天数

@@ -325,26 +325,30 @@ class DataSyncManager:
     # 数据源查询
     # ============================================================
     
-    def get_kline(self, symbol: str, days: int = 120, 
-                  timeframe: str = 'daily') -> Optional[pd.DataFrame]:
+    def get_kline(self, symbol: str, days: int = 120,
+                  timeframe: str = 'daily', allow_tqsdk_fallback: bool = True) -> Optional[pd.DataFrame]:
         """
         获取K线数据（优先从本地DB，其次从TqSdk）
-        
+
         Args:
             symbol: 品种代码
             days: 获取天数
             timeframe: 时间周期
-        
+            allow_tqsdk_fallback: 是否允许 TqSdk 兜底（心跳模式可关闭以避免超时阻塞）
+
         Returns:
             DataFrame
         """
         # 1. 尝试从 DuckDB 获取
         df = self.duckdb.get_klines(symbol, days, timeframe)
-        
+
         if df is not None and len(df) >= 60:
             return df
-        
-        # 2. 从 TqSdk 获取
+
+        # 2. 从 TqSdk 获取（可跳过）
+        if not allow_tqsdk_fallback:
+            return None
+
         print(f"  [数据源] 本地数据不足，从 TqSdk 获取 {symbol}...")
         df = self.tqsdk.get_kline(symbol, days=days)
         

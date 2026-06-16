@@ -302,6 +302,9 @@ from .overfitting_detector import OverfittingDetector
 # 策略健康度
 from .strategy_health import StrategyHealthChecker
 
+# 持仓健康度评估
+from .position_health import PositionHealthChecker
+
 # 宏观状态检测
 from .macro_state import MacroStateDetector
 

@@ -213,15 +213,15 @@ def check_symbol_changes(symbols: List[str], data_source,
         data_symbol = normalize_symbol(symbol)
         
         try:
-            df = data_source.get_kline(data_symbol, days=120)
+            df = data_source.get_kline(data_symbol, days=120, allow_tqsdk_fallback=False)
             if df is None or len(df) < 60:
                 continue
-            
+
             engine = IndicatorEngine(df)
             engine.compute_all()
             composite = engine.get_trend_strength_composite()
             engine.df['trend_strength_composite'] = composite
-            
+
             latest = engine.df.iloc[-1]
             er = float(latest.get('er', 0))
             tsi = float(latest.get('tsi', 0))

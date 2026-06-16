@@ -153,11 +153,11 @@ class TqSdkSource(DataSource):
             return False
         return self._bridge.is_available()
     
-    def get_kline(self, symbol: str, days: int = 120, period: str = "daily") -> Optional[pd.DataFrame]:
+    def get_kline(self, symbol: str, days: int = 120, period: str = "daily", **kwargs) -> Optional[pd.DataFrame]:
         """获取K线数据（使用桥接器）"""
         if not self.is_available():
             return None
-        
+
         try:
             return self._bridge.get_kline(symbol, days, period)
         except Exception as e:

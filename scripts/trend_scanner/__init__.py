@@ -261,6 +261,53 @@ from .seed_factor_pool import SeedFactorPool
 from .multi_factor_model import MultiFactorModel, ModelResult
 from .factor_experience_db import FactorExperienceDB
 
+# 因子生成与验证
+from .factor_generator import (
+    FactorGenerator,
+    FactorValidator,
+    FactorKnowledgeManager,
+    FactorResult,
+)
+from .factor_validator import FactorValidator as FactorCodeValidator
+from .llm_factor_client import LLMClient
+
+# 研报解析
+from .report_parser import ReportParser
+
+# 信念传播与概念性反馈（FinCon 架构）
+from .belief_propagation import BeliefPropagationManager
+from .conceptual_feedback import ConceptualFeedbackManager
+
+# RL 接口设计（GIFT 架构）
+from .rl_interface_designer import RLInterfaceDesigner
+
+# 执行引擎
+from .execution import ExecutionEngine, PositionState, RiskGuard, TradeFilter
+
+# 仓位管理
+from .position_sizer import PositionSizer
+
+# 止损管理
+from .stop_loss import StopLossCalculator
+
+# 组合管理
+from .portfolio import PortfolioManager
+
+# 回测框架
+from .backtest import WalkForwardBacktester, MonteCarloValidator
+
+# 过拟合检测
+from .overfitting_detector import OverfittingDetector
+
+# 策略健康度
+from .strategy_health import StrategyHealthChecker
+
+# 宏观状态检测
+from .macro_state import MacroStateDetector
+
+# 记忆桥接器
+from .memory_bridge import MemoryBridge
+
 # 交易记录（兼容旧版测试）
 from .models import TradeRecord, TradeSignal, TrendPhaseInfo
 

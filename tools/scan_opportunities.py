@@ -402,6 +402,87 @@ def main():
     print(f"[{datetime.now().strftime('%H:%M:%S')}] 开始扫描...")
     result = scan_all(symbols, use_dynamic_factors=args.use_dynamic_factors)
     
+    # Reasoner深度分析（如果启用）
+    if args.reasoner and result.get('signals'):
+        print(f"\n{'=' * 60}")
+        print("Reasoner 深度分析")
+        print(f"{'=' * 60}")
+        try:
+            from reasoner import ReasonerAgent
+            reasoner = ReasonerAgent()
+            
+            analyzed_signals = []
+            for sig in result['signals']:
+                symbol = sig['symbol']
+                direction = sig['direction']
+                print(f"\n分析 {symbol} ({direction})...")
+                
+                # 构造信号数据
+                signal_data = {
+                    'symbol': symbol,
+                    'direction': direction,
+                    'trend_phase': sig.get('trend_phase', 'UNKNOWN'),
+                    'trend_strength_composite': sig.get('trend_strength_composite', 0),
+                    'tsi': sig.get('tsi', 0),
+                    'er': sig.get('er', 0),
+                    'r_squared': sig.get('r_squared', 0),
+                    'key_signals': [sig.get('trigger_reason', '')],
+                    'risk_factors': [],
+                    'scan_id': result.get('scan_time', '')
+                }
+                
+                # 调用Reasoner分析
+                try:
+                    brief = reasoner.analyze(signal_data)
+                    
+                    # 提取关键信息
+                    recommended_route = brief.get('recommended_route', '')
+                    routes = brief.get('routes', [])
+                    confidence = 0
+                    action = ''
+                    reasoning = ''
+                    
+                    for route in routes:
+                        if route.get('route_id') == recommended_route:
+                            confidence = route.get('confidence', 0)
+                            action = route.get('action', '')
+                            reasoning = route.get('reasoning', '')
+                            break
+                    
+                    # 添加Reasoner评估到信号
+                    sig['reasoner_brief'] = {
+                        'confidence': confidence,
+                        'recommended_action': action,
+                        'reasoning': reasoning,
+                        'routes_count': len(routes),
+                        'warnings': brief.get('warnings', []),
+                        'uncertainty': brief.get('uncertainty', {}),
+                        'generation_time_ms': brief.get('generation_time_ms', 0)
+                    }
+                    
+                    print(f"  置信度: {confidence:.0%}")
+                    print(f"  建议: {action[:50]}..." if len(action) > 50 else f"  建议: {action}")
+                    
+                except Exception as e:
+                    print(f"  分析失败: {e}")
+                    sig['reasoner_brief'] = {
+                        'confidence': 0,
+                        'recommended_action': '分析失败',
+                        'reasoning': str(e),
+                        'error': True
+                    }
+                
+                analyzed_signals.append(sig)
+            
+            result['signals'] = analyzed_signals
+            result['reasoner_analyzed'] = True
+            print(f"\n完成 {len(analyzed_signals)} 个品种的深度分析")
+            
+        except Exception as e:
+            print(f"Reasoner初始化失败: {e}")
+            import traceback
+            traceback.print_exc()
+    
     # 输出结果
     if args.output == "json":
         print(json.dumps(result, ensure_ascii=False, indent=2))

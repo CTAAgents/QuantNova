@@ -127,46 +127,61 @@ def normalize_symbol(symbol: str) -> str:
     return symbol.upper()
 
 
-def check_position_alerts(positions: List[Dict[str, Any]], data_source, 
-                          prev_state: Dict[str, Any]) -> List[Dict[str, Any]]:
+def check_position_alerts(positions: List[Dict[str, Any]], data_source,
+                          prev_state: Dict[str, Any],
+                          realtime_quotes: Dict[str, Dict[str, Any]] = None) -> List[Dict[str, Any]]:
     """
-    检查持仓品种的风险预警
-    
+    检查持仓品种的风险预警（混合模式：本地K线算指标 + 实时报价算盈亏）
+
     参数:
         positions: 持仓列表
         data_source: 数据源实例
         prev_state: 上次心跳状态
-    
+        realtime_quotes: 实时行情数据
+
     返回:
         预警列表
     """
     alerts = []
     config = load_config()
     alert_thresholds = config.get('monitor', {}).get('alert_thresholds', {})
-    
+
     for pos in positions:
         symbol = pos.get('symbol', '')
         direction = pos.get('direction', '')
         entry_price = pos.get('entry_price', 0)
         data_symbol = normalize_symbol(symbol)
-        
+
         try:
             # 获取当前数据（心跳模式禁用 TqSdk 兜底，避免超时阻塞）
             df = data_source.get_kline(data_symbol, days=120, allow_tqsdk_fallback=False)
             if df is None or len(df) < 60:
                 continue
-            
+
             # 计算指标
             engine = IndicatorEngine(df)
             engine.compute_all()
             composite = engine.get_trend_strength_composite()
             engine.df['trend_strength_composite'] = composite
-            
+
             latest = engine.df.iloc[-1]
-            current_price = float(latest.get('close', 0))
+            # 优先使用实时报价，其次用本地K线收盘价
+            realtime_price = 0
+            if realtime_quotes and symbol in realtime_quotes:
+                realtime_price = realtime_quotes[symbol].get('last_price', 0)
+            current_price = realtime_price if realtime_price > 0 else float(latest.get('close', 0))
             er = float(latest.get('er', 0))
             tsi = float(latest.get('tsi', 0))
             trend_strength = float(composite.iloc[-1])
+
+            # 计算浮动盈亏
+            if entry_price > 0 and current_price > 0:
+                if direction == 'LONG':
+                    pnl_pct = (current_price / entry_price - 1) * 100
+                else:
+                    pnl_pct = (1 - current_price / entry_price) * 100
+            else:
+                pnl_pct = 0
             
             # 获取上次状态
             prev_symbol_state = prev_state.get('positions', {}).get(symbol, {})

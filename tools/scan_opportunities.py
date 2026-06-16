@@ -380,6 +380,8 @@ def main():
                         help="目标晋升因子数（默认 3）")
     parser.add_argument("--opt-trials", type=int, default=30,
                         help="参数优化试验次数（默认 30）")
+    parser.add_argument("--load-report", type=str, default=None,
+                        help="从研报文件加载种子因子（配合 --evolve 使用）")
     
     args = parser.parse_args()
     

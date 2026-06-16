@@ -102,8 +102,8 @@ def check_position_alerts(positions: List[Dict[str, Any]], data_source,
         data_symbol = normalize_symbol(symbol)
         
         try:
-            # 获取当前数据
-            df = data_source.get_kline(data_symbol, days=120)
+            # 获取当前数据（心跳模式禁用 TqSdk 兜底，避免超时阻塞）
+            df = data_source.get_kline(data_symbol, days=120, allow_tqsdk_fallback=False)
             if df is None or len(df) < 60:
                 continue
             

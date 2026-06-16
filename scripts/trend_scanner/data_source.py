@@ -330,19 +330,21 @@ class LocalDBSource(DataSource):
             self._sync_manager = DataSyncManager(sqlite_path=sqlite_path, duckdb_path=duckdb_path)
         return self._sync_manager
     
-    def get_kline(self, symbol: str, days: int = 120, period: str = "daily") -> Optional[pd.DataFrame]:
+    def get_kline(self, symbol: str, days: int = 120, period: str = "daily", **kwargs) -> Optional[pd.DataFrame]:
         """
         获取K线数据（优先从本地DB，其次从TqSdk）
-        
+
         Args:
             symbol: 品种代码
             days: 获取天数
             period: 周期
-        
+            **kwargs: allow_tqsdk_fallback (bool) - 是否允许 TqSdk 兜底
+
         Returns:
             DataFrame
         """
-        return self.sync_manager.get_kline(symbol, days, period)
+        allow_tqsdk = kwargs.get('allow_tqsdk_fallback', True)
+        return self.sync_manager.get_kline(symbol, days, period, allow_tqsdk_fallback=allow_tqsdk)
     
     def get_quote(self, symbol: str) -> Optional[Dict[str, Any]]:
         """

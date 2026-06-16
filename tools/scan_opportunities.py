@@ -489,13 +489,34 @@ def main():
     else:
         print(f"扫描完成: {result['total_scanned']} 个品种")
         print(f"发现信号: {result['signal_count']} 个")
+        if result.get('reasoner_analyzed'):
+            print(f"深度分析: 已完成")
         print("-" * 60)
         
         if result['signals']:
             for sig in result['signals']:
+                # 基础信息
                 print(f"  {sig['symbol']:<20} {sig['direction']:<8} {sig['signal_strength']:<8} "
                       f"ER={sig['er']:.2f} TSI={sig['tsi']:.1f} R²={sig['r_squared']:.2f}")
                 print(f"    原因: {sig['trigger_reason']}")
+                
+                # Reasoner评估（如果有）
+                if 'reasoner_brief' in sig:
+                    brief = sig['reasoner_brief']
+                    if not brief.get('error'):
+                        confidence = brief.get('confidence', 0)
+                        action = brief.get('recommended_action', '')
+                        # 根据置信度显示不同标记
+                        if confidence >= 0.7:
+                            marker = "[高置信度]"
+                        elif confidence >= 0.5:
+                            marker = "[中置信度]"
+                        else:
+                            marker = "[低置信度]"
+                        print(f"    推理: {marker} 置信度{confidence:.0%}")
+                        print(f"    建议: {action[:60]}..." if len(action) > 60 else f"    建议: {action}")
+                    else:
+                        print(f"    推理: [分析失败] {brief.get('reasoning', '')[:50]}")
         else:
             print("  无信号")
     

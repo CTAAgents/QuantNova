@@ -548,6 +548,12 @@ class FactorEvolutionEngine:
 def main():
     """命令行入口"""
     import argparse
+    import sys
+
+    # 确保 scripts 目录在路径中
+    scripts_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
+    if scripts_dir not in sys.path:
+        sys.path.insert(0, scripts_dir)
 
     parser = argparse.ArgumentParser(description='因子进化引擎')
     parser.add_argument('--db', type=str, default=None, help='DuckDB 路径')

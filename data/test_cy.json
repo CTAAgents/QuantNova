@@ -1,0 +1,111 @@
+{
+  "success": true,
+  "error": null,
+  "data": {
+    "symbol": "CY",
+    "tq_symbol": "KQ.m@CZCE.CY",
+    "period": "daily",
+    "records": 10,
+    "columns": [
+      "date",
+      "open",
+      "high",
+      "low",
+      "close",
+      "volume",
+      "open_interest"
+    ],
+    "data": [
+      {
+        "date": "2026-06-02 16:00:00",
+        "open": 22700.0,
+        "high": 22750.0,
+        "low": 22605.0,
+        "close": 22630.0,
+        "volume": 4317.0,
+        "open_interest": 5632.0
+      },
+      {
+        "date": "2026-06-03 16:00:00",
+        "open": 22685.0,
+        "high": 22740.0,
+        "low": 22445.0,
+        "close": 22510.0,
+        "volume": 13808.0,
+        "open_interest": 9255.0
+      },
+      {
+        "date": "2026-06-04 16:00:00",
+        "open": 22510.0,
+        "high": 22585.0,
+        "low": 22340.0,
+        "close": 22360.0,
+        "volume": 8917.0,
+        "open_interest": 10451.0
+      },
+      {
+        "date": "2026-06-07 16:00:00",
+        "open": 22410.0,
+        "high": 22440.0,
+        "low": 22090.0,
+        "close": 22210.0,
+        "volume": 10309.0,
+        "open_interest": 11952.0
+      },
+      {
+        "date": "2026-06-08 16:00:00",
+        "open": 22160.0,
+        "high": 22210.0,
+        "low": 22060.0,
+        "close": 22155.0,
+        "volume": 8683.0,
+        "open_interest": 11868.0
+      },
+      {
+        "date": "2026-06-09 16:00:00",
+        "open": 22115.0,
+        "high": 22220.0,
+        "low": 21990.0,
+        "close": 22060.0,
+        "volume": 8614.0,
+        "open_interest": 12356.0
+      },
+      {
+        "date": "2026-06-10 16:00:00",
+        "open": 22045.0,
+        "high": 22095.0,
+        "low": 21980.0,
+        "close": 22080.0,
+        "volume": 5275.0,
+        "open_interest": 12287.0
+      },
+      {
+        "date": "2026-06-11 16:00:00",
+        "open": 22080.0,
+        "high": 22210.0,
+        "low": 22080.0,
+        "close": 22135.0,
+        "volume": 6773.0,
+        "open_interest": 12433.0
+      },
+      {
+        "date": "2026-06-14 16:00:00",
+        "open": 22140.0,
+        "high": 22250.0,
+        "low": 22115.0,
+        "close": 22160.0,
+        "volume": 7406.0,
+        "open_interest": 12793.0
+      },
+      {
+        "date": "2026-06-15 16:00:00",
+        "open": 22200.0,
+        "high": 22230.0,
+        "low": 22095.0,
+        "close": 22205.0,
+        "volume": 4844.0,
+        "open_interest": 12966.0
+      }
+    ]
+  }
+}

@@ -219,7 +219,11 @@ class VGRSI:
         n = len(prices)
         vgrsi_values = np.full(n, np.nan)
         
-        for i in range(n - self.window_size, n):
+        # 处理边界情况
+        if n == 0:
+            return vgrsi_values
+        
+        for i in range(self.window_size, n):
             # 获取回看窗口内的价格
             window_start = max(0, i - self.window_size)
             window_end = min(n, i + self.window_size + 1)
@@ -227,6 +231,11 @@ class VGRSI:
             
             # 计算可见性关系（从当前点向前看）
             current_idx = i - window_start
+            
+            # 确保 current_idx 在有效范围内
+            if current_idx < 0 or current_idx >= len(window_prices):
+                continue
+            
             visible_points = []
             
             # 查找从当前点可见的后续点

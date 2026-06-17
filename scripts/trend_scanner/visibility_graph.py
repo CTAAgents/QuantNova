@@ -206,6 +206,10 @@ class VGRSI:
         """
         计算 VGRSI 指标
         
+        根据论文，VGRSI 基于从当前点向前看的可见性关系。
+        对于每个时间点 i，计算所有从 i 可见的后续点 j（j > i），
+        然后基于这些可见点计算 VGRSI 值。
+        
         Args:
             prices: 价格序列
             
@@ -215,20 +219,21 @@ class VGRSI:
         n = len(prices)
         vgrsi_values = np.full(n, np.nan)
         
-        for i in range(self.window_size, n):
+        for i in range(n - self.window_size, n):
             # 获取回看窗口内的价格
             window_start = max(0, i - self.window_size)
-            window_prices = prices[window_start:i + 1]
+            window_end = min(n, i + self.window_size + 1)
+            window_prices = prices[window_start:window_end]
             
-            # 计算可见性关系
-            visibility = VisibilityGraph.compute_visibility_matrix(window_prices, self.window_size)
-            
-            # 获取当前点的可见点
+            # 计算可见性关系（从当前点向前看）
             current_idx = i - window_start
-            if current_idx not in visibility:
-                continue
+            visible_points = []
             
-            visible_points = visibility[current_idx]
+            # 查找从当前点可见的后续点
+            for j in range(current_idx + 1, len(window_prices)):
+                if VisibilityGraph.backward_visibility(window_prices, current_idx, j):
+                    visible_points.append(j)
+            
             if not visible_points:
                 continue
             

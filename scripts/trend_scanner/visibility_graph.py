@@ -474,3 +474,129 @@ def calculate_vgrsi_multi_timeframe(prices_dict: Dict[str, pd.Series],
     result = pd.DataFrame(result_data, index=prices_dict[list(prices_dict.keys())[0]].index[-min_len_idx:])
     
     return result
+
+
+class MultiTimeframeVGRSIFactor:
+    """
+    多周期 VGRSI 一致性因子
+    
+    将 MultiTimeframeVGRSI 的共识信号封装为独立因子，
+    可直接用于多因子模型。
+    """
+    
+    def __init__(self, 
+                 timeframe_configs: Dict[str, Dict[str, Any]] = None,
+                 threshold_upper: float = 70.0,
+                 threshold_lower: float = 30.0):
+        """
+        初始化多时间框架 VGRSI 因子
+        
+        Args:
+            timeframe_configs: 各时间框架的配置
+            threshold_upper: 买入信号阈值
+            threshold_lower: 卖出信号阈值
+        """
+        if timeframe_configs is None:
+            timeframe_configs = {
+                'M1': {'window_size': 50, 'aggregation_mode': 'A0'},
+                'M5': {'window_size': 100, 'aggregation_mode': 'A0'},
+                'M30': {'window_size': 150, 'aggregation_mode': 'A0'}
+            }
+        
+        self.timeframe_configs = timeframe_configs
+        self.threshold_upper = threshold_upper
+        self.threshold_lower = threshold_lower
+        
+        self.calculator = MultiTimeframeVGRSI(
+            timeframe_configs=timeframe_configs,
+            threshold_upper=threshold_upper,
+            threshold_lower=threshold_lower
+        )
+        
+        logger.info(f"MultiTimeframeVGRSIFactor 初始化完成，"
+                   f"时间框架: {list(timeframe_configs.keys())}")
+    
+    def calculate(self, prices_dict: Dict[str, pd.Series]) -> pd.Series:
+        """
+        计算多时间框架共识因子
+        
+        Args:
+            prices_dict: 各时间框架的价格数据 {timeframe: pd.Series}
+            
+        Returns:
+            pd.Series: 共识因子值 (1=多, -1=空, 0=无共识)
+        """
+        if not prices_dict:
+            return pd.Series(dtype=float)
+        
+        # 计算共识信号
+        consensus_signals = self.calculator.generate_consensus_signals(
+            {tf: prices.values for tf, prices in prices_dict.items()}
+        )
+        
+        if len(consensus_signals) == 0:
+            return pd.Series(dtype=float)
+        
+        # 使用最短时间框架的索引
+        min_len_idx = min(len(prices) for prices in prices_dict.values())
+        index = prices_dict[list(prices_dict.keys())[0]].index[-min_len_idx:]
+        
+        return pd.Series(consensus_signals, index=index)
+    
+    def generate_signals(self, consensus_values: pd.Series) -> pd.Series:
+        """
+        根据共识因子值生成交易信号
+        
+        Args:
+            consensus_values: 共识因子值
+            
+        Returns:
+            pd.Series: 信号序列 (1=买入, -1=卖出, 0=无信号)
+        """
+        signals = pd.Series(0, index=consensus_values.index)
+        
+        for i in range(1, len(consensus_values)):
+            if pd.isna(consensus_values[i]) or pd.isna(consensus_values[i-1]):
+                continue
+            
+            # 买入信号: 共识值从 0 或 -1 变为 1
+            if consensus_values[i] == 1 and consensus_values[i-1] != 1:
+                signals.iloc[i] = 1
+            # 卖出信号: 共识值从 0 或 1 变为 -1
+            elif consensus_values[i] == -1 and consensus_values[i-1] != -1:
+                signals.iloc[i] = -1
+        
+        return signals
+
+
+def consensus_factor(prices_dict: Dict[str, pd.Series],
+                     timeframe_configs: Dict[str, Dict[str, Any]] = None,
+                     threshold_upper: float = 70.0,
+                     threshold_lower: float = 30.0) -> pd.DataFrame:
+    """
+    便捷函数：计算多时间框架共识因子
+    
+    Args:
+        prices_dict: 各时间框架的价格数据
+        timeframe_configs: 各时间框架的配置
+        threshold_upper: 买入信号阈值
+        threshold_lower: 卖出信号阈值
+        
+    Returns:
+        pd.DataFrame: 包含共识因子和信号的 DataFrame
+    """
+    factor = MultiTimeframeVGRSIFactor(
+        timeframe_configs=timeframe_configs,
+        threshold_upper=threshold_upper,
+        threshold_lower=threshold_lower
+    )
+    
+    consensus_values = factor.calculate(prices_dict)
+    signals = factor.generate_signals(consensus_values)
+    
+    result = pd.DataFrame({
+        'consensus': consensus_values,
+        'signal': signals
+    }, index=consensus_values.index)
+    
+    return result

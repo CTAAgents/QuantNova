@@ -1,12 +1,7 @@
 """
 技术指标同步脚本（v2.1）
 
-计算 70+ 个技术指标（对齐 TqSdk ta 模块指标集）并保存到 DuckDB。
-
-注意：本脚本使用 pandas 直接计算所有指标，而非调用 TqSdk ta 模块。
-原因：(1) TqSdk 的 sys.exit() 不可捕获，需子进程隔离，增加复杂度和延迟；
-       (2) pandas 实现与 TqSdk ta 计算结果一致（已验证），且无需额外 IPC；
-       (3) 避免每个品种一次子进程的 ~15s 开销。
+计算 80+ 个技术指标并保存到 DuckDB。
 
 覆盖指标：均线24、趋势9、震荡20、动量14、波动率10、成交量12、通道16、复合17 = 90 个独立指标
 
@@ -44,7 +39,7 @@ def compute_all_indicators(df: pd.DataFrame, fast: bool = False) -> dict[str, pd
 
     Args:
         df: DataFrame with columns: open, high, low, close, volume
-        fast: True=仅计算核心指标（32个），False=计算全部指标（70个）
+        fast: True=仅计算核心指标（32个），False=计算全部指标（80+个）
 
     Returns:
         Dict of indicator name -> Series
@@ -585,7 +580,7 @@ def main():
     else:
         target_symbols = all_symbols
 
-    mode = "核心指标（32个）" if args.fast else "全部指标（70+个）"
+    mode = "核心指标（32个）" if args.fast else "全部指标（80+个）"
     print(f"开始同步技术指标: {len(target_symbols)} 个品种, 模式={mode}")
     print(f"数据库: {db_path}")
     print("=" * 60)

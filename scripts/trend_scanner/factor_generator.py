@@ -241,6 +241,28 @@ def factor(df: pd.DataFrame) -> pd.Series:
 4. 如果需要使用特定库，请在函数内导入
 """
         
+        # 添加可见图算子描述（v6.0 新增）
+        visibility_desc = self.visibility_operator.get_operator_descriptions()
+        visibility_examples = self.visibility_operator.get_example_factors()
+        
+        prompt += f"""
+
+## 可见图类因子范式（新增）
+
+可见图（Visibility Graph）是一种将时间序列转换为网络的方法，可以捕捉价格序列的拓扑结构特征。
+
+### 可用算子
+{visibility_desc}
+
+### 示例因子
+{''.join(visibility_examples)}
+
+### 使用建议
+- 可见图捕捉价格序列的拓扑结构特征，与传统趋势/动量指标互补
+- 建议将可见图算子与传统算子组合，如：可见性 + 均值、可见性 + 波动率
+- A0 聚合模式适合捕捉趋势持续性，A1 聚合模式适合捕捉突破脉冲
+"""
+        
         if research_report:
             prompt += f"""
 

@@ -413,7 +413,7 @@ class Evaluator:
             while not done:
                 processed_state = agent.perceive({"observation": state})
                 action = agent.reason(processed_state)
-                state, reward, terminated, truncated, _ = agent.act(env, action)
+                state, reward, terminated, truncated, _ = agent.execute_action(env, action)
                 done = terminated or truncated
                 episode_reward += reward
             

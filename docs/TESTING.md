@@ -47,6 +47,7 @@
 | **test_ppo.py** | 30 | AgentPPO, ActorPPO, CriticPPO, RLTrainer |
 | **test_walk_forward_rl.py** | 11 | RLWalkForwardValidator |
 | **test_scanner_integration.py** | 11 | RLSignalGenerator, integrate_rl_signal_to_scanner |
+| **test_scenario_analyzer.py** | 11 | ScenarioAnalyzer（概率加权场景分析） |
 
 ### 端到端测试（20 个）
 

@@ -48,7 +48,7 @@ class SimpleAgent(AgentBase):
             value=0.0
         )
     
-    def act(self, env: Any, action: RLAction) -> Tuple[np.ndarray, float, bool, Dict]:
+    def execute_action(self, env: Any, action: RLAction) -> Tuple[np.ndarray, float, bool, Dict]:
         """执行动作"""
         next_state, reward, terminated, truncated, info = env.step(action.action)
         return next_state, reward, terminated, truncated, info

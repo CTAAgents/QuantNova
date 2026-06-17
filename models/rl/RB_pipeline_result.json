@@ -1,0 +1,28 @@
+{
+  "symbol": "RB",
+  "start_time": "2026-06-17T23:30:31.304694",
+  "train": {
+    "total_steps": 5120,
+    "best_reward": 0.009751070155122084,
+    "final_results": {
+      "mean_reward": -0.033788726007234954,
+      "std_reward": 0.037867289599360844,
+      "min_reward": -0.12548541748206724,
+      "max_reward": 0.027641856270931176,
+      "mean_trades": 0.0
+    }
+  },
+  "validate": {
+    "pass_rate": 0.0,
+    "avg_oos_reward": -0.0007653603908922539,
+    "avg_reward_ratio": -4.582029205434957,
+    "recommendations": [
+      "\u901a\u8fc7\u7387\u8fc7\u4f4e (0.00% < 50.00%): \u5efa\u8bae\u91cd\u65b0\u8bbe\u8ba1\u72b6\u6001\u7a7a\u95f4\u6216\u5956\u52b1\u51fd\u6570",
+      "IS/OOS \u4e00\u81f4\u6027\u5dee (avg ratio = -4.58 < 0.5): \u5efa\u8bae\u51cf\u5c11\u8bad\u7ec3\u6b65\u6570\u3001\u589e\u52a0\u6b63\u5219\u5316\u6216\u4f7f\u7528\u66f4\u7b80\u5355\u7684\u7f51\u7edc",
+      "OOS \u5e73\u5747\u5956\u52b1\u4e3a\u8d1f (-0.0008): \u5efa\u8bae\u68c0\u67e5\u6570\u636e\u8d28\u91cf\u3001\u8c03\u6574\u5956\u52b1\u51fd\u6570\u6216\u4f7f\u7528\u66f4\u4fdd\u5b88\u7684\u7b56\u7565",
+      "OOS \u5e73\u5747 Sharpe \u8fc7\u4f4e (0.00 < 0.5): \u5efa\u8bae\u4f18\u5316\u5956\u52b1\u51fd\u6570\u3001\u589e\u52a0\u8d8b\u52bf\u7ea6\u675f\u6216\u4f7f\u7528\u66f4\u7a33\u5b9a\u7684\u7b56\u7565"
+    ]
+  },
+  "signal_generator": "created",
+  "end_time": "2026-06-17T23:31:50.055356"
+}

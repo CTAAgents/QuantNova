@@ -1,6 +1,6 @@
 # 用户手册
 
-> Trend Scanner Agent v6.0 — 期货趋势跟踪决策辅助系统
+> Trend Scanner Agent v0.1.0 — 期货趋势跟踪决策辅助系统
 
 ---
 
@@ -107,7 +107,28 @@ python tools/scan_opportunities.py --overfitting-check
 python tools/scan_opportunities.py --evolve --load-report report.txt
 ```
 
-### VGRSI 因子（v6.0 新增）
+### 套利分析（v0.1.0 新增）
+
+```bash
+# 扫描套利机会（跨期/跨品种价差）
+python tools/scan_opportunities.py --arbitrage
+```
+
+**支持的套利组合**：
+- 螺纹钢-铁矿石（RB-I）
+- 焦炭-焦煤（J-JM）
+- 热卷-螺纹钢（HC-RB）
+- 铜-铝（CU-AL）
+- 原油-燃料油（SC-FU）
+
+### Reasoner 深度分析
+
+```bash
+# 使用 LLM 进行深度分析
+python tools/scan_opportunities.py --reasoner
+```
+
+### VGRSI 因子（可见图技术指标）
 
 基于可见图的技术指标，捕捉价格序列的拓扑结构特征。
 
@@ -124,7 +145,7 @@ python tools/add_vgrsi_factor.py
 - A0（均值聚合）：捕捉趋势持续性
 - A1（比率聚合）：捕捉突破脉冲
 
-### Walk-Forward 验证（v6.0 新增）
+### Walk-Forward 验证
 
 滚动前向优化验证，防止参数过拟合。
 
@@ -138,27 +159,6 @@ python tools/scan_opportunities.py --evolve --walk-forward
 - 最小夏普比率：0.5
 - 最大回撤：20%
 - IS/OOS 一致性：OOS Sharpe >= IS Sharpe * 50%
-
-### 波动幅度止损锚点（v6.0 新增）
-
-基于近期 K 线波动幅度中位数的止损参考锚点，已集成到 Reasoner 推理流程。
-
-**工作原理**：
-- 计算最近 20 根 K 线的波动幅度中位数（使用 ATR 近似）
-- 乘以系数 2.0 作为止损距离
-- 在 Reasoner 推理时自动注入到 prompt 中
-
-**输出示例**：
-```
-波动幅度止损锚点（参考值）：
-- 当前价格: 3164.00
-- 波动幅度中位数: 45.20
-- 止损锚点距离: 90.40（2.86%）
-- 多头止损参考: 3073.60
-- 空头止损参考: 3254.40
-```
-
-**说明**：止损锚点是参考值，Reasoner 可以根据市场状态动态调整止损位置。
 
 ### 数据同步
 

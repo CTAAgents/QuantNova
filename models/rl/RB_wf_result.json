@@ -1,0 +1,227 @@
+{
+  "total_windows": 13,
+  "passed_windows": 0,
+  "pass_rate": 0.0,
+  "avg_oos_reward": -0.0007653603908922539,
+  "avg_oos_sharpe": 0,
+  "avg_oos_win_rate": 0.23076922846153852,
+  "max_oos_drawdown": 0.0,
+  "avg_reward_ratio": -4.582029205434957,
+  "avg_sharpe_ratio": 0.0,
+  "recommendations": [
+    "通过率过低 (0.00% < 50.00%): 建议重新设计状态空间或奖励函数",
+    "IS/OOS 一致性差 (avg ratio = -4.58 < 0.5): 建议减少训练步数、增加正则化或使用更简单的网络",
+    "OOS 平均奖励为负 (-0.0008): 建议检查数据质量、调整奖励函数或使用更保守的策略",
+    "OOS 平均 Sharpe 过低 (0.00 < 0.5): 建议优化奖励函数、增加趋势约束或使用更稳定的策略"
+  ],
+  "windows": [
+    {
+      "window_idx": 0,
+      "is_reward": -0.00012867327035679237,
+      "oos_reward": 0.008479112201504636,
+      "is_sharpe": 0.0,
+      "oos_sharpe": 0.0,
+      "reward_ratio": -65.90157531354097,
+      "sharpe_ratio": 0.0,
+      "passed": false,
+      "diagnosis": {
+        "oos_reward": "PASS",
+        "reward_ratio": "FAIL: OOS/IS ratio = -65.90 < 0.5",
+        "max_drawdown": "PASS",
+        "trades": "FAIL: OOS trades = 0 < 5"
+      }
+    },
+    {
+      "window_idx": 1,
+      "is_reward": -0.030436962793976906,
+      "oos_reward": -0.004748811280684492,
+      "is_sharpe": 0.0,
+      "oos_sharpe": 0.0,
+      "reward_ratio": 0.15602124538643772,
+      "sharpe_ratio": 0.0,
+      "passed": false,
+      "diagnosis": {
+        "oos_reward": "FAIL: OOS reward < 0",
+        "reward_ratio": "FAIL: OOS/IS ratio = 0.16 < 0.5",
+        "max_drawdown": "PASS",
+        "trades": "FAIL: OOS trades = 0 < 5"
+      }
+    },
+    {
+      "window_idx": 2,
+      "is_reward": -0.008400060013878545,
+      "oos_reward": 0.00037708634861336664,
+      "is_sharpe": 0.0,
+      "oos_sharpe": 0.0,
+      "reward_ratio": -0.04489096469548935,
+      "sharpe_ratio": 0.0,
+      "passed": false,
+      "diagnosis": {
+        "oos_reward": "PASS",
+        "reward_ratio": "FAIL: OOS/IS ratio = -0.04 < 0.5",
+        "max_drawdown": "PASS",
+        "trades": "FAIL: OOS trades = 0 < 5"
+      }
+    },
+    {
+      "window_idx": 3,
+      "is_reward": -0.011299219480685532,
+      "oos_reward": 0.005092069194397948,
+      "is_sharpe": 0.0,
+      "oos_sharpe": 0.0,
+      "reward_ratio": -0.45065711925264773,
+      "sharpe_ratio": 0.0,
+      "passed": false,
+      "diagnosis": {
+        "oos_reward": "PASS",
+        "reward_ratio": "FAIL: OOS/IS ratio = -0.45 < 0.5",
+        "max_drawdown": "PASS",
+        "trades": "FAIL: OOS trades = 0 < 5"
+      }
+    },
+    {
+      "window_idx": 4,
+      "is_reward": -0.010713719852104708,
+      "oos_reward": -0.00937264231738759,
+      "is_sharpe": 0.0,
+      "oos_sharpe": 0.0,
+      "reward_ratio": 0.8748269690677067,
+      "sharpe_ratio": 0.0,
+      "passed": false,
+      "diagnosis": {
+        "oos_reward": "FAIL: OOS reward < 0",
+        "reward_ratio": "PASS",
+        "max_drawdown": "PASS",
+        "trades": "FAIL: OOS trades = 0 < 5"
+      }
+    },
+    {
+      "window_idx": 5,
+      "is_reward": -0.0033607250178257684,
+      "oos_reward": -0.00469091534371716,
+      "is_sharpe": 0.0,
+      "oos_sharpe": 0.0,
+      "reward_ratio": 1.3958087248802107,
+      "sharpe_ratio": 0.0,
+      "passed": false,
+      "diagnosis": {
+        "oos_reward": "FAIL: OOS reward < 0",
+        "reward_ratio": "PASS",
+        "max_drawdown": "PASS",
+        "trades": "FAIL: OOS trades = 0 < 5"
+      }
+    },
+    {
+      "window_idx": 6,
+      "is_reward": -0.009261428091633982,
+      "oos_reward": -0.004672285031749076,
+      "is_sharpe": 0.0,
+      "oos_sharpe": 0.0,
+      "reward_ratio": 0.5044891598155623,
+      "sharpe_ratio": 0.0,
+      "passed": false,
+      "diagnosis": {
+        "oos_reward": "FAIL: OOS reward < 0",
+        "reward_ratio": "PASS",
+        "max_drawdown": "PASS",
+        "trades": "FAIL: OOS trades = 0 < 5"
+      }
+    },
+    {
+      "window_idx": 7,
+      "is_reward": -0.005238026074937847,
+      "oos_reward": -0.005699919122674005,
+      "is_sharpe": 0.0,
+      "oos_sharpe": 0.0,
+      "reward_ratio": 1.0881828236354998,
+      "sharpe_ratio": 0.0,
+      "passed": false,
+      "diagnosis": {
+        "oos_reward": "FAIL: OOS reward < 0",
+        "reward_ratio": "PASS",
+        "max_drawdown": "PASS",
+        "trades": "FAIL: OOS trades = 0 < 5"
+      }
+    },
+    {
+      "window_idx": 8,
+      "is_reward": -0.003978519781688092,
+      "oos_reward": 0.00606769530141853,
+      "is_sharpe": 0.0,
+      "oos_sharpe": 0.0,
+      "reward_ratio": -1.525117602914122,
+      "sharpe_ratio": 0.0,
+      "passed": false,
+      "diagnosis": {
+        "oos_reward": "PASS",
+        "reward_ratio": "FAIL: OOS/IS ratio = -1.53 < 0.5",
+        "max_drawdown": "PASS",
+        "trades": "FAIL: OOS trades = 0 < 5"
+      }
+    },
+    {
+      "window_idx": 9,
+      "is_reward": 0.0005726468728107613,
+      "oos_reward": 0.002800533814718531,
+      "is_sharpe": 0.0,
+      "oos_sharpe": 0.0,
+      "reward_ratio": 4.890422079408078,
+      "sharpe_ratio": 0.0,
+      "passed": false,
+      "diagnosis": {
+        "oos_reward": "PASS",
+        "reward_ratio": "PASS",
+        "max_drawdown": "PASS",
+        "trades": "FAIL: OOS trades = 0 < 5"
+      }
+    },
+    {
+      "window_idx": 10,
+      "is_reward": -0.0021891367856955806,
+      "oos_reward": -0.006194858008894273,
+      "is_sharpe": 0.0,
+      "oos_sharpe": 0.0,
+      "reward_ratio": 2.8298306198495933,
+      "sharpe_ratio": 0.0,
+      "passed": false,
+      "diagnosis": {
+        "oos_reward": "FAIL: OOS reward < 0",
+        "reward_ratio": "PASS",
+        "max_drawdown": "PASS",
+        "trades": "FAIL: OOS trades = 0 < 5"
+      }
+    },
+    {
+      "window_idx": 11,
+      "is_reward": 0.004150104515898191,
+      "oos_reward": -0.006264047742262506,
+      "is_sharpe": 0.0,
+      "oos_sharpe": 0.0,
+      "reward_ratio": -1.509367444745511,
+      "sharpe_ratio": 0.0,
+      "passed": false,
+      "diagnosis": {
+        "oos_reward": "FAIL: OOS reward < 0",
+        "reward_ratio": "FAIL: OOS/IS ratio = -1.51 < 0.5",
+        "max_drawdown": "PASS",
+        "trades": "FAIL: OOS trades = 0 < 5"
+      }
+    },
+    {
+      "window_idx": 12,
+      "is_reward": -0.004736203036826669,
+      "oos_reward": 0.008877296905116794,
+      "is_sharpe": 0.0,
+      "oos_sharpe": 0.0,
+      "reward_ratio": -1.874352847548785,
+      "sharpe_ratio": 0.0,
+      "passed": false,
+      "diagnosis": {
+        "oos_reward": "PASS",
+        "reward_ratio": "FAIL: OOS/IS ratio = -1.87 < 0.5",
+        "max_drawdown": "PASS",
+        "trades": "FAIL: OOS trades = 0 < 5"
+      }
+    }
+  ]
+}

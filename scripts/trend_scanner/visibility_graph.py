@@ -556,14 +556,14 @@ class MultiTimeframeVGRSIFactor:
         signals = pd.Series(0, index=consensus_values.index)
         
         for i in range(1, len(consensus_values)):
-            if pd.isna(consensus_values[i]) or pd.isna(consensus_values[i-1]):
+            if pd.isna(consensus_values.iloc[i]) or pd.isna(consensus_values.iloc[i-1]):
                 continue
             
             # 买入信号: 共识值从 0 或 -1 变为 1
-            if consensus_values[i] == 1 and consensus_values[i-1] != 1:
+            if consensus_values.iloc[i] == 1 and consensus_values.iloc[i-1] != 1:
                 signals.iloc[i] = 1
             # 卖出信号: 共识值从 0 或 1 变为 -1
-            elif consensus_values[i] == -1 and consensus_values[i-1] != -1:
+            elif consensus_values.iloc[i] == -1 and consensus_values.iloc[i-1] != -1:
                 signals.iloc[i] = -1
         
         return signals

@@ -14,7 +14,7 @@ v3.1 增强：机制门思想
 
 import json
 import time
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 from abc import ABC, abstractmethod
 
 from .models import (

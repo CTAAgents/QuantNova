@@ -51,6 +51,7 @@ python tools/scan_opportunities.py --evolve --evolve-rounds 5
 ## v6.0 新特性
 
 - **Reasoner Agent 深度分析**: LLM 驱动的信号推理，输出置信度评估和操作建议
+- **五维度筛选评分**: Trend/Momentum/Volume/Volatility/Channel 加权评分，信号增强/警告
 - **持仓健康度评估**: 多维度评估持仓状态（技术面+资金面+市场面+LLM推理）
 - **闭环因子进化**: Generate → Eval → Gate → Memory 自动迭代
 - **截面 IC/ICIR 评估**: 多品种截面预测能力量化
@@ -64,6 +65,8 @@ python tools/scan_opportunities.py --evolve --evolve-rounds 5
 - **可见图算子注入**: 扩展 LLM 因子生成的搜索空间
 - **多周期 VGRSI 因子**: M1/M5/M30 三周期同向确认
 - **波动幅度止损锚点**: Reasoner 推理时的止损参考锚点
+- **知识锚点体系**: references/ 编码为因子种子+验证规则
+- **分级输出机制**: formal/standard/brief 三种输出级别
 - **统一记忆管理**: 因子/Walk-Forward/可见图/波动率锚点统一管理
 
 ## 系统架构

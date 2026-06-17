@@ -38,6 +38,7 @@ python tools/scan_opportunities.py --evolve --evolve-rounds 5
 | 能力 | 命令 |
 |------|------|
 | 全品种扫描 | `--output text --save` |
+| **五维度筛选评分** | `--use-multi-dimension` |
 | **Reasoner深度分析** | `--reasoner --output text --save` |
 | **持仓健康度评估** | `--position-health` |
 | 因子评估 | `--evaluate-factors` |

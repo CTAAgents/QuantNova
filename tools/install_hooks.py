@@ -24,11 +24,7 @@ def install_pre_commit_hook():
 
     # 检查是否已有 hook
     if hook_file.exists():
-        print(f"警告: {hook_file} 已存在")
-        response = input("是否覆盖? (y/N): ")
-        if response.lower() != "y":
-            print("跳过安装")
-            return False
+        print(f"警告: {hook_file} 已存在，将覆盖")
 
     # 写入 hook 内容
     hook_content = '''#!/usr/bin/env python3
@@ -66,7 +62,7 @@ def main():
     
     # 运行 ruff check
     check_result = subprocess.run(
-        ["python", "-m", "ruff", "check", "--fix"] + staged_files,
+        [sys.executable, "-m", "ruff", "check", "--fix"] + staged_files,
         cwd=project_root,
     )
     
@@ -78,7 +74,7 @@ def main():
     
     # 运行 ruff format
     format_result = subprocess.run(
-        ["python", "-m", "ruff", "format"] + staged_files,
+        [sys.executable, "-m", "ruff", "format"] + staged_files,
         cwd=project_root,
     )
     

@@ -20,6 +20,7 @@ from .command_parser import CommandParser, Command
 from .context_manager import ContextManager
 from .response_generator import ResponseGenerator, Response
 from .quick_commands import execute_quick_command, QUICK_COMMANDS
+from .llm_processor import LLMProcessor, EnhancedLLMProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -27,27 +28,42 @@ logger = logging.getLogger(__name__)
 class NLPEngine:
     """NLP 引擎"""
 
-    def __init__(self):
+    def __init__(self, use_llm: bool = True, api_key: Optional[str] = None):
         self.intent_recognizer = IntentRecognizer()
         self.command_parser = CommandParser()
         self.context_manager = ContextManager()
         self.response_generator = ResponseGenerator()
 
+        # 初始化 LLM 处理器
+        if use_llm:
+            self.llm_processor = EnhancedLLMProcessor(api_key=api_key)
+        else:
+            self.llm_processor = LLMProcessor()
+
     def process(self, user_input: str) -> str:
         """处理用户输入"""
-        # 1. 识别意图
-        intent = self.intent_recognizer.recognize(user_input)
+        # 1. 使用 LLM 理解意图
+        llm_result = self.llm_processor.process(user_input)
 
-        # 2. 解析命令
+        # 2. 根据 LLM 结果获取命令
+        action = llm_result.get("action", "unknown")
+        explanation = llm_result.get("explanation", "")
+
+        # 3. 检查是否有快速命令
+        if action in QUICK_COMMANDS:
+            return execute_quick_command(action)
+
+        # 4. 否则使用传统方式
+        intent = self.intent_recognizer.recognize(user_input)
         command = self.command_parser.parse(intent)
 
-        # 3. 执行命令
+        # 5. 执行命令
         if command:
             result = self._execute_command(command)
         else:
-            result = self._handle_unknown(intent)
+            result = self._handle_unknown(intent, explanation)
 
-        # 4. 记录对话
+        # 6. 记录对话
         self.context_manager.add_turn(
             user_input=user_input,
             system_response=result,
@@ -103,10 +119,12 @@ class NLPEngine:
         except Exception as e:
             return f"执行命令时出错：{e}"
 
-    def _handle_unknown(self, intent: Intent) -> str:
+    def _handle_unknown(self, intent: Intent, explanation: str = "") -> str:
         """处理未知意图"""
         if intent.intent_type == IntentType.HELP:
             return self.command_parser.get_help()
+        elif explanation:
+            return explanation
         else:
             return self.response_generator.generate("unknown").text
 

@@ -354,3 +354,8 @@ class FuturesTradingEnv(gym.Env):
   - 创建 `scripts/trend_scanner/rl/base.py`（AgentBase, ReplayBuffer, Evaluator）
   - 创建 `scripts/trend_scanner/rl/futures_env.py`（FuturesTradingEnv, MultiAssetVecEnv）
   - 创建 `tests/test_rl_base.py`（19个测试全部通过）
+- [x] Phase 3: PPO 训练器（完成）
+  - 创建 `scripts/trend_scanner/rl/networks.py`（ActorPPO, CriticPPO, ActorCriticPPO, CriticEnsemble, StateNormalizer）
+  - 创建 `scripts/trend_scanner/rl/agent_ppo.py`（AgentPPO, AgentPPOShared）
+  - 创建 `scripts/trend_scanner/rl/trainer.py`（RLTrainer, TrainingLogger, evaluate_agent）
+  - 创建 `tests/test_ppo.py`（30个测试全部通过）

@@ -270,14 +270,16 @@ class TestConvenienceFunctions:
     
     def test_calculate_vgrsi_multi_timeframe(self):
         """测试 calculate_vgrsi_multi_timeframe 便捷函数"""
-        # 创建价格序列
+        # 创建价格序列（确保长度匹配索引）
         np.random.seed(42)
-        dates = pd.date_range('2024-01-01', periods=200, freq='D')
+        dates_m1 = pd.date_range('2024-01-01', periods=200, freq='D')
+        dates_m5 = pd.date_range('2024-01-01', periods=40, freq='5D')
+        dates_m30 = pd.date_range('2024-01-01', periods=7, freq='30D')
         
         prices_dict = {
-            'M1': pd.Series(np.cumsum(np.random.randn(200) * 0.1) + 100, index=dates),
-            'M5': pd.Series(np.cumsum(np.random.randn(150) * 0.1) + 100, index=dates[::5]),
-            'M30': pd.Series(np.cumsum(np.random.randn(100) * 0.1) + 100, index=dates[::30])
+            'M1': pd.Series(np.cumsum(np.random.randn(200) * 0.1) + 100, index=dates_m1),
+            'M5': pd.Series(np.cumsum(np.random.randn(40) * 0.1) + 100, index=dates_m5),
+            'M30': pd.Series(np.cumsum(np.random.randn(7) * 0.1) + 100, index=dates_m30)
         }
         
         result = calculate_vgrsi_multi_timeframe(prices_dict)

@@ -114,6 +114,9 @@ def load_positions() -> List[Dict[str, Any]]:
         return []
     with open(POSITIONS_FILE, 'r', encoding='utf-8') as f:
         data = json.load(f)
+    # 兼容两种格式：直接列表 或 {"positions": [...]}
+    if isinstance(data, list):
+        return data
     return data.get('positions', [])
 
 

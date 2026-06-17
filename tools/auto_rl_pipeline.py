@@ -142,29 +142,57 @@ class RLPipeline:
         # 价格变化
         df['return'] = df['close'].pct_change()
         
-        # RSI
+        # RSI (14)
         delta = df['close'].diff()
         gain = (delta.where(delta > 0, 0)).rolling(14).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
         rs = gain / loss
         df['rsi'] = 100 - (100 / (1 + rs))
         
-        # 布林带宽度
+        # ATR (14) - Average True Range
+        high_low = df['high'] - df['low']
+        high_close = np.abs(df['high'] - df['close'].shift())
+        low_close = np.abs(df['low'] - df['close'].shift())
+        true_range = np.maximum(high_low, np.maximum(high_close, low_close))
+        df['atr'] = true_range.rolling(14).mean()
+        df['atr_pct'] = df['atr'] / df['close']  # ATR 占价格的百分比
+        
+        # MACD
+        ema12 = df['close'].ewm(span=12, adjust=False).mean()
+        ema26 = df['close'].ewm(span=26, adjust=False).mean()
+        df['macd'] = ema12 - ema26
+        df['macd_signal'] = df['macd'].ewm(span=9, adjust=False).mean()
+        df['macd_hist'] = df['macd'] - df['macd_signal']
+        
+        # 布林带
         df['bb_middle'] = df['close'].rolling(20).mean()
         bb_std = df['close'].rolling(20).std()
+        df['bb_upper'] = df['bb_middle'] + 2 * bb_std
+        df['bb_lower'] = df['bb_middle'] - 2 * bb_std
         df['bb_width'] = (4 * bb_std) / df['bb_middle']
+        df['bb_position'] = (df['close'] - df['bb_lower']) / (df['bb_upper'] - df['bb_lower'])
         
         # 成交量变化
         df['volume_change'] = df['volume'].pct_change()
+        df['volume_ma_ratio'] = df['volume'] / df['volume'].rolling(20).mean()
+        
+        # 价格动量
+        df['momentum_5'] = df['close'].pct_change(5)
+        df['momentum_10'] = df['close'].pct_change(10)
         
         # 填充 NaN
-        df = df.fillna(method='bfill').fillna(0)
+        df = df.ffill().fillna(0)
         
         return df
     
     def _prepare_state_features(self, df: pd.DataFrame) -> np.ndarray:
         """准备状态特征"""
-        feature_columns = ['return', 'rsi', 'bb_width', 'volume_change']
+        feature_columns = [
+            'return', 'rsi', 'atr_pct', 
+            'macd_hist', 'bb_position', 'bb_width',
+            'volume_change', 'volume_ma_ratio',
+            'momentum_5', 'momentum_10'
+        ]
         features = df[feature_columns].values
         
         # 标准化

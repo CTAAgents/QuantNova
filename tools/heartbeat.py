@@ -96,7 +96,7 @@ def filter_active_symbols(symbols: List[str], min_oi: int = 10000, min_volume: i
     筛选活跃品种（非僵尸品种）
     
     参数:
-        symbols: 品种列表
+        symbols: 品种列表（配置格式，如 ['SHFE.rb', 'DCE.jm']）
         min_oi: 最小持仓量
         min_volume: 最小成交量
     
@@ -104,15 +104,13 @@ def filter_active_symbols(symbols: List[str], min_oi: int = 10000, min_volume: i
         活跃品种列表
     """
     try:
-        # 获取实时行情
-        tq_user = os.environ.get('TQ_USER', '')
-        tq_password = os.environ.get('TQ_PASSWORD', '')
+        # 获取数据源
+        data_source = DataSourceFactory.create(source="tqsdk")
         
-        if not tq_user or not tq_password:
-            print("[警告] TqSdk 认证信息缺失，跳过品种筛选", file=sys.stderr)
+        # 检查数据源是否支持批量获取
+        if not hasattr(data_source, 'get_quotes_batch'):
+            print("[警告] 数据源不支持批量获取行情，跳过品种筛选", file=sys.stderr)
             return symbols
-        
-        from tqsdk import TqApi, TqAuth
         
         # 将配置格式转换为 TqSdk 格式
         tq_symbols = []
@@ -125,29 +123,26 @@ def filter_active_symbols(symbols: List[str], min_oi: int = 10000, min_volume: i
             symbol_map[tq_symbol] = symbol
         
         # 批量获取行情
+        print(f"    批量获取 {len(tq_symbols)} 个品种行情...", flush=True)
+        quotes = data_source.get_quotes_batch(tq_symbols)
+        
+        # 筛选活跃品种
         active_symbols = []
         
-        with TqApi(auth=TqAuth(tq_user, tq_password)) as api:
-            quotes = {}
-            for tq_symbol in tq_symbols:
-                try:
-                    quote = api.get_quote(tq_symbol)
-                    quotes[tq_symbol] = quote
-                except Exception as e:
-                    print(f"[警告] 获取 {tq_symbol} 行情失败: {e}", file=sys.stderr)
+        for tq_symbol, quote in quotes.items():
+            try:
+                if not quote:
                     continue
-            
-            # 筛选活跃品种
-            for tq_symbol, quote in quotes.items():
-                try:
-                    oi = quote.open_interest if hasattr(quote, 'open_interest') else 0
-                    volume = quote.volume if hasattr(quote, 'volume') else 0
-                    
-                    if oi >= min_oi and volume >= min_volume:
+                
+                oi = quote.get('open_interest', 0)
+                volume = quote.get('volume', 0)
+                
+                if oi >= min_oi and volume >= min_volume:
+                    if tq_symbol in symbol_map:
                         active_symbols.append(symbol_map[tq_symbol])
-                except Exception as e:
-                    print(f"[警告] 检查 {tq_symbol} 活跃度失败: {e}", file=sys.stderr)
-                    continue
+            except Exception as e:
+                print(f"[警告] 检查 {tq_symbol} 活跃度失败: {e}", file=sys.stderr)
+                continue
         
         return active_symbols
     except Exception as e:

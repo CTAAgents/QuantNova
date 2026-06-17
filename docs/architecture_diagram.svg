@@ -1,230 +1,276 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg width="1200" height="1000" xmlns="http://www.w3.org/2000/svg">
+<svg width="1400" height="1100" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="headerGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    <!-- 渐变定义 -->
+    <linearGradient id="headerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#8b5cf6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#a855f7;stop-opacity:1" />
     </linearGradient>
-    <linearGradient id="layerGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" style="stop-color:#f8f9fa;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#e9ecef;stop-opacity:1" />
+    <linearGradient id="layer10Gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#f0f9ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e0f2fe;stop-opacity:1" />
     </linearGradient>
+    <linearGradient id="layer9Gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#f5f3ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ede9fe;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="layer8Gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#fdf4ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#fae8ff;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="layer7Gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#fff7ed;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ffedd5;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="layer6Gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#ecfdf5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#d1fae5;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="layer5Gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#f0fdf4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#dcfce7;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="layer4Gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#fefce8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#fef9c3;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="layer3Gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#fef2f2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#fee2e2;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="layer2Gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#f0fdfa;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ccfbf1;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="layer1Gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#f8fafc;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f1f5f9;stop-opacity:1" />
+    </linearGradient>
+
+    <!-- 阴影效果 -->
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.15"/>
+    </filter>
+    <filter id="shadowSmall" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.1"/>
+    </filter>
+
+    <!-- 箭头标记 -->
     <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-      <polygon points="0 0, 10 3.5, 0 7" fill="#667eea"/>
+      <polygon points="0 0, 10 3.5, 0 7" fill="#6366f1"/>
+    </marker>
+    <marker id="arrowheadGreen" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#10b981"/>
     </marker>
   </defs>
 
   <!-- 背景 -->
-  <rect width="1200" height="1000" fill="white" rx="20"/>
+  <rect width="1400" height="1100" fill="#fafbfc" rx="0"/>
 
   <!-- 标题栏 -->
-  <rect x="0" y="0" width="1200" height="100" fill="url(#headerGradient)" rx="20"/>
-  <rect x="0" y="80" width="1200" height="20" fill="url(#headerGradient)"/>
-  <text x="600" y="45" text-anchor="middle" fill="white" font-size="32" font-weight="bold">Trend Scanner Agent</text>
-  <text x="600" y="75" text-anchor="middle" fill="white" font-size="18">推理重于规则的期货趋势跟踪决策辅助系统</text>
+  <rect x="0" y="0" width="1400" height="120" fill="url(#headerGradient)" rx="0"/>
+  <text x="700" y="50" text-anchor="middle" fill="white" font-size="36" font-weight="bold" font-family="Arial, sans-serif">Trend Scanner Agent</text>
+  <text x="700" y="80" text-anchor="middle" fill="rgba(255,255,255,0.9)" font-size="18" font-family="Arial, sans-serif">推理重于规则的期货趋势跟踪决策辅助系统</text>
+  <text x="700" y="105" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="14" font-family="Arial, sans-serif">v0.1.0 | 118 模块 | 544+ 测试 | 86 品种 | 80+ 指标</text>
 
   <!-- 架构层级 -->
   <!-- Layer 10: 主协调层 -->
-  <rect x="50" y="120" width="1100" height="60" fill="url(#layerGradient)" stroke="#667eea" stroke-width="2" rx="10"/>
-  <circle cx="90" cy="150" r="20" fill="#667eea"/>
-  <text x="90" y="155" text-anchor="middle" fill="white" font-size="14" font-weight="bold">10</text>
-  <text x="120" y="155" fill="#333" font-size="16" font-weight="bold">主协调层 (Orchestrator)</text>
-  <rect x="400" y="135" width="150" height="30" fill="white" rx="5"/>
-  <text x="475" y="155" text-anchor="middle" fill="#667eea" font-size="12">TradingAssistant</text>
-  <rect x="570" y="135" width="100" height="30" fill="white" rx="5"/>
-  <text x="620" y="155" text-anchor="middle" fill="#667eea" font-size="12">navigator.py</text>
+  <rect x="50" y="140" width="1300" height="70" fill="url(#layer10Gradient)" stroke="#0ea5e9" stroke-width="1.5" rx="12" filter="url(#shadow)"/>
+  <circle cx="95" cy="175" r="22" fill="#0ea5e9"/>
+  <text x="95" y="180" text-anchor="middle" fill="white" font-size="16" font-weight="bold" font-family="Arial, sans-serif">10</text>
+  <text x="130" y="175" fill="#0c4a6e" font-size="17" font-weight="bold" font-family="Arial, sans-serif">主协调层 Orchestrator</text>
+  <rect x="450" y="158" width="160" height="34" fill="white" rx="8" filter="url(#shadowSmall)"/>
+  <text x="530" y="180" text-anchor="middle" fill="#0ea5e9" font-size="13" font-weight="500" font-family="Arial, sans-serif">TradingAssistant</text>
+  <rect x="630" y="158" width="120" height="34" fill="white" rx="8" filter="url(#shadowSmall)"/>
+  <text x="690" y="180" text-anchor="middle" fill="#0ea5e9" font-size="13" font-weight="500" font-family="Arial, sans-serif">navigator.py</text>
 
   <!-- Layer 9: RL 强化学习层 -->
-  <rect x="50" y="195" width="1100" height="60" fill="url(#layerGradient)" stroke="#667eea" stroke-width="2" rx="10"/>
-  <circle cx="90" cy="225" r="20" fill="#667eea"/>
-  <text x="90" y="230" text-anchor="middle" fill="white" font-size="14" font-weight="bold">9</text>
-  <text x="120" y="230" fill="#333" font-size="16" font-weight="bold">RL 强化学习层 (Reinforcement Learning)</text>
-  <rect x="500" y="210" width="120" height="30" fill="white" rx="5"/>
-  <text x="560" y="230" text-anchor="middle" fill="#667eea" font-size="12">AgentPPO</text>
-  <rect x="640" y="210" width="140" height="30" fill="white" rx="5"/>
-  <text x="710" y="230" text-anchor="middle" fill="#667eea" font-size="12">FuturesTradingEnv</text>
-  <rect x="800" y="210" width="130" height="30" fill="white" rx="5"/>
-  <text x="865" y="230" text-anchor="middle" fill="#667eea" font-size="12">RLSignalGenerator</text>
+  <rect x="50" y="225" width="1300" height="70" fill="url(#layer9Gradient)" stroke="#8b5cf6" stroke-width="1.5" rx="12" filter="url(#shadow)"/>
+  <circle cx="95" cy="260" r="22" fill="#8b5cf6"/>
+  <text x="95" y="265" text-anchor="middle" fill="white" font-size="16" font-weight="bold" font-family="Arial, sans-serif">9</text>
+  <text x="130" y="260" fill="#4c1d95" font-size="17" font-weight="bold" font-family="Arial, sans-serif">RL 强化学习层 Reinforcement Learning</text>
+  <rect x="550" y="243" width="140" height="34" fill="white" rx="8" filter="url(#shadowSmall)"/>
+  <text x="620" y="265" text-anchor="middle" fill="#8b5cf6" font-size="13" font-weight="500" font-family="Arial, sans-serif">AgentPPO</text>
+  <rect x="710" y="243" width="160" height="34" fill="white" rx="8" filter="url(#shadowSmall)"/>
+  <text x="790" y="265" text-anchor="middle" fill="#8b5cf6" font-size="13" font-weight="500" font-family="Arial, sans-serif">FuturesTradingEnv</text>
+  <rect x="890" y="243" width="150" height="34" fill="white" rx="8" filter="url(#shadowSmall)"/>
+  <text x="965" y="265" text-anchor="middle" fill="#8b5cf6" font-size="13" font-weight="500" font-family="Arial, sans-serif">RLSignalGenerator</text>
 
   <!-- Layer 8: 推理层 -->
-  <rect x="50" y="270" width="1100" height="60" fill="url(#layerGradient)" stroke="#667eea" stroke-width="2" rx="10"/>
-  <circle cx="90" cy="300" r="20" fill="#667eea"/>
-  <text x="90" y="305" text-anchor="middle" fill="white" font-size="14" font-weight="bold">8</text>
-  <text x="120" y="305" fill="#333" font-size="16" font-weight="bold">推理层 (Reasoning)</text>
-  <rect x="400" y="285" width="130" height="30" fill="white" rx="5"/>
-  <text x="465" y="305" text-anchor="middle" fill="#667eea" font-size="12">ReasoningEngine</text>
-  <rect x="550" y="285" width="110" height="30" fill="white" rx="5"/>
-  <text x="605" y="305" text-anchor="middle" fill="#667eea" font-size="12">DebateEngine</text>
-  <rect x="680" y="285" width="120" height="30" fill="white" rx="5"/>
-  <text x="740" y="305" text-anchor="middle" fill="#667eea" font-size="12">BriefGenerator</text>
-  <rect x="820" y="285" width="130" height="30" fill="white" rx="5"/>
-  <text x="885" y="305" text-anchor="middle" fill="#667eea" font-size="12">ScenarioAnalyzer</text>
+  <rect x="50" y="310" width="1300" height="70" fill="url(#layer8Gradient)" stroke="#d946ef" stroke-width="1.5" rx="12" filter="url(#shadow)"/>
+  <circle cx="95" cy="345" r="22" fill="#d946ef"/>
+  <text x="95" y="350" text-anchor="middle" fill="white" font-size="16" font-weight="bold" font-family="Arial, sans-serif">8</text>
+  <text x="130" y="345" fill="#701a75" font-size="17" font-weight="bold" font-family="Arial, sans-serif">推理层 Reasoning</text>
+  <rect x="450" y="328" width="150" height="34" fill="white" rx="8" filter="url(#shadowSmall)"/>
+  <text x="525" y="350" text-anchor="middle" fill="#d946ef" font-size="13" font-weight="500" font-family="Arial, sans-serif">ReasoningEngine</text>
+  <rect x="620" y="328" width="130" height="34" fill="white" rx="8" filter="url(#shadowSmall)"/>
+  <text x="685" y="350" text-anchor="middle" fill="#d946ef" font-size="13" font-weight="500" font-family="Arial, sans-serif">DebateEngine</text>
+  <rect x="770" y="328" width="140" height="34" fill="white" rx="8" filter="url(#shadowSmall)"/>
+  <text x="840" y="350" text-anchor="middle" fill="#d946ef" font-size="13" font-weight="500" font-family="Arial, sans-serif">BriefGenerator</text>
+  <rect x="930" y="328" width="150" height="34" fill="white" rx="8" filter="url(#shadowSmall)"/>
+  <text x="1005" y="350" text-anchor="middle" fill="#d946ef" font-size="13" font-weight="500" font-family="Arial, sans-serif">ScenarioAnalyzer</text>
 
   <!-- Layer 7: 因子进化层 -->
-  <rect x="50" y="345" width="1100" height="60" fill="url(#layerGradient)" stroke="#667eea" stroke-width="2" rx="10"/>
-  <circle cx="90" cy="375" r="20" fill="#667eea"/>
-  <text x="90" y="380" text-anchor="middle" fill="white" font-size="14" font-weight="bold">7</text>
-  <text x="120" y="380" fill="#333" font-size="16" font-weight="bold">因子进化层 (Factor Evolution)</text>
-  <rect x="450" y="360" width="120" height="30" fill="white" rx="5"/>
-  <text x="510" y="380" text-anchor="middle" fill="#667eea" font-size="12">FactorGenerator</text>
-  <rect x="590" y="360" width="130" height="30" fill="white" rx="5"/>
-  <text x="655" y="380" text-anchor="middle" fill="#667eea" font-size="12">FactorEvaluator</text>
-  <rect x="740" y="360" width="160" height="30" fill="white" rx="5"/>
-  <text x="820" y="380" text-anchor="middle" fill="#667eea" font-size="12">FactorEvolutionEngine</text>
-  <rect x="920" y="360" width="120" height="30" fill="white" rx="5"/>
-  <text x="980" y="380" text-anchor="middle" fill="#667eea" font-size="12">WalkForward</text>
+  <rect x="50" y="395" width="1300" height="70" fill="url(#layer7Gradient)" stroke="#f97316" stroke-width="1.5" rx="12" filter="url(#shadow)"/>
+  <circle cx="95" cy="430" r="22" fill="#f97316"/>
+  <text x="95" y="435" text-anchor="middle" fill="white" font-size="16" font-weight="bold" font-family="Arial, sans-serif">7</text>
+  <text x="130" y="430" fill="#7c2d12" font-size="17" font-weight="bold" font-family="Arial, sans-serif">因子进化层 Factor Evolution</text>
+  <rect x="450" y="413" width="140" height="34" fill="white" rx="8" filter="url(#shadowSmall)"/>
+  <text x="520" y="435" text-anchor="middle" fill="#f97316" font-size="13" font-weight="500" font-family="Arial, sans-serif">FactorGenerator</text>
+  <rect x="610" y="413" width="140" height="34" fill="white" rx="8" filter="url(#shadowSmall)"/>
+  <text x="680" y="435" text-anchor="middle" fill="#f97316" font-size="13" font-weight="500" font-family="Arial, sans-serif">FactorEvaluator</text>
+  <rect x="770" y="413" width="180" height="34" fill="white" rx="8" filter="url(#shadowSmall)"/>
+  <text x="860" y="435" text-anchor="middle" fill="#f97316" font-size="13" font-weight="500" font-family="Arial, sans-serif">FactorEvolutionEngine</text>
+  <rect x="970" y="413" width="130" height="34" fill="white" rx="8" filter="url(#shadowSmall)"/>
+  <text x="1035" y="435" text-anchor="middle" fill="#f97316" font-size="13" font-weight="500" font-family="Arial, sans-serif">WalkForward</text>
 
   <!-- Layer 6: 策略层 -->
-  <rect x="50" y="420" width="1100" height="80" fill="url(#layerGradient)" stroke="#667eea" stroke-width="2" rx="10"/>
-  <circle cx="90" cy="460" r="20" fill="#667eea"/>
-  <text x="90" y="465" text-anchor="middle" fill="white" font-size="14" font-weight="bold">6</text>
-  <text x="120" y="445" fill="#333" font-size="16" font-weight="bold">策略层 (Strategy)</text>
+  <rect x="50" y="480" width="1300" height="90" fill="url(#layer6Gradient)" stroke="#10b981" stroke-width="1.5" rx="12" filter="url(#shadow)"/>
+  <circle cx="95" cy="525" r="22" fill="#10b981"/>
+  <text x="95" y="530" text-anchor="middle" fill="white" font-size="16" font-weight="bold" font-family="Arial, sans-serif">6</text>
+  <text x="130" y="510" fill="#064e3b" font-size="17" font-weight="bold" font-family="Arial, sans-serif">策略层 Strategy</text>
 
-  <!-- 独立策略模块 -->
-  <rect x="200" y="435" width="150" height="25" fill="#10b981" rx="5"/>
-  <text x="275" y="452" text-anchor="middle" fill="white" font-size="11" font-weight="bold">trend_following</text>
-  <rect x="370" y="435" width="120" height="25" fill="#10b981" rx="5"/>
-  <text x="430" y="452" text-anchor="middle" fill="white" font-size="11" font-weight="bold">carry</text>
-  <rect x="510" y="435" width="120" height="25" fill="#10b981" rx="5"/>
-  <text x="570" y="452" text-anchor="middle" fill="white" font-size="11" font-weight="bold">arbitrage</text>
+  <!-- 独立策略模块标签 -->
+  <rect x="200" y="500" width="160" height="28" fill="#10b981" rx="14"/>
+  <text x="280" y="519" text-anchor="middle" fill="white" font-size="12" font-weight="600" font-family="Arial, sans-serif">trend_following</text>
+  <rect x="380" y="500" width="130" height="28" fill="#10b981" rx="14"/>
+  <text x="445" y="519" text-anchor="middle" fill="white" font-size="12" font-weight="600" font-family="Arial, sans-serif">carry</text>
+  <rect x="530" y="500" width="130" height="28" fill="#10b981" rx="14"/>
+  <text x="595" y="519" text-anchor="middle" fill="white" font-size="12" font-weight="600" font-family="Arial, sans-serif">arbitrage</text>
 
   <!-- 趋势跟踪策略详情 -->
-  <rect x="200" y="465" width="120" height="25" fill="white" rx="5"/>
-  <text x="260" y="482" text-anchor="middle" fill="#667eea" font-size="10">TrendScanner</text>
-  <rect x="340" y="465" width="100" height="25" fill="white" rx="5"/>
-  <text x="390" y="482" text-anchor="middle" fill="#667eea" font-size="10">RiskManager</text>
-  <rect x="460" y="465" width="120" height="25" fill="white" rx="5"/>
-  <text x="520" y="482" text-anchor="middle" fill="#667eea" font-size="10">ExecutionEngine</text>
-  <rect x="600" y="465" width="100" height="25" fill="white" rx="5"/>
-  <text x="650" y="482" text-anchor="middle" fill="#667eea" font-size="10">PositionSizer</text>
-  <rect x="720" y="465" width="100" height="25" fill="white" rx="5"/>
-  <text x="770" y="482" text-anchor="middle" fill="#667eea" font-size="10">StopLoss</text>
+  <rect x="200" y="540" width="130" height="28" fill="white" rx="6" filter="url(#shadowSmall)"/>
+  <text x="265" y="559" text-anchor="middle" fill="#10b981" font-size="11" font-weight="500" font-family="Arial, sans-serif">TrendScanner</text>
+  <rect x="350" y="540" width="110" height="28" fill="white" rx="6" filter="url(#shadowSmall)"/>
+  <text x="405" y="559" text-anchor="middle" fill="#10b981" font-size="11" font-weight="500" font-family="Arial, sans-serif">RiskManager</text>
+  <rect x="480" y="540" width="130" height="28" fill="white" rx="6" filter="url(#shadowSmall)"/>
+  <text x="545" y="559" text-anchor="middle" fill="#10b981" font-size="11" font-weight="500" font-family="Arial, sans-serif">ExecutionEngine</text>
+  <rect x="630" y="540" width="110" height="28" fill="white" rx="6" filter="url(#shadowSmall)"/>
+  <text x="685" y="559" text-anchor="middle" fill="#10b981" font-size="11" font-weight="500" font-family="Arial, sans-serif">PositionSizer</text>
+  <rect x="760" y="540" width="100" height="28" fill="white" rx="6" filter="url(#shadowSmall)"/>
+  <text x="810" y="559" text-anchor="middle" fill="#10b981" font-size="11" font-weight="500" font-family="Arial, sans-serif">StopLoss</text>
+  <rect x="880" y="540" width="110" height="28" fill="white" rx="6" filter="url(#shadowSmall)"/>
+  <text x="935" y="559" text-anchor="middle" fill="#10b981" font-size="11" font-weight="500" font-family="Arial, sans-serif">Portfolio</text>
 
   <!-- Carry 策略详情 -->
-  <rect x="850" y="435" width="130" height="25" fill="white" rx="5"/>
-  <text x="915" y="452" text-anchor="middle" fill="#667eea" font-size="10">CarryAnalyzer</text>
-  <rect x="850" y="465" width="130" height="25" fill="white" rx="5"/>
-  <text x="915" y="482" text-anchor="middle" fill="#667eea" font-size="10">TermStructure</text>
+  <rect x="1020" y="540" width="130" height="28" fill="white" rx="6" filter="url(#shadowSmall)"/>
+  <text x="1085" y="559" text-anchor="middle" fill="#10b981" font-size="11" font-weight="500" font-family="Arial, sans-serif">CarryAnalyzer</text>
+  <rect x="1170" y="540" width="130" height="28" fill="white" rx="6" filter="url(#shadowSmall)"/>
+  <text x="1235" y="559" text-anchor="middle" fill="#10b981" font-size="11" font-weight="500" font-family="Arial, sans-serif">TermStructure</text>
 
-  <!-- Layer 5: 进化层 -->
-  <rect x="50" y="515" width="1100" height="60" fill="url(#layerGradient)" stroke="#667eea" stroke-width="2" rx="10"/>
-  <circle cx="90" cy="545" r="20" fill="#667eea"/>
-  <text x="90" y="550" text-anchor="middle" fill="white" font-size="14" font-weight="bold">5</text>
-  <text x="120" y="550" fill="#333" font-size="16" font-weight="bold">进化工具层 (Evolution Tools)</text>
-  <rect x="400" y="530" width="140" height="30" fill="white" rx="5"/>
-  <text x="470" y="550" text-anchor="middle" fill="#667eea" font-size="12">EvolutionManager</text>
-  <rect x="560" y="530" width="140" height="30" fill="white" rx="5"/>
-  <text x="630" y="550" text-anchor="middle" fill="#667eea" font-size="12">TrajectoryAnalyzer</text>
-  <rect x="720" y="530" width="110" height="30" fill="white" rx="5"/>
-  <text x="775" y="550" text-anchor="middle" fill="#667eea" font-size="12">TradeJournal</text>
-  <rect x="850" y="530" width="120" height="30" fill="white" rx="5"/>
-  <text x="910" y="550" text-anchor="middle" fill="#667eea" font-size="12">CircuitBreaker</text>
+  <!-- Layer 5: 进化工具层 -->
+  <rect x="50" y="585" width="1300" height="70" fill="url(#layer5Gradient)" stroke="#22c55e" stroke-width="1.5" rx="12" filter="url(#shadow)"/>
+  <circle cx="95" cy="620" r="22" fill="#22c55e"/>
+  <text x="95" y="625" text-anchor="middle" fill="white" font-size="16" font-weight="bold" font-family="Arial, sans-serif">5</text>
+  <text x="130" y="620" fill="#14532d" font-size="17" font-weight="bold" font-family="Arial, sans-serif">进化工具层 Evolution Tools</text>
+  <rect x="500" y="603" width="150" height="34" fill="white" rx="8" filter="url(#shadowSmall)"/>
+  <text x="575" y="625" text-anchor="middle" fill="#22c55e" font-size="13" font-weight="500" font-family="Arial, sans-serif">EvolutionManager</text>
+  <rect x="670" y="603" width="150" height="34" fill="white" rx="8" filter="url(#shadowSmall)"/>
+  <text x="745" y="625" text-anchor="middle" fill="#22c55e" font-size="13" font-weight="500" font-family="Arial, sans-serif">TrajectoryAnalyzer</text>
+  <rect x="840" y="603" width="120" height="34" fill="white" rx="8" filter="url(#shadowSmall)"/>
+  <text x="900" y="625" text-anchor="middle" fill="#22c55e" font-size="13" font-weight="500" font-family="Arial, sans-serif">TradeJournal</text>
+  <rect x="980" y="603" width="130" height="34" fill="white" rx="8" filter="url(#shadowSmall)"/>
+  <text x="1045" y="625" text-anchor="middle" fill="#22c55e" font-size="13" font-weight="500" font-family="Arial, sans-serif">CircuitBreaker</text>
 
   <!-- Layer 4: 记忆层 -->
-  <rect x="50" y="590" width="1100" height="60" fill="url(#layerGradient)" stroke="#667eea" stroke-width="2" rx="10"/>
-  <circle cx="90" cy="620" r="20" fill="#667eea"/>
-  <text x="90" y="625" text-anchor="middle" fill="white" font-size="14" font-weight="bold">4</text>
-  <text x="120" y="625" fill="#333" font-size="16" font-weight="bold">记忆层 (Memory)</text>
-  <rect x="400" y="605" width="160" height="30" fill="white" rx="5"/>
-  <text x="480" y="625" text-anchor="middle" fill="#667eea" font-size="12">UnifiedMemoryManager</text>
-  <rect x="580" y="605" width="110" height="30" fill="white" rx="5"/>
-  <text x="635" y="625" text-anchor="middle" fill="#667eea" font-size="12">MemoryBridge</text>
-  <rect x="710" y="605" width="130" height="30" fill="white" rx="5"/>
-  <text x="775" y="625" text-anchor="middle" fill="#667eea" font-size="12">ExperienceMemory</text>
-  <rect x="860" y="605" width="130" height="30" fill="white" rx="5"/>
-  <text x="925" y="625" text-anchor="middle" fill="#667eea" font-size="12">KnowledgeAnchors</text>
+  <rect x="50" y="670" width="1300" height="70" fill="url(#layer4Gradient)" stroke="#eab308" stroke-width="1.5" rx="12" filter="url(#shadow)"/>
+  <circle cx="95" cy="705" r="22" fill="#eab308"/>
+  <text x="95" y="710" text-anchor="middle" fill="white" font-size="16" font-weight="bold" font-family="Arial, sans-serif">4</text>
+  <text x="130" y="705" fill="#713f12" font-size="17" font-weight="bold" font-family="Arial, sans-serif">记忆层 Memory</text>
+  <rect x="450" y="688" width="180" height="34" fill="white" rx="8" filter="url(#shadowSmall)"/>
+  <text x="540" y="710" text-anchor="middle" fill="#eab308" font-size="13" font-weight="500" font-family="Arial, sans-serif">UnifiedMemoryManager</text>
+  <rect x="650" y="688" width="120" height="34" fill="white" rx="8" filter="url(#shadowSmall)"/>
+  <text x="710" y="710" text-anchor="middle" fill="#eab308" font-size="13" font-weight="500" font-family="Arial, sans-serif">MemoryBridge</text>
+  <rect x="790" y="688" width="150" height="34" fill="white" rx="8" filter="url(#shadowSmall)"/>
+  <text x="865" y="710" text-anchor="middle" fill="#eab308" font-size="13" font-weight="500" font-family="Arial, sans-serif">ExperienceMemory</text>
+  <rect x="960" y="688" width="150" height="34" fill="white" rx="8" filter="url(#shadowSmall)"/>
+  <text x="1035" y="710" text-anchor="middle" fill="#eab308" font-size="13" font-weight="500" font-family="Arial, sans-serif">KnowledgeAnchors</text>
 
   <!-- Layer 3: 感知层 -->
-  <rect x="50" y="665" width="1100" height="60" fill="url(#layerGradient)" stroke="#667eea" stroke-width="2" rx="10"/>
-  <circle cx="90" cy="695" r="20" fill="#667eea"/>
-  <text x="90" y="700" text-anchor="middle" fill="white" font-size="14" font-weight="bold">3</text>
-  <text x="120" y="700" fill="#333" font-size="16" font-weight="bold">感知层 (Perception)</text>
-  <rect x="400" y="680" width="130" height="30" fill="white" rx="5"/>
-  <text x="465" y="700" text-anchor="middle" fill="#667eea" font-size="12">IndicatorEngine</text>
-  <rect x="550" y="680" width="130" height="30" fill="white" rx="5"/>
-  <text x="615" y="700" text-anchor="middle" fill="#667eea" font-size="12">ContextAssembler</text>
-  <rect x="700" y="680" width="140" height="30" fill="white" rx="5"/>
-  <text x="770" y="700" text-anchor="middle" fill="#667eea" font-size="12">MacroStateDetector</text>
-  <rect x="860" y="680" width="130" height="30" fill="white" rx="5"/>
-  <text x="925" y="700" text-anchor="middle" fill="#667eea" font-size="12">IndicatorHub</text>
+  <rect x="50" y="755" width="1300" height="70" fill="url(#layer3Gradient)" stroke="#ef4444" stroke-width="1.5" rx="12" filter="url(#shadow)"/>
+  <circle cx="95" cy="790" r="22" fill="#ef4444"/>
+  <text x="95" y="795" text-anchor="middle" fill="white" font-size="16" font-weight="bold" font-family="Arial, sans-serif">3</text>
+  <text x="130" y="790" fill="#7f1d1d" font-size="17" font-weight="bold" font-family="Arial, sans-serif">感知层 Perception</text>
+  <rect x="450" y="773" width="140" height="34" fill="white" rx="8" filter="url(#shadowSmall)"/>
+  <text x="520" y="795" text-anchor="middle" fill="#ef4444" font-size="13" font-weight="500" font-family="Arial, sans-serif">IndicatorEngine</text>
+  <rect x="610" y="773" width="140" height="34" fill="white" rx="8" filter="url(#shadowSmall)"/>
+  <text x="680" y="795" text-anchor="middle" fill="#ef4444" font-size="13" font-weight="500" font-family="Arial, sans-serif">ContextAssembler</text>
+  <rect x="770" y="773" width="150" height="34" fill="white" rx="8" filter="url(#shadowSmall)"/>
+  <text x="845" y="795" text-anchor="middle" fill="#ef4444" font-size="13" font-weight="500" font-family="Arial, sans-serif">MacroStateDetector</text>
+  <rect x="940" y="773" width="130" height="34" fill="white" rx="8" filter="url(#shadowSmall)"/>
+  <text x="1005" y="795" text-anchor="middle" fill="#ef4444" font-size="13" font-weight="500" font-family="Arial, sans-serif">IndicatorHub</text>
 
   <!-- Layer 2: 存储层 -->
-  <rect x="50" y="740" width="1100" height="60" fill="url(#layerGradient)" stroke="#667eea" stroke-width="2" rx="10"/>
-  <circle cx="90" cy="770" r="20" fill="#667eea"/>
-  <text x="90" y="775" text-anchor="middle" fill="white" font-size="14" font-weight="bold">2</text>
-  <text x="120" y="775" fill="#333" font-size="16" font-weight="bold">存储层 (Storage)</text>
-  <rect x="400" y="755" width="110" height="30" fill="white" rx="5"/>
-  <text x="455" y="775" text-anchor="middle" fill="#667eea" font-size="12">DuckDBStore</text>
-  <rect x="530" y="755" width="110" height="30" fill="white" rx="5"/>
-  <text x="585" y="775" text-anchor="middle" fill="#667eea" font-size="12">SQLiteStore</text>
-  <rect x="660" y="755" width="130" height="30" fill="white" rx="5"/>
-  <text x="725" y="775" text-anchor="middle" fill="#667eea" font-size="12">DataSyncManager</text>
-  <rect x="810" y="755" width="130" height="30" fill="white" rx="5"/>
-  <text x="875" y="775" text-anchor="middle" fill="#667eea" font-size="12">DataValidator</text>
+  <rect x="50" y="840" width="1300" height="70" fill="url(#layer2Gradient)" stroke="#14b8a6" stroke-width="1.5" rx="12" filter="url(#shadow)"/>
+  <circle cx="95" cy="875" r="22" fill="#14b8a6"/>
+  <text x="95" y="880" text-anchor="middle" fill="white" font-size="16" font-weight="bold" font-family="Arial, sans-serif">2</text>
+  <text x="130" y="875" fill="#134e4a" font-size="17" font-weight="bold" font-family="Arial, sans-serif">存储层 Storage</text>
+  <rect x="450" y="858" width="120" height="34" fill="white" rx="8" filter="url(#shadowSmall)"/>
+  <text x="510" y="880" text-anchor="middle" fill="#14b8a6" font-size="13" font-weight="500" font-family="Arial, sans-serif">DuckDBStore</text>
+  <rect x="590" y="858" width="120" height="34" fill="white" rx="8" filter="url(#shadowSmall)"/>
+  <text x="650" y="880" text-anchor="middle" fill="#14b8a6" font-size="13" font-weight="500" font-family="Arial, sans-serif">SQLiteStore</text>
+  <rect x="730" y="858" width="150" height="34" fill="white" rx="8" filter="url(#shadowSmall)"/>
+  <text x="805" y="880" text-anchor="middle" fill="#14b8a6" font-size="13" font-weight="500" font-family="Arial, sans-serif">DataSyncManager</text>
+  <rect x="900" y="858" width="130" height="34" fill="white" rx="8" filter="url(#shadowSmall)"/>
+  <text x="965" y="880" text-anchor="middle" fill="#14b8a6" font-size="13" font-weight="500" font-family="Arial, sans-serif">DataValidator</text>
 
   <!-- Layer 1: 数据源层 -->
-  <rect x="50" y="815" width="1100" height="60" fill="url(#layerGradient)" stroke="#667eea" stroke-width="2" rx="10"/>
-  <circle cx="90" cy="845" r="20" fill="#667eea"/>
-  <text x="90" y="850" text-anchor="middle" fill="white" font-size="14" font-weight="bold">1</text>
-  <text x="120" y="850" fill="#333" font-size="16" font-weight="bold">数据源层 (Data Sources)</text>
-  <rect x="400" y="830" width="80" height="30" fill="white" rx="5"/>
-  <text x="440" y="850" text-anchor="middle" fill="#667eea" font-size="12">TqSdk</text>
-  <rect x="500" y="830" width="80" height="30" fill="white" rx="5"/>
-  <text x="540" y="850" text-anchor="middle" fill="#667eea" font-size="12">Pytdx</text>
-  <rect x="600" y="830" width="80" height="30" fill="white" rx="5"/>
-  <text x="640" y="850" text-anchor="middle" fill="#667eea" font-size="12">AkShare</text>
-  <rect x="700" y="830" width="80" height="30" fill="white" rx="5"/>
-  <text x="740" y="850" text-anchor="middle" fill="#667eea" font-size="12">CSV</text>
+  <rect x="50" y="925" width="1300" height="70" fill="url(#layer1Gradient)" stroke="#64748b" stroke-width="1.5" rx="12" filter="url(#shadow)"/>
+  <circle cx="95" cy="960" r="22" fill="#64748b"/>
+  <text x="95" y="965" text-anchor="middle" fill="white" font-size="16" font-weight="bold" font-family="Arial, sans-serif">1</text>
+  <text x="130" y="960" fill="#1e293b" font-size="17" font-weight="bold" font-family="Arial, sans-serif">数据源层 Data Sources</text>
+  <rect x="450" y="943" width="100" height="34" fill="white" rx="8" filter="url(#shadowSmall)"/>
+  <text x="500" y="965" text-anchor="middle" fill="#64748b" font-size="13" font-weight="500" font-family="Arial, sans-serif">TqSdk</text>
+  <rect x="570" y="943" width="100" height="34" fill="white" rx="8" filter="url(#shadowSmall)"/>
+  <text x="620" y="965" text-anchor="middle" fill="#64748b" font-size="13" font-weight="500" font-family="Arial, sans-serif">Pytdx</text>
+  <rect x="690" y="943" width="100" height="34" fill="white" rx="8" filter="url(#shadowSmall)"/>
+  <text x="740" y="965" text-anchor="middle" fill="#64748b" font-size="13" font-weight="500" font-family="Arial, sans-serif">AkShare</text>
+  <rect x="810" y="943" width="100" height="34" fill="white" rx="8" filter="url(#shadowSmall)"/>
+  <text x="860" y="965" text-anchor="middle" fill="#64748b" font-size="13" font-weight="500" font-family="Arial, sans-serif">CSV</text>
 
   <!-- 依赖关系箭头 -->
-  <!-- 数据流 -->
-  <line x1="440" y1="860" x2="455" y2="770" stroke="#667eea" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#arrowhead)"/>
-  <line x1="540" y1="860" x2="585" y2="770" stroke="#667eea" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#arrowhead)"/>
-  <line x1="640" y1="860" x2="725" y2="770" stroke="#667eea" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#arrowhead)"/>
+  <line x1="500" y1="980" x2="510" y2="910" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#arrowhead)"/>
+  <line x1="620" y1="980" x2="650" y2="910" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#arrowhead)"/>
+  <line x1="740" y1="980" x2="805" y2="910" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#arrowhead)"/>
 
-  <!-- 存储到感知 -->
-  <line x1="455" y1="755" x2="465" y2="710" stroke="#667eea" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#arrowhead)"/>
-  <line x1="585" y1="755" x2="615" y2="710" stroke="#667eea" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#arrowhead)"/>
+  <line x1="510" y1="858" x2="520" y2="825" stroke="#14b8a6" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#arrowhead)"/>
+  <line x1="650" y1="858" x2="680" y2="825" stroke="#14b8a6" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#arrowhead)"/>
 
-  <!-- 感知到记忆 -->
-  <line x1="465" y1="680" x2="480" y2="635" stroke="#667eea" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#arrowhead)"/>
+  <line x1="520" y1="773" x2="540" y2="740" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#arrowhead)"/>
 
-  <!-- 记忆到策略 -->
-  <line x1="480" y1="605" x2="275" y2="495" stroke="#667eea" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#arrowhead)"/>
+  <line x1="540" y1="688" x2="280" y2="595" stroke="#eab308" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#arrowhead)"/>
 
-  <!-- 策略到因子进化 -->
-  <line x1="275" y1="435" x2="510" y2="405" stroke="#667eea" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#arrowhead)"/>
+  <line x1="280" y1="500" x2="520" y2="465" stroke="#10b981" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#arrowheadGreen)"/>
 
-  <!-- 因子进化到推理 -->
-  <line x1="510" y1="360" x2="465" y2="320" stroke="#667eea" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#arrowhead)"/>
+  <line x1="520" y1="413" x2="525" y2="380" stroke="#f97316" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#arrowhead)"/>
 
-  <!-- 推理到RL -->
-  <line x1="465" y1="285" x2="560" y2="245" stroke="#667eea" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#arrowhead)"/>
+  <line x1="525" y1="328" x2="620" y2="295" stroke="#d946ef" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#arrowhead)"/>
 
-  <!-- RL到主协调 -->
-  <line x1="560" y1="210" x2="475" y2="175" stroke="#667eea" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#arrowhead)"/>
+  <line x1="620" y1="243" x2="530" y2="210" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#arrowhead)"/>
 
-  <!-- Carry策略到推理 -->
-  <line x1="915" y1="435" x2="885" y2="320" stroke="#10b981" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#arrowhead)"/>
+  <line x1="530" y1="158" x2="530" y2="140" stroke="#0ea5e9" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#arrowhead)"/>
+
+  <!-- Carry策略到推理层 -->
+  <line x1="1085" y1="540" x2="1005" y2="380" stroke="#10b981" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#arrowheadGreen)"/>
 
   <!-- 统计信息 -->
-  <rect x="50" y="890" width="250" height="80" fill="url(#headerGradient)" rx="10"/>
-  <text x="175" y="920" text-anchor="middle" fill="white" font-size="32" font-weight="bold">118</text>
-  <text x="175" y="950" text-anchor="middle" fill="white" font-size="14">Python 模块</text>
+  <rect x="50" y="1010" width="300" height="70" fill="url(#headerGradient)" rx="12" filter="url(#shadow)"/>
+  <text x="200" y="1040" text-anchor="middle" fill="white" font-size="36" font-weight="bold" font-family="Arial, sans-serif">118</text>
+  <text x="200" y="1065" text-anchor="middle" fill="rgba(255,255,255,0.9)" font-size="14" font-family="Arial, sans-serif">Python 模块</text>
 
-  <rect x="320" y="890" width="250" height="80" fill="url(#headerGradient)" rx="10"/>
-  <text x="445" y="920" text-anchor="middle" fill="white" font-size="32" font-weight="bold">544+</text>
-  <text x="445" y="950" text-anchor="middle" fill="white" font-size="14">单元测试</text>
+  <rect x="370" y="1010" width="300" height="70" fill="url(#headerGradient)" rx="12" filter="url(#shadow)"/>
+  <text x="520" y="1040" text-anchor="middle" fill="white" font-size="36" font-weight="bold" font-family="Arial, sans-serif">544+</text>
+  <text x="520" y="1065" text-anchor="middle" fill="rgba(255,255,255,0.9)" font-size="14" font-family="Arial, sans-serif">单元测试</text>
 
-  <rect x="590" y="890" width="250" height="80" fill="url(#headerGradient)" rx="10"/>
-  <text x="715" y="920" text-anchor="middle" fill="white" font-size="32" font-weight="bold">86</text>
-  <text x="715" y="950" text-anchor="middle" fill="white" font-size="14">监控品种</text>
+  <rect x="690" y="1010" width="300" height="70" fill="url(#headerGradient)" rx="12" filter="url(#shadow)"/>
+  <text x="840" y="1040" text-anchor="middle" fill="white" font-size="36" font-weight="bold" font-family="Arial, sans-serif">86</text>
+  <text x="840" y="1065" text-anchor="middle" fill="rgba(255,255,255,0.9)" font-size="14" font-family="Arial, sans-serif">监控品种</text>
 
-  <rect x="860" y="890" width="250" height="80" fill="url(#headerGradient)" rx="10"/>
-  <text x="985" y="920" text-anchor="middle" fill="white" font-size="32" font-weight="bold">35+</text>
-  <text x="985" y="950" text-anchor="middle" fill="white" font-size="14">技术指标</text>
+  <rect x="1010" y="1010" width="300" height="70" fill="url(#headerGradient)" rx="12" filter="url(#shadow)"/>
+  <text x="1160" y="1040" text-anchor="middle" fill="white" font-size="36" font-weight="bold" font-family="Arial, sans-serif">80+</text>
+  <text x="1160" y="1065" text-anchor="middle" fill="rgba(255,255,255,0.9)" font-size="14" font-family="Arial, sans-serif">技术指标</text>
 
   <!-- 页脚 -->
-  <rect x="0" y="980" width="1200" height="60" fill="#333" rx="0"/>
-  <text x="600" y="1015" text-anchor="middle" fill="white" font-size="14">Trend Scanner Agent - 推理重于规则的期货趋势跟踪决策辅助系统</text>
+  <rect x="0" y="1090" width="1400" height="10" fill="url(#headerGradient)" rx="0"/>
 </svg>

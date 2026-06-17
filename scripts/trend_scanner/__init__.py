@@ -341,6 +341,22 @@ from .walk_forward_validator import (
 # 权重优化
 from .weight_optimizer import WeightOptimizer
 
+# 统一配置（Config 统一化）
+from .trend_scanner_config import (
+    TrendScannerConfig,
+    DataConfig,
+    ScannerConfig,
+    ReasonerConfig,
+    EvolverConfig,
+    DebaterConfig,
+    MonitorConfig,
+    RLConfig,
+    TokenBudgetConfig,
+    get_config,
+    set_config,
+    reset_config,
+)
+
 
 __all__ = [
     # 版本信息
@@ -585,4 +601,17 @@ __all__ = [
     "get_visibility_example_factors",
     "VolatilityAnchor",
     "volatility_anchor",
+    # 统一配置
+    "TrendScannerConfig",
+    "DataConfig",
+    "ScannerConfig",
+    "ReasonerConfig",
+    "EvolverConfig",
+    "DebaterConfig",
+    "MonitorConfig",
+    "RLConfig",
+    "TokenBudgetConfig",
+    "get_config",
+    "set_config",
+    "reset_config",
 ]

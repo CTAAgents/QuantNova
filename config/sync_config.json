@@ -1,0 +1,32 @@
+{
+  "sync_schedule": {
+    "day_close_check": "15:30",
+    "night_open_check": "20:30",
+    "timezone": "Asia/Shanghai"
+  },
+  "retry_policy": {
+    "max_retries": 2,
+    "retry_delay_seconds": 300,
+    "notify_after_failure": true
+  },
+  "validation": {
+    "timeliness_threshold": 0.8,
+    "completeness_check_symbols": 10,
+    "max_zero_volume_ratio": 0.1,
+    "require_price_logic": true
+  },
+  "sync_parameters": {
+    "default_days": 5,
+    "min_oi": 10000,
+    "force_sync_today": true,
+    "batch_size": 10,
+    "sleep_between_batches": 0.5
+  },
+  "notification": {
+    "enabled": true,
+    "channel": "workbuddy_message",
+    "alert_levels": ["ERROR", "CRITICAL"],
+    "include_validation_report": true
+  },
+  "state_file": "data/sync_state.json"
+}

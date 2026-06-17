@@ -292,6 +292,80 @@ class MemoryBridge:
         trigger = EvolutionTrigger(self.memory)
         return trigger.should_evolve()
     
+    # ========== 因子进化集成（v6.0 新增） ==========
+    
+    def store_factor_result(self, factor_result: Dict[str, Any]) -> str:
+        """
+        存储因子结果（供 FactorEvolutionEngine 使用）
+        
+        Args:
+            factor_result: 因子结果字典
+                
+        Returns:
+            因子ID
+        """
+        return self.memory.store_factor_result(factor_result)
+    
+    def get_factor_history(self, factor_name: str = None) -> List[Dict[str, Any]]:
+        """
+        获取因子历史
+        
+        Args:
+            factor_name: 因子名称（可选）
+            
+        Returns:
+            因子历史列表
+        """
+        return self.memory.get_factor_history(factor_name)
+    
+    def store_walk_forward_result(self, wf_result: Dict[str, Any]) -> str:
+        """
+        存储 Walk-Forward 验证结果
+        
+        Args:
+            wf_result: Walk-Forward 结果字典
+                
+        Returns:
+            结果ID
+        """
+        return self.memory.store_walk_forward_result(wf_result)
+    
+    def store_visibility_graph_factor(self, factor_info: Dict[str, Any]) -> str:
+        """
+        存储可见图因子信息
+        
+        Args:
+            factor_info: 因子信息字典
+                
+        Returns:
+            因子ID
+        """
+        return self.memory.store_visibility_graph_factor(factor_info)
+    
+    def store_volatility_anchor(self, anchor_info: Dict[str, Any]) -> str:
+        """
+        存储波动率锚点信息
+        
+        Args:
+            anchor_info: 锚点信息字典
+                
+        Returns:
+            锚点ID
+        """
+        return self.memory.store_volatility_anchor(anchor_info)
+    
+    def get_volatility_anchor(self, symbol: str) -> Optional[Dict[str, Any]]:
+        """
+        获取波动率锚点
+        
+        Args:
+            symbol: 品种代码
+            
+        Returns:
+            锚点信息
+        """
+        return self.memory.get_volatility_anchor(symbol)
+    
     # ========== 工具方法 ==========
     
     def _extract_feature_vector(self, signal: Dict[str, Any]) -> List[float]:

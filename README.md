@@ -327,3 +327,4 @@ python -m pytest tests/ -v
 | [版本历史](docs/CHANGELOG.md) | 完整变更记录 |
 | [编码规范](docs/CODE_STYLE.md) | 代码风格指南 |
 | [测试文档](docs/TESTING.md) | 测试覆盖与运行 |
+| [自动运行升级计划](docs/auto_run_upgrade_plan.md) | 从cron升级为事件驱动架构 |

@@ -51,30 +51,42 @@ python tools/scan_opportunities.py --evolve --evolve-rounds 5
 
 ## 系统架构
 
-```
-数据层 → 感知层 → 因子进化层 → 推理层 → 执行层 → 进化层 → 记忆层
-```
+![系统架构](docs/architecture_diagram.svg)
 
 ### 分层架构
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                    Trend Scanner Agent                                │
+│ Layer 10 - 主协调层 (Orchestrator)                                   │
+│   TradingAssistant - 系统主入口                                       │
 ├─────────────────────────────────────────────────────────────────────┤
-│  数据层    │ TqSdk → DuckDB/SQLite ← Pytdx ← AkShare ← CSV        │
-├────────────┼─────────────────────────────────────────────────────────┤
-│  感知层    │ IndicatorEngine(35+) + MacroStateDetector              │
-├────────────┼─────────────────────────────────────────────────────────┤
-│  因子进化层│ Generate → Execute → Evaluate → Gate → Memory          │
-├────────────┼─────────────────────────────────────────────────────────┤
-│  推理层    │ Reasoner Agent(LLM推理) + Debater Agent(多角色辩论)    │
-├────────────┼─────────────────────────────────────────────────────────┤
-│  执行层    │ PositionSizer + StopLossCalculator + ExecutionEngine   │
-├────────────┼─────────────────────────────────────────────────────────┤
-│  进化层    │ StrategyHealth + OverfittingDetector + TrajectoryAnalyzer│
-├────────────┼─────────────────────────────────────────────────────────┤
-│  记忆层    │ MemoryBridge + SQLite(经验) + DuckDB(K线/因子)         │
-└────────────┴─────────────────────────────────────────────────────────┘
+│ Layer 9 - RL 强化学习层 (Reinforcement Learning)                     │
+│   AgentPPO + FuturesTradingEnv + RLSignalGenerator                   │
+├─────────────────────────────────────────────────────────────────────┤
+│ Layer 8 - 推理层 (Reasoning)                                         │
+│   ReasoningEngine(LLM推理) + DebateEngine(多角色辩论)               │
+├─────────────────────────────────────────────────────────────────────┤
+│ Layer 7 - 因子进化层 (Factor Evolution)                              │
+│   FactorGenerator → FactorEvaluator → FactorEvolutionEngine         │
+├─────────────────────────────────────────────────────────────────────┤
+│ Layer 6 - 策略层 (Strategy)                                          │
+│   TrendScanner + RiskManager + ExecutionEngine                      │
+├─────────────────────────────────────────────────────────────────────┤
+│ Layer 5 - 进化层 (Evolution)                                         │
+│   EvolutionManager + TrajectoryAnalyzer + TradeJournal              │
+├─────────────────────────────────────────────────────────────────────┤
+│ Layer 4 - 记忆层 (Memory)                                            │
+│   UnifiedMemoryManager + MemoryBridge + ExperienceMemory            │
+├─────────────────────────────────────────────────────────────────────┤
+│ Layer 3 - 感知层 (Perception)                                        │
+│   IndicatorEngine(35+) + ContextAssembler + MacroStateDetector      │
+├─────────────────────────────────────────────────────────────────────┤
+│ Layer 2 - 存储层 (Storage)                                           │
+│   DuckDBStore + SQLiteStore + DataSyncManager                       │
+├─────────────────────────────────────────────────────────────────────┤
+│ Layer 1 - 数据源层 (Data Sources)                                    │
+│   TqSdk(首选) + Pytdx(备选) + AkShare + CSV(兜底)                   │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ### 设计原则

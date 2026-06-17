@@ -362,3 +362,12 @@ class FuturesTradingEnv(gym.Env):
 - [x] Phase 4: Walk-Forward + RL 验证（完成）
   - 创建 `scripts/trend_scanner/rl/walk_forward_rl.py`（RLWalkForwardValidator, walk_forward_validate_rl）
   - 创建 `tests/test_walk_forward_rl.py`（11个测试全部通过）
+- [x] 方向C: AgentBase 统一基类（完成）
+  - 创建 `scripts/trend_scanner/core/__init__.py`
+  - 创建 `scripts/trend_scanner/core/agent_base.py`（AgentBase, AgentConfig, AgentState, AgentResult）
+  - 创建 `tests/test_agent_base.py`（12个测试全部通过）
+  - 所有 92 个测试通过
+- [x] 方向B: 目录分层重组（部分完成）
+  - 创建了目录结构，但因循环导入问题回滚
+  - 保留 core/ 目录作为核心抽象层
+  - 其他目录重组留待后续优化

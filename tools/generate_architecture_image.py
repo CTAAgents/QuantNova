@@ -1,0 +1,267 @@
+"""
+生成架构图图片
+
+使用 Playwright 截取 HTML 架构图为 PNG 图片。
+
+使用方式：
+    python tools/generate_architecture_image.py
+
+版本：v1.0
+创建日期：2026-06-18
+"""
+
+import os
+import sys
+from pathlib import Path
+
+def generate_architecture_image():
+    """生成架构图图片"""
+    print("生成架构图图片...")
+    
+    # 检查是否安装了 playwright
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        print("需要安装 playwright: pip install playwright")
+        print("然后运行: playwright install chromium")
+        return False
+    
+    # 获取路径
+    project_root = Path(__file__).parent.parent
+    html_file = project_root / "docs" / "architecture_diagram.html"
+    output_file = project_root / "docs" / "architecture_diagram.png"
+    
+    if not html_file.exists():
+        print(f"错误: HTML 文件不存在: {html_file}")
+        return False
+    
+    # 使用 Playwright 截图
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page(viewport={"width": 1200, "height": 800})
+        
+        # 加载 HTML 文件
+        page.goto(f"file://{html_file.absolute()}")
+        
+        # 等待页面加载
+        page.wait_for_load_state("networkidle")
+        
+        # 截图
+        page.screenshot(path=str(output_file), full_page=True)
+        
+        browser.close()
+    
+    print(f"架构图已保存到: {output_file}")
+    return True
+
+
+def create_architecture_svg():
+    """创建 SVG 架构图（备选方案）"""
+    print("创建 SVG 架构图...")
+    
+    project_root = Path(__file__).parent.parent
+    output_file = project_root / "docs" / "architecture_diagram.svg"
+    
+    svg_content = '''<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1200" height="800" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="headerGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="layerGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#f8f9fa;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e9ecef;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- 背景 -->
+  <rect width="1200" height="800" fill="white" rx="20"/>
+  
+  <!-- 标题栏 -->
+  <rect x="0" y="0" width="1200" height="100" fill="url(#headerGradient)" rx="20"/>
+  <rect x="0" y="80" width="1200" height="20" fill="url(#headerGradient)"/>
+  <text x="600" y="45" text-anchor="middle" fill="white" font-size="32" font-weight="bold">Trend Scanner Agent</text>
+  <text x="600" y="75" text-anchor="middle" fill="white" font-size="18">推理重于规则的期货趋势跟踪决策辅助系统</text>
+  
+  <!-- 架构层级 -->
+  <!-- Layer 10: 主协调层 -->
+  <rect x="50" y="120" width="1100" height="60" fill="url(#layerGradient)" stroke="#667eea" stroke-width="2" rx="10"/>
+  <circle cx="90" cy="150" r="20" fill="#667eea"/>
+  <text x="90" y="155" text-anchor="middle" fill="white" font-size="14" font-weight="bold">10</text>
+  <text x="120" y="155" fill="#333" font-size="16" font-weight="bold">主协调层 (Orchestrator)</text>
+  <rect x="400" y="135" width="150" height="30" fill="white" rx="5"/>
+  <text x="475" y="155" text-anchor="middle" fill="#667eea" font-size="12">TradingAssistant</text>
+  <rect x="570" y="135" width="100" height="30" fill="white" rx="5"/>
+  <text x="620" y="155" text-anchor="middle" fill="#667eea" font-size="12">navigator.py</text>
+  
+  <!-- Layer 9: RL 强化学习层 -->
+  <rect x="50" y="195" width="1100" height="60" fill="url(#layerGradient)" stroke="#667eea" stroke-width="2" rx="10"/>
+  <circle cx="90" cy="225" r="20" fill="#667eea"/>
+  <text x="90" y="230" text-anchor="middle" fill="white" font-size="14" font-weight="bold">9</text>
+  <text x="120" y="230" fill="#333" font-size="16" font-weight="bold">RL 强化学习层 (Reinforcement Learning)</text>
+  <rect x="500" y="210" width="120" height="30" fill="white" rx="5"/>
+  <text x="560" y="230" text-anchor="middle" fill="#667eea" font-size="12">AgentPPO</text>
+  <rect x="640" y="210" width="140" height="30" fill="white" rx="5"/>
+  <text x="710" y="230" text-anchor="middle" fill="#667eea" font-size="12">FuturesTradingEnv</text>
+  <rect x="800" y="210" width="130" height="30" fill="white" rx="5"/>
+  <text x="865" y="230" text-anchor="middle" fill="#667eea" font-size="12">RLSignalGenerator</text>
+  
+  <!-- Layer 8: 推理层 -->
+  <rect x="50" y="270" width="1100" height="60" fill="url(#layerGradient)" stroke="#667eea" stroke-width="2" rx="10"/>
+  <circle cx="90" cy="300" r="20" fill="#667eea"/>
+  <text x="90" y="305" text-anchor="middle" fill="white" font-size="14" font-weight="bold">8</text>
+  <text x="120" y="305" fill="#333" font-size="16" font-weight="bold">推理层 (Reasoning)</text>
+  <rect x="400" y="285" width="130" height="30" fill="white" rx="5"/>
+  <text x="465" y="305" text-anchor="middle" fill="#667eea" font-size="12">ReasoningEngine</text>
+  <rect x="550" y="285" width="110" height="30" fill="white" rx="5"/>
+  <text x="605" y="305" text-anchor="middle" fill="#667eea" font-size="12">DebateEngine</text>
+  <rect x="680" y="285" width="120" height="30" fill="white" rx="5"/>
+  <text x="740" y="305" text-anchor="middle" fill="#667eea" font-size="12">BriefGenerator</text>
+  
+  <!-- Layer 7: 因子进化层 -->
+  <rect x="50" y="345" width="1100" height="60" fill="url(#layerGradient)" stroke="#667eea" stroke-width="2" rx="10"/>
+  <circle cx="90" cy="375" r="20" fill="#667eea"/>
+  <text x="90" y="380" text-anchor="middle" fill="white" font-size="14" font-weight="bold">7</text>
+  <text x="120" y="380" fill="#333" font-size="16" font-weight="bold">因子进化层 (Factor Evolution)</text>
+  <rect x="450" y="360" width="120" height="30" fill="white" rx="5"/>
+  <text x="510" y="380" text-anchor="middle" fill="#667eea" font-size="12">FactorGenerator</text>
+  <rect x="590" y="360" width="130" height="30" fill="white" rx="5"/>
+  <text x="655" y="380" text-anchor="middle" fill="#667eea" font-size="12">FactorEvaluator</text>
+  <rect x="740" y="360" width="160" height="30" fill="white" rx="5"/>
+  <text x="820" y="380" text-anchor="middle" fill="#667eea" font-size="12">FactorEvolutionEngine</text>
+  
+  <!-- Layer 6: 策略层 -->
+  <rect x="50" y="420" width="1100" height="60" fill="url(#layerGradient)" stroke="#667eea" stroke-width="2" rx="10"/>
+  <circle cx="90" cy="450" r="20" fill="#667eea"/>
+  <text x="90" y="455" text-anchor="middle" fill="white" font-size="14" font-weight="bold">6</text>
+  <text x="120" y="455" fill="#333" font-size="16" font-weight="bold">策略层 (Strategy)</text>
+  <rect x="400" y="435" width="120" height="30" fill="white" rx="5"/>
+  <text x="460" y="455" text-anchor="middle" fill="#667eea" font-size="12">TrendScanner</text>
+  <rect x="540" y="435" width="110" height="30" fill="white" rx="5"/>
+  <text x="595" y="455" text-anchor="middle" fill="#667eea" font-size="12">RiskManager</text>
+  <rect x="670" y="435" width="130" height="30" fill="white" rx="5"/>
+  <text x="735" y="455" text-anchor="middle" fill="#667eea" font-size="12">ExecutionEngine</text>
+  
+  <!-- Layer 5: 进化层 -->
+  <rect x="50" y="495" width="1100" height="60" fill="url(#layerGradient)" stroke="#667eea" stroke-width="2" rx="10"/>
+  <circle cx="90" cy="525" r="20" fill="#667eea"/>
+  <text x="90" y="530" text-anchor="middle" fill="white" font-size="14" font-weight="bold">5</text>
+  <text x="120" y="530" fill="#333" font-size="16" font-weight="bold">进化层 (Evolution)</text>
+  <rect x="400" y="510" width="140" height="30" fill="white" rx="5"/>
+  <text x="470" y="530" text-anchor="middle" fill="#667eea" font-size="12">EvolutionManager</text>
+  <rect x="560" y="510" width="140" height="30" fill="white" rx="5"/>
+  <text x="630" y="530" text-anchor="middle" fill="#667eea" font-size="12">TrajectoryAnalyzer</text>
+  <rect x="720" y="510" width="110" height="30" fill="white" rx="5"/>
+  <text x="775" y="530" text-anchor="middle" fill="#667eea" font-size="12">TradeJournal</text>
+  
+  <!-- Layer 4: 记忆层 -->
+  <rect x="50" y="570" width="1100" height="60" fill="url(#layerGradient)" stroke="#667eea" stroke-width="2" rx="10"/>
+  <circle cx="90" cy="600" r="20" fill="#667eea"/>
+  <text x="90" y="605" text-anchor="middle" fill="white" font-size="14" font-weight="bold">4</text>
+  <text x="120" y="605" fill="#333" font-size="16" font-weight="bold">记忆层 (Memory)</text>
+  <rect x="400" y="585" width="160" height="30" fill="white" rx="5"/>
+  <text x="480" y="605" text-anchor="middle" fill="#667eea" font-size="12">UnifiedMemoryManager</text>
+  <rect x="580" y="585" width="110" height="30" fill="white" rx="5"/>
+  <text x="635" y="605" text-anchor="middle" fill="#667eea" font-size="12">MemoryBridge</text>
+  <rect x="710" y="585" width="130" height="30" fill="white" rx="5"/>
+  <text x="775" y="605" text-anchor="middle" fill="#667eea" font-size="12">ExperienceMemory</text>
+  
+  <!-- Layer 3: 感知层 -->
+  <rect x="50" y="645" width="1100" height="60" fill="url(#layerGradient)" stroke="#667eea" stroke-width="2" rx="10"/>
+  <circle cx="90" cy="675" r="20" fill="#667eea"/>
+  <text x="90" y="680" text-anchor="middle" fill="white" font-size="14" font-weight="bold">3</text>
+  <text x="120" y="680" fill="#333" font-size="16" font-weight="bold">感知层 (Perception)</text>
+  <rect x="400" y="660" width="130" height="30" fill="white" rx="5"/>
+  <text x="465" y="680" text-anchor="middle" fill="#667eea" font-size="12">IndicatorEngine</text>
+  <rect x="550" y="660" width="130" height="30" fill="white" rx="5"/>
+  <text x="615" y="680" text-anchor="middle" fill="#667eea" font-size="12">ContextAssembler</text>
+  <rect x="700" y="660" width="140" height="30" fill="white" rx="5"/>
+  <text x="770" y="680" text-anchor="middle" fill="#667eea" font-size="12">MacroStateDetector</text>
+  
+  <!-- Layer 2: 存储层 -->
+  <rect x="50" y="720" width="1100" height="60" fill="url(#layerGradient)" stroke="#667eea" stroke-width="2" rx="10"/>
+  <circle cx="90" cy="750" r="20" fill="#667eea"/>
+  <text x="90" y="755" text-anchor="middle" fill="white" font-size="14" font-weight="bold">2</text>
+  <text x="120" y="755" fill="#333" font-size="16" font-weight="bold">存储层 (Storage)</text>
+  <rect x="400" y="735" width="110" height="30" fill="white" rx="5"/>
+  <text x="455" y="755" text-anchor="middle" fill="#667eea" font-size="12">DuckDBStore</text>
+  <rect x="530" y="735" width="110" height="30" fill="white" rx="5"/>
+  <text x="585" y="755" text-anchor="middle" fill="#667eea" font-size="12">SQLiteStore</text>
+  <rect x="660" y="735" width="130" height="30" fill="white" rx="5"/>
+  <text x="725" y="755" text-anchor="middle" fill="#667eea" font-size="12">DataSyncManager</text>
+  
+  <!-- Layer 1: 数据源层 -->
+  <rect x="50" y="795" width="1100" height="60" fill="url(#layerGradient)" stroke="#667eea" stroke-width="2" rx="10"/>
+  <circle cx="90" cy="825" r="20" fill="#667eea"/>
+  <text x="90" y="830" text-anchor="middle" fill="white" font-size="14" font-weight="bold">1</text>
+  <text x="120" y="830" fill="#333" font-size="16" font-weight="bold">数据源层 (Data Sources)</text>
+  <rect x="400" y="810" width="80" height="30" fill="white" rx="5"/>
+  <text x="440" y="830" text-anchor="middle" fill="#667eea" font-size="12">TqSdk</text>
+  <rect x="500" y="810" width="80" height="30" fill="white" rx="5"/>
+  <text x="540" y="830" text-anchor="middle" fill="#667eea" font-size="12">Pytdx</text>
+  <rect x="600" y="810" width="80" height="30" fill="white" rx="5"/>
+  <text x="640" y="830" text-anchor="middle" fill="#667eea" font-size="12">AkShare</text>
+  <rect x="700" y="810" width="80" height="30" fill="white" rx="5"/>
+  <text x="740" y="830" text-anchor="middle" fill="#667eea" font-size="12">CSV</text>
+  
+  <!-- 统计信息 -->
+  <rect x="50" y="870" width="250" height="80" fill="url(#headerGradient)" rx="10"/>
+  <text x="175" y="900" text-anchor="middle" fill="white" font-size="32" font-weight="bold">111</text>
+  <text x="175" y="930" text-anchor="middle" fill="white" font-size="14">Python 模块</text>
+  
+  <rect x="320" y="870" width="250" height="80" fill="url(#headerGradient)" rx="10"/>
+  <text x="445" y="900" text-anchor="middle" fill="white" font-size="32" font-weight="bold">120+</text>
+  <text x="445" y="930" text-anchor="middle" fill="white" font-size="14">单元测试</text>
+  
+  <rect x="590" y="870" width="250" height="80" fill="url(#headerGradient)" rx="10"/>
+  <text x="715" y="900" text-anchor="middle" fill="white" font-size="32" font-weight="bold">86</text>
+  <text x="715" y="930" text-anchor="middle" fill="white" font-size="14">监控品种</text>
+  
+  <rect x="860" y="870" width="250" height="80" fill="url(#headerGradient)" rx="10"/>
+  <text x="985" y="900" text-anchor="middle" fill="white" font-size="32" font-weight="bold">35+</text>
+  <text x="985" y="930" text-anchor="middle" fill="white" font-size="14">技术指标</text>
+  
+  <!-- 页脚 -->
+  <rect x="0" y="960" width="1200" height="60" fill="#333" rx="0"/>
+  <text x="600" y="995" text-anchor="middle" fill="white" font-size="14">Trend Scanner Agent - 推理重于规则的期货趋势跟踪决策辅助系统</text>
+</svg>
+'''
+    
+    output_file.write_text(svg_content, encoding='utf-8')
+    print(f"SVG 架构图已保存到: {output_file}")
+    return True
+
+
+def main():
+    """主函数"""
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='生成架构图图片')
+    parser.add_argument('--format', choices=['png', 'svg', 'both'], default='both',
+                        help='输出格式')
+    
+    args = parser.parse_args()
+    
+    success = True
+    
+    if args.format in ['png', 'both']:
+        if not generate_architecture_image():
+            print("PNG 生成失败，尝试 SVG...")
+            args.format = 'svg'
+    
+    if args.format in ['svg', 'both']:
+        if not create_architecture_svg():
+            success = False
+    
+    if success:
+        print("\n架构图生成完成！")
+        print("文件位置:")
+        print("  - docs/architecture_diagram.html")
+        print("  - docs/architecture_diagram.svg")
+    else:
+        print("\n架构图生成失败")
+
+
+if __name__ == "__main__":
+    main()

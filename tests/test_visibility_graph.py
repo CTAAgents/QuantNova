@@ -115,7 +115,7 @@ class TestVGRSI:
         assert len(vgrsi_values) == n
         # 前 window_size 个值应该是 NaN
         assert np.all(np.isnan(vgrsi_values[:50]))
-        # 后续值应该在 0-100 之间
+        # 后续值应该在 0-100 之间（包含边界）
         valid_values = vgrsi_values[50:]
         valid_values = valid_values[~np.isnan(valid_values)]
         assert np.all(valid_values >= 0)

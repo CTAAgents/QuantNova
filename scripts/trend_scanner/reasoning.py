@@ -244,6 +244,7 @@ class ReasoningEngine:
         context: MarketContext,
         similar_experiences: List[ExperienceMatch],
         experience_aggregation: dict,
+        multi_dimension_result: Optional[dict] = None,
     ) -> dict:
         """
         执行推理
@@ -252,6 +253,7 @@ class ReasoningEngine:
             context: 当前市场上下文
             similar_experiences: 相似经验列表
             experience_aggregation: 经验聚合结果
+            multi_dimension_result: 多维度筛选评分结果（可选，由 IndicatorHub + MultiDimensionScreener 生成）
 
         返回:
             推理结果（包含操作方案、约束、不确定性等）
@@ -267,6 +269,7 @@ class ReasoningEngine:
         # 3. 构建用户提示词
         user_prompt = self._build_user_prompt(
             context, similar_experiences, experience_aggregation,
+            multi_dimension_result=multi_dimension_result,
         )
 
         # 4. 调用 LLM
@@ -676,6 +679,7 @@ class ReasoningEngine:
         context: MarketContext,
         similar_experiences: List[ExperienceMatch],
         experience_aggregation: dict,
+        multi_dimension_result: Optional[dict] = None,
     ) -> str:
         """
         构建用户提示词
@@ -836,10 +840,100 @@ class ReasoningEngine:
         except Exception as e:
             logger.debug(f"基差/季节性数据注入失败: {e}")
 
-        # 8. 请求推理
+        # 8. 多维度筛选评分（v5.1 新增）
+        if multi_dimension_result:
+            try:
+                md = multi_dimension_result
+                parts.append("")
+                parts.append("# 多维度筛选评分（五维度）")
+                parts.append("基于 Trend/Momentum/Volume/Volatility/Channel 五个维度的综合评分：")
+                parts.append("")
+
+                # 整体概览
+                overall = md.get('overall_score', 0)
+                confidence = md.get('confidence', 0)
+                signal = md.get('signal', 'NEUTRAL')
+                parts.append(f"- **综合得分**: {overall:+.3f} (范围: -1.0 ~ +1.0)")
+                parts.append(f"- **信号方向**: {signal}")
+                parts.append(f"- **置信度**: {confidence:.0%}")
+                parts.append("")
+
+                # 各维度明细
+                dims = md.get('dimensions', [])
+                if dims:
+                    parts.append("## 维度明细")
+                    for d in dims:
+                        name = d.get('name', '?')
+                        composite = d.get('composite', 0)
+                        direction = d.get('direction', 'NEUTRAL')
+                        weight = d.get('weight', 0)
+                        dim_conf = d.get('confidence', 0)
+
+                        # 方向标记
+                        if direction == 'BULLISH':
+                            arrow = '↑'
+                        elif direction == 'BEARISH':
+                            arrow = '↓'
+                        else:
+                            arrow = '→'
+
+                        parts.append(f"- **{name}** (权重{weight:.0%}): "
+                                    f"{composite:+.3f} {arrow} {direction} "
+                                    f"[置信度{dim_conf:.0%}]")
+
+                        # 各维度关键指标得分
+                        ind_scores = d.get('indicator_scores', {})
+                        if ind_scores:
+                            top3 = sorted(ind_scores.items(),
+                                         key=lambda x: abs(x[1]), reverse=True)[:3]
+                            parts.append(f"  关键指标: "
+                                        + ", ".join(f"{k}={v:+.2f}" for k, v in top3))
+                    parts.append("")
+
+                # 维度间一致性
+                if len(dims) >= 2:
+                    directions = [d.get('direction', 'NEUTRAL') for d in dims]
+                    bullish_count = sum(1 for d in directions if d == 'BULLISH')
+                    bearish_count = sum(1 for d in directions if d == 'BEARISH')
+                    total = len(directions)
+
+                    if bullish_count >= total * 0.6:
+                        parts.append("**维度一致性**: 偏多共识 "
+                                    f"({bullish_count}/{total} 维度看多)")
+                    elif bearish_count >= total * 0.6:
+                        parts.append("**维度一致性**: 偏空共识 "
+                                    f"({bearish_count}/{total} 维度看空)")
+                    else:
+                        parts.append("**维度一致性**: 分歧较大 "
+                                    f"(多{bullish_count}/空{bearish_count}/中{total - bullish_count - bearish_count})")
+                    parts.append("")
+
+                # 量能特别提示
+                vol_dim = None
+                for d in dims:
+                    if d.get('name') == 'volume':
+                        vol_dim = d
+                        break
+                if vol_dim:
+                    vol_composite = vol_dim.get('composite', 0)
+                    vol_direction = vol_dim.get('direction', 'NEUTRAL')
+                    if vol_composite > 0.4:
+                        parts.append("**量能提示**: 成交量结构明显偏多，"
+                                    f"建议确认是否为趋势突破放量 (score={vol_composite:+.3f})")
+                    elif vol_composite < -0.4:
+                        parts.append("**量能提示**: 成交量结构明显偏空，"
+                                    f"注意是否为趋势衰竭缩量 (score={vol_composite:+.3f})")
+                    parts.append("")
+
+            except Exception as e:
+                logger.warning(f"注入多维度评分失败: {e}")
+
+        # 9. 请求推理
         parts.append("")
         parts.append("# 请求")
-        parts.append("基于以上市场状态、历史经验、反身性分析、波动幅度锚点、基差和季节性数据，请给出2-3条操作方案。")
+        parts.append("基于以上市场状态、历史经验、反身性分析、波动幅度锚点、基差和季节性数据"
+                    + ("、多维度筛选评分" if multi_dimension_result else "")
+                    + "，请给出2-3条操作方案。")
         parts.append("每条方案都要有具体的约束建议（仓位、止损、入场条件），并附带推理依据。")
         parts.append("如果有明确推荐，请说明理由。")
         parts.append("")
@@ -848,6 +942,9 @@ class ReasoningEngine:
         parts.append("2. 请结合反身性分析，评估当前趋势的自我强化程度和反转风险。")
         parts.append("3. 波动幅度止损锚点是参考值，你可以根据市场状态动态调整止损位置。")
         parts.append("4. 基差和季节性是补充维度，可辅助判断供需格局和时机选择。")
+        if multi_dimension_result:
+            parts.append("5. 多维度评分是五维度综合结果，重点关注维度间一致性。"
+                        "当维度一致性高时信号更可靠；分歧大时建议谨慎。")
 
         return "\n".join(parts)
 

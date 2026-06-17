@@ -191,13 +191,17 @@ class ReasonerAgent:
         
         # 3. 聚合经验
         experience_aggregation = self.experience_memory.aggregate_routes(similar_experiences)
-        
+
+        # 提取多维度评分结果（如果信号中包含）
+        multi_dimension_result = signal.get('multi_dimension', None)
+
         # 4. 执行推理
         try:
             reasoning_result = self.reasoning_engine.reason(
                 context=context,
                 similar_experiences=similar_experiences,
-                experience_aggregation=experience_aggregation
+                experience_aggregation=experience_aggregation,
+                multi_dimension_result=multi_dimension_result,
             )
         except Exception as e:
             print(f"[错误] 推理失败: {e}", flush=True)

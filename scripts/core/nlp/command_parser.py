@@ -50,6 +50,7 @@ class CommandParser:
                 "command": "python tools/scan_opportunities.py",
                 "args_template": ["--position-health"],
                 "description": "检查持仓健康度",
+                "use_quick_command": True,  # 标记使用快速命令
             },
             "arbitrage": {
                 "command": "python tools/scan_opportunities.py",
@@ -60,6 +61,13 @@ class CommandParser:
                 "command": "python scripts/core/main.py",
                 "args_template": ["--status"],
                 "description": "查看系统状态",
+                "use_quick_command": True,  # 标记使用快速命令
+            },
+            "signals": {
+                "command": "",
+                "args_template": [],
+                "description": "查看当前信号",
+                "use_quick_command": True,  # 标记使用快速命令
             },
         }
 

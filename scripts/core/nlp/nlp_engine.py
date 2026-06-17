@@ -19,6 +19,7 @@ from .intent_recognizer import IntentRecognizer, Intent, IntentType
 from .command_parser import CommandParser, Command
 from .context_manager import ContextManager
 from .response_generator import ResponseGenerator, Response
+from .quick_commands import execute_quick_command, QUICK_COMMANDS
 
 logger = logging.getLogger(__name__)
 
@@ -57,13 +58,14 @@ class NLPEngine:
 
     def _execute_command(self, command: Command) -> str:
         """执行命令"""
+        # 优先使用快速命令
+        if command.action in QUICK_COMMANDS:
+            return execute_quick_command(command.action)
+
+        # 如果没有快速命令，执行完整命令
         try:
             # 构建完整命令
             full_cmd = [sys.executable] + command.command.split()[1:] + command.args
-
-            # 添加超时选项
-            if "--timeout" not in " ".join(command.args):
-                full_cmd.extend(["--timeout", "30"])
 
             # 执行命令
             result = subprocess.run(

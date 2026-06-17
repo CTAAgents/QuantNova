@@ -7,18 +7,23 @@
 感知层是推理层的眼睛和耳朵，不是大脑。
 """
 
+import logging
 import numpy as np
 import pandas as pd
 
 from .indicators import IndicatorEngine
 from .models import (
+    FundamentalContext,
     IndicatorSnapshot,
     MarketContext,
     MarketStructure,
     MomentumState,
+    NewsEvent,
     TrendPhase,
     VolatilityState,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class ContextAssembler:
@@ -33,13 +38,15 @@ class ContextAssembler:
         self.symbol = symbol
         self.timeframe = timeframe
 
-    def assemble(self, df: pd.DataFrame, lookback: int = 120) -> MarketContext:
+    def assemble(self, df: pd.DataFrame, lookback: int = 120, 
+                 include_fundamental: bool = True) -> MarketContext:
         """
         组装市场上下文
 
         参数:
             df: 包含 OHLCV 数据的 DataFrame（至少 lookback 行）
             lookback: 用于计算分位数等统计量的回看周期
+            include_fundamental: 是否包含基本面信息
 
         返回:
             MarketContext 结构化上下文
@@ -75,7 +82,15 @@ class ContextAssembler:
         # 7. 计算特征向量（用于经验检索）
         feature_vector = self._compute_feature_vector(df, latest)
 
-        # 8. 组装上下文
+        # 8. 组装基本面信息（可选）
+        fundamental = FundamentalContext()
+        if include_fundamental:
+            try:
+                fundamental = self._assemble_fundamental()
+            except Exception as e:
+                logger.warning(f"基本面信息组装失败: {e}")
+
+        # 9. 组装上下文
         context = MarketContext(
             symbol=self.symbol,
             timestamp=str(latest.get("date", latest.name)),
@@ -92,9 +107,186 @@ class ContextAssembler:
             consecutive_down_days=consec_down,
             snapshot=snapshot,
             feature_vector=feature_vector,
+            fundamental=fundamental,
         )
 
         return context
+
+    def _assemble_fundamental(self) -> FundamentalContext:
+        """
+        组装基本面信息
+
+        Returns:
+            基本面上下文
+        """
+        fundamental = FundamentalContext(
+            symbol=self.symbol,
+            timestamp=pd.Timestamp.now().isoformat(),
+        )
+
+        try:
+            # 导入基本面模块
+            import sys
+            import os
+            sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+            from fundamental.news_crawler import NewsCrawler
+            from fundamental.supply_demand import SupplyDemandProvider
+            from fundamental.geopolitical import GeopoliticalTracker
+
+            # 1. 抓取新闻
+            try:
+                news_crawler = NewsCrawler()
+                news_events = news_crawler.crawl(symbol=self.symbol, max_results=5)
+                fundamental.news_events = news_events
+                fundamental.news_count = len(news_events)
+                
+                # 计算新闻情绪
+                if news_events:
+                    positive_count = sum(1 for e in news_events if e.impact == "positive")
+                    negative_count = sum(1 for e in news_events if e.impact == "negative")
+                    if positive_count > negative_count:
+                        fundamental.news_sentiment = "positive"
+                    elif negative_count > positive_count:
+                        fundamental.news_sentiment = "negative"
+                    else:
+                        fundamental.news_sentiment = "neutral"
+            except Exception as e:
+                logger.warning(f"新闻抓取失败: {e}")
+
+            # 2. 获取供需数据
+            try:
+                supply_demand_provider = SupplyDemandProvider()
+                supply_demand = supply_demand_provider.get_supply_demand(self.symbol)
+                fundamental.supply_demand = supply_demand
+            except Exception as e:
+                logger.warning(f"供需数据获取失败: {e}")
+
+            # 3. 追踪地缘政治风险
+            try:
+                geopolitical_tracker = GeopoliticalTracker()
+                geopolitical_risks = geopolitical_tracker.track(symbol=self.symbol)
+                fundamental.geopolitical_risks = geopolitical_risks
+                
+                # 确定整体风险等级
+                if geopolitical_risks:
+                    high_risks = sum(1 for r in geopolitical_risks if r.risk_level == "high")
+                    medium_risks = sum(1 for r in geopolitical_risks if r.risk_level == "medium")
+                    if high_risks > 0:
+                        fundamental.geopolitical_risk_level = "high"
+                    elif medium_risks > 0:
+                        fundamental.geopolitical_risk_level = "medium"
+                    else:
+                        fundamental.geopolitical_risk_level = "low"
+            except Exception as e:
+                logger.warning(f"地缘政治风险追踪失败: {e}")
+
+            # 4. 计算基本面综合评估
+            fundamental.fundamental_score = self._calculate_fundamental_score(fundamental)
+            fundamental.fundamental_direction = self._determine_fundamental_direction(fundamental)
+            fundamental.key_drivers = self._identify_key_drivers(fundamental)
+
+        except Exception as e:
+            logger.warning(f"基本面信息组装失败: {e}")
+
+        return fundamental
+
+    def _calculate_fundamental_score(self, fundamental: FundamentalContext) -> float:
+        """
+        计算基本面综合评分
+
+        Args:
+            fundamental: 基本面上下文
+
+        Returns:
+            综合评分 [-1, 1]
+        """
+        score = 0.0
+        count = 0
+
+        # 新闻情绪评分
+        if fundamental.news_sentiment == "positive":
+            score += 0.3
+        elif fundamental.news_sentiment == "negative":
+            score -= 0.3
+        count += 1
+
+        # 供需平衡评分
+        balance_status = fundamental.supply_demand.balance_status
+        if balance_status == "deficit":
+            score += 0.4  # 供不应求，看多
+        elif balance_status == "surplus":
+            score -= 0.4  # 供过于求，看空
+        count += 1
+
+        # 地缘政治风险评分
+        risk_level = fundamental.geopolitical_risk_level
+        if risk_level == "high":
+            # 高风险可能推高价格（避险）或打压价格（需求下降）
+            # 这里简化处理，根据品种类型判断
+            if self.symbol in ["AU", "AG"]:  # 贵金属，避险推高
+                score += 0.3
+            else:  # 其他品种，风险打压
+                score -= 0.3
+        elif risk_level == "low":
+            # 低风险，价格可能回归基本面
+            pass
+        count += 1
+
+        # 归一化到 [-1, 1]
+        if count > 0:
+            score = score / count
+
+        return max(-1.0, min(1.0, score))
+
+    def _determine_fundamental_direction(self, fundamental: FundamentalContext) -> str:
+        """
+        确定基本面方向
+
+        Args:
+            fundamental: 基本面上下文
+
+        Returns:
+            方向：bullish/bearish/neutral
+        """
+        score = fundamental.fundamental_score
+        if score > 0.2:
+            return "bullish"
+        elif score < -0.2:
+            return "bearish"
+        else:
+            return "neutral"
+
+    def _identify_key_drivers(self, fundamental: FundamentalContext) -> list[str]:
+        """
+        识别关键驱动因素
+
+        Args:
+            fundamental: 基本面上下文
+
+        Returns:
+            关键驱动因素列表
+        """
+        drivers = []
+
+        # 新闻驱动
+        if fundamental.news_events:
+            # 找出最重要的新闻
+            important_news = [e for e in fundamental.news_events if e.confidence > 0.7]
+            if important_news:
+                drivers.append(f"新闻：{important_news[0].title[:20]}")
+
+        # 供需驱动
+        if fundamental.supply_demand.balance_status:
+            status_map = {"surplus": "供过于求", "balanced": "供需平衡", "deficit": "供不应求"}
+            drivers.append(f"供需：{status_map.get(fundamental.supply_demand.balance_status, '')}")
+
+        # 地缘政治驱动
+        if fundamental.geopolitical_risks:
+            high_risks = [r for r in fundamental.geopolitical_risks if r.risk_level == "high"]
+            if high_risks:
+                drivers.append(f"地缘政治：{high_risks[0].description[:20]}")
+
+        return drivers[:3]  # 最多返回3个
 
     # ──────────────────────────────────────────
     # 内部方法：构建各维度状态

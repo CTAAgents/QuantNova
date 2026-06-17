@@ -22,6 +22,41 @@ import numpy as np
 import pandas as pd
 
 
+def load_symbol_names() -> dict[str, str]:
+    """
+    加载品种代码到中文名称的映射
+
+    Returns:
+        品种代码到中文名称的映射字典
+    """
+    config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "config", "symbol_names.json")
+    try:
+        if os.path.exists(config_path):
+            with open(config_path, encoding="utf-8") as f:
+                data = json.load(f)
+                return data.get("symbols", {})
+    except Exception as e:
+        logger.warning(f"加载品种名称映射失败: {e}")
+    return {}
+
+
+def get_symbol_display_name(symbol: str, symbol_names: dict[str, str]) -> str:
+    """
+    获取品种的显示名称（中文名称 + 代码）
+
+    Args:
+        symbol: 品种代码
+        symbol_names: 品种名称映射字典
+
+    Returns:
+        显示名称，如 "纯苯(BZ)" 或 "BZ"（如果没有中文名称）
+    """
+    chinese_name = symbol_names.get(symbol.upper(), "")
+    if chinese_name:
+        return f"{chinese_name}({symbol})"
+    return symbol
+
+
 # 添加模块路径
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "scripts"))
 
@@ -31,6 +66,7 @@ from data_formats import create_scan_result, create_signal, get_signal_filter, l
 from trend_scanner.data_source import DataSourceFactory
 from trend_scanner.indicators import IndicatorEngine
 from trend_scanner.market_analysis import TrendPhaseDetector
+from trend_scanner.context import ContextAssembler
 
 
 logger = logging.getLogger(__name__)
@@ -157,6 +193,24 @@ def scan_symbol(
         # 计算复合趋势强度（compute_all 不包含此步骤）
         composite = engine.get_trend_strength_composite()
         engine.df["trend_strength_composite"] = composite
+
+        # 获取基本面信息（可选）
+        fundamental_info = {}
+        try:
+            assembler = ContextAssembler(symbol=data_symbol)
+            context = assembler.assemble(df, include_fundamental=True)
+            if context.fundamental:
+                fundamental_info = {
+                    "news_sentiment": context.fundamental.news_sentiment,
+                    "news_count": context.fundamental.news_count,
+                    "supply_demand_status": context.fundamental.supply_demand.balance_status,
+                    "geopolitical_risk_level": context.fundamental.geopolitical_risk_level,
+                    "fundamental_direction": context.fundamental.fundamental_direction,
+                    "fundamental_score": context.fundamental.fundamental_score,
+                    "key_drivers": context.fundamental.key_drivers,
+                }
+        except Exception as e:
+            logger.debug(f"基本面信息获取失败（跳过）: {e}")
 
         # 动态因子计算（如果启用）
         dynamic_factor_values = {}
@@ -324,6 +378,10 @@ def scan_symbol(
             signal["position_suggestion"] = position_info
         if stop_loss_info:
             signal["stop_loss"] = stop_loss_info
+
+        # 附加基本面信息
+        if fundamental_info:
+            signal["fundamental"] = fundamental_info
 
         # RL 信号生成（可选）
         if use_rl and rl_generator is not None:
@@ -733,10 +791,16 @@ def main():
         print("-" * 60)
 
         if result["signals"]:
+            # 加载品种名称映射
+            symbol_names = load_symbol_names()
+            
             for sig in result["signals"]:
+                # 获取品种显示名称
+                display_name = get_symbol_display_name(sig['symbol'], symbol_names)
+                
                 # 基础信息
                 print(
-                    f"  {sig['symbol']:<20} {sig['direction']:<8} {sig['signal_strength']:<8} "
+                    f"  {display_name:<20} {sig['direction']:<8} {sig['signal_strength']:<8} "
                     f"ER={sig['er']:.2f} TSI={sig['tsi']:.1f} R²={sig['r_squared']:.2f}"
                 )
                 print(f"    原因: {sig['trigger_reason']}")

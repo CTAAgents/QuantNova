@@ -1,5 +1,5 @@
 {
-  "scan_time": "2026-06-18T00:02:58.419515",
+  "scan_time": "2026-06-18T01:04:09.810181",
   "total_scanned": 86,
   "signals": [
     {
@@ -39,35 +39,35 @@
     {
       "symbol": "SC",
       "trend_phase": "UNKNOWN",
-      "trend_strength_composite": 0.379,
-      "tsi": -29.24,
-      "er": 0.509,
-      "r_squared": 0.722,
+      "trend_strength_composite": 0.381,
+      "tsi": -29.59,
+      "er": 0.515,
+      "r_squared": 0.721,
       "direction": "SHORT",
       "signal_strength": "MEDIUM",
-      "trigger_reason": "TSI=-29.2 或 R²=0.72 [mode=or, 满足2/4项]",
-      "hurst": 0.616,
-      "rsi": 31.6,
-      "adx": 29.5,
+      "trigger_reason": "TSI=-29.6 或 R²=0.72 [mode=or, 满足2/4项]",
+      "hurst": 0.613,
+      "rsi": 31.1,
+      "adx": 29.4,
       "position_suggestion": {
         "method": "adaptive",
-        "position_size": 0.1894,
-        "position_pct": "18.9%",
+        "position_size": 0.1904,
+        "position_pct": "19.0%",
         "inputs": {
-          "trend_strength": 0.3788947241947216,
-          "volatility": 0.05117134453084924,
+          "trend_strength": 0.3808148437647088,
+          "volatility": 0.05212303378792428,
           "win_rate": 0.55,
           "win_loss_ratio": 1.5
         },
         "risk_metrics": {
-          "max_loss_pct": "1.9%",
+          "max_loss_pct": "2.0%",
           "kelly_optimal": "12.5%"
         }
       },
       "stop_loss": {
-        "stop_price": 584.04,
+        "stop_price": 583.01,
         "atr_multiplier": 2.5,
-        "risk_points": 66.24
+        "risk_points": 67.21
       }
     }
   ],
@@ -181,7 +181,7 @@
       "defensive": 0.2
     },
     "recommendation": "经济衰退期，趋势跟踪为主，降低仓位",
-    "timestamp": "2026-06-18T00:02:22.611724"
+    "timestamp": "2026-06-18T01:02:35.329158"
   },
   "data_timeliness": {
     "is_latest": true,

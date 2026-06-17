@@ -4,6 +4,7 @@ description: >
   推理重于规则的期货趋势跟踪决策辅助系统。
   统一数据路由 + 知识锚点 + 分级输出 + 套利分析 + LLM推理 + 闭环因子进化，
   数据源：TqSdk + Pytdx + AkShare + 本地数据库缓存。
+  独立策略模块：Carry 策略（期限结构套利）。
 ---
 
 # Trend Scanner Agent
@@ -88,6 +89,18 @@ python tools/scan_opportunities.py --evolve --evolve-rounds 5
 │   TqSdk(首选) + Pytdx(备选) + AkShare + CSV(兜底)                   │
 └─────────────────────────────────────────────────────────────────────┘
 ```
+
+### 独立策略模块
+
+```
+scripts/strategies/
+├── __init__.py           # 策略模块导出
+└── carry/                # Carry 策略（期限结构套利）
+    ├── __init__.py
+    └── carry_analyzer.py
+```
+
+**Carry 策略**：赚取期货曲线形态（Contango/Backwardation）带来的展期收益，与趋势跟踪策略并行运行。
 
 ### 设计原则
 

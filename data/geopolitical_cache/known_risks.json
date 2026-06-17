@@ -1,0 +1,24 @@
+[
+  {
+    "risk_id": "test_001",
+    "timestamp": "2026-06-18T01:28:58.044103",
+    "region": "中东",
+    "risk_type": "war",
+    "risk_level": "high",
+    "affected_commodities": [
+      "energy",
+      "precious"
+    ],
+    "affected_symbols": [
+      "SC",
+      "FU",
+      "BU",
+      "LU",
+      "AU",
+      "AG"
+    ],
+    "description": "美伊和平协议达成",
+    "impact_analysis": "供应中断风险，避险情绪上升",
+    "confidence": 0.9
+  }
+]

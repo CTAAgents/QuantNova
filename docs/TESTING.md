@@ -1,21 +1,21 @@
 # 测试文档
 
-> 版本：v1.4 | 创建日期：2026-06-17
-> 最后更新：2026-06-17
+> 版本：v1.5 | 创建日期：2026-06-17
+> 最后更新：2026-06-18
 
 ## 测试概览
 
 | 指标 | 数值 |
 |------|------|
-| **总测试数** | 525+ |
-| **通过** | 525+ |
+| **总测试数** | 544+ |
+| **通过** | 544+ |
 | **跳过** | 1 |
 | **失败** | 0 |
 | **覆盖率** | 100%（核心模块） |
 
 ## 测试文件清单
 
-### 单元测试（350+ 个）
+### 单元测试（369+ 个）
 
 | 测试文件 | 测试数 | 覆盖模块 |
 |----------|--------|----------|
@@ -48,6 +48,7 @@
 | **test_walk_forward_rl.py** | 11 | RLWalkForwardValidator |
 | **test_scanner_integration.py** | 11 | RLSignalGenerator, integrate_rl_signal_to_scanner |
 | **test_scenario_analyzer.py** | 11 | ScenarioAnalyzer（概率加权场景分析） |
+| **test_carry_analyzer.py** | 19 | CarryAnalyzer（Carry策略：期限结构套利） |
 
 ### 端到端测试（20 个）
 

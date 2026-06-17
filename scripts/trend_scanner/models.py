@@ -7,6 +7,214 @@
 import json
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
+from typing import ForwardRef
+
+
+# ──────────────────────────────────────────────
+# 前向声明（用于解决循环引用）
+# ──────────────────────────────────────────────
+
+# 基本面数据模型的前向声明
+FundamentalContextRef = ForwardRef('FundamentalContext')
+
+
+# ──────────────────────────────────────────────
+# 基本面数据模型（v1.0 — 基本面分析模块）
+# ──────────────────────────────────────────────
+
+
+@dataclass
+class NewsEvent:
+    """新闻事件"""
+    event_id: str = ""
+    timestamp: str = ""  # 事件时间
+    source: str = ""  # 来源（财新、新浪、央广网等）
+    title: str = ""  # 标题
+    content: str = ""  # 内容摘要
+    category: str = ""  # 分类：policy/geopolitical/industry/company
+    impact: str = ""  # 影响：positive/negative/neutral
+    keywords: list[str] = field(default_factory=list)  # 关键词
+    affected_symbols: list[str] = field(default_factory=list)  # 受影响的品种
+    confidence: float = 0.5  # 信息置信度
+    url: str = ""  # 原文链接
+    
+    def to_dict(self) -> dict:
+        return asdict(self)
+    
+    def to_prompt_text(self) -> str:
+        """转换为推理层可读的文本描述"""
+        impact_map = {"positive": "利好", "negative": "利空", "neutral": "中性"}
+        return f"[{self.source}] {self.title} ({impact_map.get(self.impact, self.impact)})"
+
+
+@dataclass
+class SupplyDemandData:
+    """供需数据"""
+    symbol: str = ""  # 品种代码
+    timestamp: str = ""  # 数据时间
+    source: str = ""  # 数据来源
+    
+    # 库存数据
+    inventory_exchange: float = 0.0  # 交易所库存
+    inventory_social: float = 0.0  # 社会库存
+    inventory_change_pct: float = 0.0  # 库存变化百分比
+    
+    # 产量数据
+    production: float = 0.0  # 产量
+    production_change_pct: float = 0.0  # 产量变化百分比
+    capacity_utilization: float = 0.0  # 产能利用率
+    
+    # 消费数据
+    consumption: float = 0.0  # 消费量
+    consumption_change_pct: float = 0.0  # 消费变化百分比
+    
+    # 进出口数据
+    import_volume: float = 0.0  # 进口量
+    export_volume: float = 0.0  # 出口量
+    net_import: float = 0.0  # 净进口
+    
+    # 供需平衡
+    supply_surplus: float = 0.0  # 供需盈余（正=供过于求，负=供不应求）
+    balance_status: str = ""  # surplus/balanced/deficit
+    
+    def to_dict(self) -> dict:
+        return asdict(self)
+    
+    def to_prompt_text(self) -> str:
+        """转换为推理层可读的文本描述"""
+        status_map = {"surplus": "供过于求", "balanced": "供需平衡", "deficit": "供不应求"}
+        lines = []
+        if self.inventory_exchange > 0:
+            lines.append(f"交易所库存：{self.inventory_exchange:.0f}（{self.inventory_change_pct:+.1f}%）")
+        if self.production > 0:
+            lines.append(f"产量：{self.production:.0f}（{self.production_change_pct:+.1f}%）")
+        if self.consumption > 0:
+            lines.append(f"消费量：{self.consumption:.0f}")
+        if self.balance_status:
+            lines.append(f"供需状态：{status_map.get(self.balance_status, self.balance_status)}")
+        return "；".join(lines) if lines else "暂无供需数据"
+
+
+@dataclass
+class GeopoliticalRisk:
+    """地缘政治风险"""
+    risk_id: str = ""
+    timestamp: str = ""  # 事件时间
+    region: str = ""  # 地区（中东、俄罗斯、中国等）
+    risk_type: str = ""  # 风险类型：war/sanctions/tariffs/dispute/peace_agreement
+    risk_level: str = ""  # 风险等级：high/medium/low
+    affected_commodities: list[str] = field(default_factory=list)  # 受影响的商品类别
+    affected_symbols: list[str] = field(default_factory=list)  # 受影响的品种
+    description: str = ""  # 事件描述
+    impact_analysis: str = ""  # 影响分析
+    confidence: float = 0.5  # 信息置信度
+    
+    def to_dict(self) -> dict:
+        return asdict(self)
+    
+    def to_prompt_text(self) -> str:
+        """转换为推理层可读的文本描述"""
+        level_map = {"high": "高风险", "medium": "中风险", "low": "低风险"}
+        type_map = {
+            "war": "战争/冲突", "sanctions": "制裁", "tariffs": "关税",
+            "dispute": "争端", "peace_agreement": "和平协议"
+        }
+        return f"[{self.region}] {type_map.get(self.risk_type, self.risk_type)} - {level_map.get(self.risk_level, self.risk_level)}：{self.description[:50]}"
+
+
+@dataclass
+class PolicyImpact:
+    """政策影响"""
+    policy_id: str = ""
+    timestamp: str = ""  # 政策时间
+    policy_type: str = ""  # 政策类型：monetary/fiscal/industrial/environmental/safety
+    policy_name: str = ""  # 政策名称
+    issuing_authority: str = ""  # 发布机构
+    description: str = ""  # 政策描述
+    impact_direction: str = ""  # 影响方向：positive/negative/neutral
+    affected_industries: list[str] = field(default_factory=list)  # 受影响行业
+    affected_symbols: list[str] = field(default_factory=list)  # 受影响品种
+    implementation_date: str = ""  # 实施日期
+    
+    def to_dict(self) -> dict:
+        return asdict(self)
+    
+    def to_prompt_text(self) -> str:
+        """转换为推理层可读的文本描述"""
+        type_map = {
+            "monetary": "货币政策", "fiscal": "财政政策", "industrial": "产业政策",
+            "environmental": "环保政策", "safety": "安全政策"
+        }
+        return f"[{type_map.get(self.policy_type, self.policy_type)}] {self.policy_name}"
+
+
+@dataclass
+class FundamentalContext:
+    """基本面上下文"""
+    symbol: str = ""
+    timestamp: str = ""
+    
+    # 新闻事件
+    news_events: list[NewsEvent] = field(default_factory=list)
+    news_sentiment: str = ""  # 整体情绪：positive/negative/neutral/mixed
+    news_count: int = 0  # 新闻数量
+    
+    # 供需数据
+    supply_demand: SupplyDemandData = field(default_factory=SupplyDemandData)
+    
+    # 地缘政治风险
+    geopolitical_risks: list[GeopoliticalRisk] = field(default_factory=list)
+    geopolitical_risk_level: str = ""  # 整体风险等级：high/medium/low
+    
+    # 政策影响
+    policy_impacts: list[PolicyImpact] = field(default_factory=list)
+    
+    # 综合评估
+    fundamental_score: float = 0.0  # 基本面综合评分 [-1, 1]
+    fundamental_direction: str = ""  # 基本面方向：bullish/bearish/neutral
+    key_drivers: list[str] = field(default_factory=list)  # 关键驱动因素
+    
+    def to_dict(self) -> dict:
+        return asdict(self)
+    
+    def to_prompt_text(self) -> str:
+        """转换为推理层可读的文本描述"""
+        lines = []
+        
+        # 新闻摘要
+        if self.news_events:
+            lines.append(f"近期新闻（{self.news_count}条）：")
+            for event in self.news_events[:3]:  # 只显示前3条
+                lines.append(f"  - {event.to_prompt_text()}")
+            if self.news_count > 3:
+                lines.append(f"  ... 还有{self.news_count - 3}条")
+        
+        # 供需数据
+        supply_text = self.supply_demand.to_prompt_text()
+        if supply_text != "暂无供需数据":
+            lines.append(f"供需数据：{supply_text}")
+        
+        # 地缘政治风险
+        if self.geopolitical_risks:
+            lines.append("地缘政治风险：")
+            for risk in self.geopolitical_risks[:2]:  # 只显示前2条
+                lines.append(f"  - {risk.to_prompt_text()}")
+        
+        # 政策影响
+        if self.policy_impacts:
+            lines.append("政策影响：")
+            for policy in self.policy_impacts[:2]:  # 只显示前2条
+                lines.append(f"  - {policy.to_prompt_text()}")
+        
+        # 综合评估
+        if self.fundamental_direction:
+            direction_map = {"bullish": "看多", "bearish": "看空", "neutral": "中性"}
+            lines.append(f"基本面评估：{direction_map.get(self.fundamental_direction, self.fundamental_direction)}")
+        
+        if self.key_drivers:
+            lines.append(f"关键驱动：{'、'.join(self.key_drivers[:3])}")
+        
+        return "\n".join(lines) if lines else "暂无基本面数据"
 
 
 # ──────────────────────────────────────────────
@@ -236,6 +444,9 @@ class MarketContext:
     # 感知层原始特征向量（用于经验检索）
     feature_vector: list[float] = field(default_factory=list)
 
+    # 基本面上下文（v1.0 新增）
+    fundamental: FundamentalContext = field(default_factory=FundamentalContext)
+
     def to_dict(self) -> dict:
         d = asdict(self)
         return d
@@ -282,6 +493,13 @@ class MarketContext:
             f"- 连续上涨：{self.consecutive_up_days}天",
             f"- 连续下跌：{self.consecutive_down_days}天",
         ]
+        
+        # 基本面信息（如果有）
+        if self.fundamental and self.fundamental.news_events:
+            lines.append("")
+            lines.append("## 基本面信息")
+            lines.append(self.fundamental.to_prompt_text())
+        
         return "\n".join(lines)
 
 
@@ -817,3 +1035,5 @@ class ScoringFeedback:
         self.direction_correct = self.score_direction == actual_direction
         self.status = "completed"
         self.updated_at = datetime.now().isoformat()
+
+

@@ -718,6 +718,19 @@ class ReasoningEngine:
         parts.append(context.to_prompt_text())
         parts.append("")
 
+        # 1.5 基本面信息（v1.0 新增）
+        if hasattr(context, 'fundamental') and context.fundamental:
+            fundamental = context.fundamental
+            if fundamental.news_events or fundamental.geopolitical_risks:
+                parts.append("# 基本面信息")
+                parts.append(fundamental.to_prompt_text())
+                parts.append("")
+                
+                # 特别提醒地缘政治风险
+                if fundamental.geopolitical_risk_level == "high":
+                    parts.append("**重要提醒**：当前存在高地缘政治风险，请特别关注！")
+                    parts.append("")
+
         # 2. 机制权重分析（v3.1 新增）
         current_phase = context.trend_phase.phase if hasattr(context, "trend_phase") else "UNKNOWN"
         phase_confidence = context.trend_phase.confidence if hasattr(context, "trend_phase") else 0.5

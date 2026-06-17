@@ -66,7 +66,8 @@ class FactorEvolutionEngine:
     def __init__(self, generator=None, executor=None, evaluator=None,
                  gate=None, knowledge_manager=None,
                  seed_pool=None, experience_db=None,
-                 report_parser=None, trajectory_analyzer=None):
+                 report_parser=None, trajectory_analyzer=None,
+                 use_walk_forward=False, walk_forward_config=None):
         """
         初始化进化引擎
 
@@ -80,6 +81,8 @@ class FactorEvolutionEngine:
             experience_db: FactorExperienceDB（经验数据库）
             report_parser: ReportParser（研报解析器）
             trajectory_analyzer: TrajectoryAnalyzer（轨迹分析器）
+            use_walk_forward: 是否启用 Walk-Forward 验证
+            walk_forward_config: Walk-Forward 配置
         """
         # 延迟导入，避免循环依赖
         if generator is None:
@@ -122,6 +125,16 @@ class FactorEvolutionEngine:
         self.experience_db = experience_db
         self.report_parser = report_parser
         self.trajectory_analyzer = trajectory_analyzer
+
+        # Walk-Forward 验证（v6.0 新增）
+        self.use_walk_forward = use_walk_forward
+        if use_walk_forward:
+            from .walk_forward_validator import WalkForwardValidator, WalkForwardConfig
+            config = walk_forward_config or WalkForwardConfig()
+            self.walk_forward_validator = WalkForwardValidator(config)
+            logger.info("Walk-Forward 验证已启用")
+        else:
+            self.walk_forward_validator = None
 
         # 进化状态
         self.promoted_factors: List[Dict] = []

@@ -1,21 +1,21 @@
 # 测试文档
 
-> 版本：v1.3 | 创建日期：2026-06-17
+> 版本：v1.4 | 创建日期：2026-06-17
 > 最后更新：2026-06-17
 
 ## 测试概览
 
 | 指标 | 数值 |
 |------|------|
-| **总测试数** | 475 |
-| **通过** | 475 |
+| **总测试数** | 575 |
+| **通过** | 575 |
 | **跳过** | 1 |
 | **失败** | 0 |
 | **覆盖率** | 100%（核心模块） |
 
 ## 测试文件清单
 
-### 单元测试（272 个）
+### 单元测试（350 个）
 
 | 测试文件 | 测试数 | 覆盖模块 |
 |----------|--------|----------|
@@ -38,6 +38,10 @@
 | `test_validation_matrix.py` | 19 | ValidationMatrix（7种改动类型验证标准+红线检查） |
 | `test_indicator_hub.py` | 15 | IndicatorHub（维度分组+字段映射+缓存+维度加载） |
 | `test_multi_dimension_screener.py` | 29 | MultiDimensionScreener（五维度评分+归一化+信号分类） |
+| `test_monte_carlo.py` | 24 | MonteCarloSimulator（交易重排+破产概率+回撤分布） |
+| `test_strategy_incubator.py` | 18 | StrategyIncubator（孵化会话+信号记录+评估） |
+| `test_circuit_breaker.py` | 16 | CircuitBreaker（熔断规则+冷却期+状态管理） |
+| `test_strategy_portfolio.py` | 20 | StrategyPortfolio（权重优化+分散化+相关性） |
 
 ### 端到端测试（14 个）
 

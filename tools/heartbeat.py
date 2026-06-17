@@ -105,7 +105,11 @@ def filter_active_symbols(symbols: List[str], min_oi: int = 10000, min_volume: i
     """
     try:
         # 获取数据源
-        data_source = DataSourceFactory.create(source="tqsdk")
+        try:
+            data_source = DataSourceFactory.create(source="tqsdk")
+        except RuntimeError as e:
+            print(f"[警告] TqSdk 不可用: {e}，跳过品种筛选", file=sys.stderr)
+            return symbols
         
         # 检查数据源是否支持批量获取
         if not hasattr(data_source, 'get_quotes_batch'):

@@ -505,15 +505,11 @@ def heartbeat(positions_only: bool = False, all_symbols: bool = False) -> Dict[s
     
     if not positions_only:
         if all_symbols:
-            # 扫描全部品种（非僵尸品种）
+            # 扫描全部品种：从 data_source.py 的 MAIN_CONTRACT_MAP 提取
+            # K线不足60根的品种会被 check_symbol_changes 自动跳过（僵尸品种自然无数据）
             print("  获取全部主力合约品种...", flush=True)
-            all_contracts = get_all_main_contracts()
-            print(f"  发现 {len(all_contracts)} 个主力合约", flush=True)
-            
-            # 筛选活跃品种
-            print("  筛选活跃品种（持仓量≥10000，成交量≥1000）...", flush=True)
-            symbols_to_scan = filter_active_symbols(all_contracts, min_oi=10000, min_volume=1000)
-            print(f"  筛选后 {len(symbols_to_scan)} 个活跃品种", flush=True)
+            symbols_to_scan = get_all_main_contracts()
+            print(f"  共 {len(symbols_to_scan)} 个品种（K线不足的将自动跳过）", flush=True)
         else:
             # 使用配置文件中的品种
             symbols_to_scan = config.get('scanner', {}).get('symbols', [])

@@ -11,7 +11,8 @@
 - 新品种出现强信号
 
 使用方式：
-    python tools/heartbeat.py                    # 单次心跳检查
+    python tools/heartbeat.py                    # 单次心跳检查（配置文件中的品种）
+    python tools/heartbeat.py --all              # 扫描全部非僵尸品种
     python tools/heartbeat.py --loop             # 持续循环（每 5 分钟）
     python tools/heartbeat.py --positions-only   # 只监控持仓
 """
@@ -586,7 +587,7 @@ def main():
     
     else:
         # 单次心跳
-        result = heartbeat(positions_only=args.positions_only)
+        result = heartbeat(positions_only=args.positions_only, all_symbols=args.all)
         
         if args.output == "json":
             print(json.dumps(result, ensure_ascii=False, indent=2))

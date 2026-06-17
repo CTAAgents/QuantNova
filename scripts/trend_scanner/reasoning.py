@@ -728,16 +728,36 @@ class ReasoningEngine:
         parts.append("- 上升趋势反转：止损触发 → 强制平仓 → 价格加速下跌 → 更多止损")
         parts.append("- 下降趋势反转：空头回补 → 价格反弹 → 更多空头回补 → 价格加速上涨")
 
-        # 6. 请求推理
+        # 6. 波动幅度止损锚点（v6.0 新增）
+        try:
+            anchor_info = self._calculate_volatility_anchor(context)
+            if anchor_info:
+                parts.append("")
+                parts.append("# 波动幅度止损锚点（参考值）")
+                parts.append("基于近期市场波动计算的止损参考锚点，可作为止损位置的参考：")
+                parts.append("")
+                parts.append(f"- **当前价格**: {anchor_info['current_price']:.2f}")
+                parts.append(f"- **波动幅度中位数**: {anchor_info['median_height']:.2f}")
+                parts.append(f"- **止损锚点距离**: {anchor_info['anchor_distance']:.2f}（{anchor_info['anchor_distance_pct']:.2f}%）")
+                parts.append(f"- **多头止损参考**: {anchor_info['long_stop_loss']:.2f}")
+                parts.append(f"- **空头止损参考**: {anchor_info['short_stop_loss']:.2f}")
+                parts.append("")
+                parts.append("**说明**：止损锚点是基于近期 K 线波动幅度中位数 × 2.0 计算的参考值。")
+                parts.append("你可以根据当前市场状态、趋势强度和反身性分析，动态调整止损位置。")
+        except Exception as e:
+            logger.warning(f"计算波动幅度锚点失败: {e}")
+        
+        # 7. 请求推理
         parts.append("")
         parts.append("# 请求")
-        parts.append("基于以上市场状态、历史经验和反身性分析，请给出2-3条操作方案。")
+        parts.append("基于以上市场状态、历史经验、反身性分析和波动幅度锚点，请给出2-3条操作方案。")
         parts.append("每条方案都要有具体的约束建议（仓位、止损、入场条件），并附带推理依据。")
         parts.append("如果有明确推荐，请说明理由。")
         parts.append("")
         parts.append("**特别注意**：")
         parts.append("1. 请考虑机制权重，优先参考同机制的历史经验。")
         parts.append("2. 请结合反身性分析，评估当前趋势的自我强化程度和反转风险。")
+        parts.append("3. 波动幅度止损锚点是参考值，你可以根据市场状态动态调整止损位置。")
 
         return "\n".join(parts)
 

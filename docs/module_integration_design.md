@@ -1,20 +1,20 @@
 # 模块集成设计文档
 
-> 版本：v1.0 | 创建日期：2026-06-17
-> 状态：待实施
+> 版本：v1.1 | 创建日期：2026-06-17 | 更新日期：2026-06-17
+> 状态：已完成
 
 ## 一、问题概述
 
 ### 1.1 现状
 
-论文吸收任务（arXiv:2605.01300）已完成所有模块的实现和测试，但存在 **4 个孤立模块** 未集成到核心系统：
+论文吸收任务（arXiv:2605.01300）已完成所有模块的实现和测试，并已完成集成：
 
 | 模块 | 文件 | 状态 |
 |------|------|------|
-| Walk-Forward 验证框架 | `walk_forward_validator.py` | 孤立 |
-| 可见图算子注入因子生成器 | `visibility_graph_operator.py` | 孤立 |
-| 多周期 VGRSI 一致性因子 | `visibility_graph.py` (类) | 完全孤立 |
-| 波动幅度止损锚点 | `volatility_anchor.py` | 孤立 |
+| Walk-Forward 验证框架 | `walk_forward_validator.py` | ✅ 已集成 |
+| 可见图算子注入因子生成器 | `visibility_graph_operator.py` | ✅ 已集成 |
+| 多周期 VGRSI 一致性因子 | `visibility_graph.py` (类) | ✅ 已集成 |
+| 波动幅度止损锚点 | `volatility_anchor.py` | ✅ 已集成 |
 
 ### 1.2 目标
 

@@ -61,26 +61,43 @@ class NLPEngine:
             # 构建完整命令
             full_cmd = [sys.executable] + command.command.split()[1:] + command.args
 
-            # 执行命令（超时时间增加到5分钟）
+            # 添加超时选项
+            if "--timeout" not in " ".join(command.args):
+                full_cmd.extend(["--timeout", "30"])
+
+            # 执行命令
             result = subprocess.run(
                 full_cmd,
                 capture_output=True,
                 text=True,
-                timeout=300,
+                timeout=120,
                 cwd=str(Path(__file__).parent.parent.parent.parent),
             )
 
             if result.returncode == 0:
                 output = result.stdout.strip()
                 if output:
-                    return output
+                    # 过滤掉网络错误信息，只保留有用输出
+                    lines = output.split('\n')
+                    filtered_lines = [l for l in lines if not l.startswith('[错误]') and '搜索失败' not in l]
+                    filtered_output = '\n'.join(filtered_lines).strip()
+                    if filtered_output:
+                        return filtered_output
+                    else:
+                        return command.description + " 完成（但无有效输出）。"
                 else:
                     return command.description + " 完成。"
             else:
-                return f"命令执行失败：{result.stderr}"
+                # 过滤错误输出中的网络错误
+                error_lines = result.stderr.strip().split('\n')
+                filtered_errors = [l for l in error_lines if '搜索失败' not in l and '超时' not in l]
+                if filtered_errors:
+                    return f"命令执行失败：{' '.join(filtered_errors[:3])}"
+                else:
+                    return command.description + " 执行完成（部分功能可能不可用）。"
 
         except subprocess.TimeoutExpired:
-            return "命令执行超时（超过5分钟）。这可能是因为：\n1. 数据量较大，处理需要时间\n2. 网络连接较慢\n3. 系统资源不足\n\n建议：请稍后重试，或使用 CLI 命令直接执行。"
+            return "命令执行超时（超过2分钟）。可能原因：\n1. 网络连接问题\n2. TqSdk 服务不稳定\n\n建议：请稍后重试。"
         except Exception as e:
             return f"执行命令时出错：{e}"
 

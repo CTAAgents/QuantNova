@@ -257,6 +257,12 @@ class VGRSI:
                 vgrsi_values[i] = 100 * vgrsi_pos / (vgrsi_pos + vgrsi_neg)
             else:
                 vgrsi_values[i] = 50.0  # 中性值
+            
+            # 处理浮点数精度问题，确保值在 [0, 100] 范围内
+            if vgrsi_values[i] > 100:
+                vgrsi_values[i] = 100.0
+            elif vgrsi_values[i] < 0:
+                vgrsi_values[i] = 0.0
         
         return vgrsi_values
     

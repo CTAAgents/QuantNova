@@ -1,7 +1,7 @@
 # 编码行为准则
 
 > 来源：CLAUDE.md + trend-tracking-scanner coding-guidelines.md
-> 版本：v1.3 | 创建日期：2026-06-15 | 更新日期：2026-06-17
+> 版本：v2.0 | 创建日期：2026-06-15 | 更新日期：2026-06-17
 
 ---
 
@@ -10,6 +10,174 @@
 **减少常见的 LLM 编码错误，偏向谨慎而非速度。**
 
 > 权衡：这些准则偏向谨慎而非速度。对于简单任务，自行判断。
+
+---
+
+## 代码风格规范（v2.0 新增）
+
+### 自动化工具
+
+本项目使用 **Ruff** 进行代码风格检查和自动修复。配置文件：`pyproject.toml`
+
+```bash
+# 安装 ruff
+pip install ruff
+
+# 检查代码风格
+ruff check scripts/ tools/ tests/
+
+# 自动修复
+ruff check --fix scripts/ tools/ tests/
+
+# 格式化代码
+ruff format scripts/ tools/ tests/
+```
+
+### 1. 导入排序
+
+使用 `isort` 规则，按以下顺序组织导入：
+
+```python
+# 1. 标准库
+import os
+import sys
+from datetime import datetime
+from typing import Dict, List, Optional
+
+# 2. 第三方库
+import numpy as np
+import pandas as pd
+from scipy import stats
+
+# 3. 本地模块
+from trend_scanner.indicators import IndicatorEngine
+from trend_scanner.models import MarketContext
+```
+
+**规则**：
+- 每组之间空 2 行
+- 标准库 → 第三方库 → 本地模块
+- 字母顺序排列
+
+### 2. 文档字符串
+
+使用 **Google 风格**文档字符串：
+
+```python
+def get_kline(self, symbol: str, days: int = 120) -> Optional[pd.DataFrame]:
+    """获取K线数据
+
+    Args:
+        symbol: 品种代码（如 "RB", "I"）
+        days: 获取天数，默认 120
+
+    Returns:
+        DataFrame 包含 date, open, high, low, close, volume 列
+        数据不可用时返回 None
+
+    Raises:
+        ValueError: 当 symbol 为空时
+    """
+    pass
+```
+
+**规则**：
+- 所有公共方法必须有文档字符串
+- 包含 Args、Returns、Raises（如适用）
+- 使用中文描述（与项目语言一致）
+- 一行简述 + 详细说明
+
+### 3. 类型提示
+
+所有公共方法必须有类型提示：
+
+```python
+# 正确
+def calculate_signal(self, df: pd.DataFrame, threshold: float = 0.5) -> Dict[str, Any]:
+    pass
+
+# 错误（缺少类型提示）
+def calculate_signal(self, df, threshold=0.5):
+    pass
+```
+
+**规则**：
+- 参数和返回值都需要类型提示
+- 使用 `Optional[T]` 表示可选值
+- 使用 `Dict[str, Any]` 表示字典
+
+### 4. 注释风格
+
+```python
+# 单行注释：# 后空格，首字母大写
+# 这是一个注释
+
+# 多行注释：每行独立
+# 第一行注释
+# 第二行注释
+
+# 分隔线：用于区分代码段
+# ──────────────────────────────────────────────
+# 或
+# ===========================================================================
+```
+
+**规则**：
+- 使用中文注释（与项目语言一致）
+- 注释解释"为什么"，不解释"做什么"
+- 避免注释代码（直接删除更好）
+
+### 5. 命名约定
+
+| 类型 | 风格 | 示例 |
+|------|------|------|
+| 类名 | PascalCase | `IndicatorEngine`, `TrendScanner` |
+| 函数/方法 | snake_case | `get_kline()`, `calculate_signal()` |
+| 变量 | snake_case | `trend_strength`, `price_data` |
+| 常量 | UPPER_SNAKE_CASE | `MAX_RETRIES`, `DEFAULT_TIMEOUT` |
+| 私有成员 | _前缀 | `_cache`, `_validate()` |
+
+### 6. 错误处理
+
+```python
+# 正确：捕获具体异常
+try:
+    result = api.call()
+except ConnectionError as e:
+    logger.error(f"连接失败: {e}")
+    return None
+except TimeoutError as e:
+    logger.warning(f"超时: {e}")
+    return None
+
+# 错误：裸 except
+try:
+    result = api.call()
+except:
+    return None
+```
+
+**规则**：
+- 捕获具体异常，不使用裸 `except:`
+- 使用 logging 记录错误
+- 优雅降级（返回 None 或默认值）
+
+### 7. 行宽限制
+
+- **最大行宽**：120 字符
+- **长行处理**：使用括号换行，不使用反斜杠
+
+```python
+# 正确
+result = some_function(
+    argument_one,
+    argument_two,
+    argument_three,
+)
+
+# 错误
+result = some_function(argument_one, argument_two, argument_three)
+```
 
 ---
 

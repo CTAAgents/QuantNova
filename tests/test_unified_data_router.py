@@ -706,12 +706,110 @@ class TestNewDataTypes:
         assert resp.data['strong_months'] == [1, 9, 10]
         assert resp.data['years_covered'] == 5
 
+    def test_top_list_data_type(self):
+        """龙虎榜数据类型路由"""
+        router = UnifiedDataRouter(db_dir=self.temp_dir)
+        resp = router.get_top_list('RB')
+        assert resp.data_type == 'top_list'
+        assert isinstance(resp, DataResponse)
 
-# ===========================================================================
-# 边界场景测试
-# ===========================================================================
+    def test_margin_data_type(self):
+        """保证金数据类型路由"""
+        router = UnifiedDataRouter(db_dir=self.temp_dir)
+        resp = router.get_margin('RB')
+        assert resp.data_type == 'margin'
+        assert isinstance(resp, DataResponse)
 
-class TestEdgeCases:
+    def test_macro_data_type(self):
+        """宏观经济数据类型路由"""
+        router = UnifiedDataRouter(db_dir=self.temp_dir)
+        resp = router.get_macro('RB')
+        assert resp.data_type == 'macro'
+        assert isinstance(resp, DataResponse)
+
+    def test_delivery_data_type(self):
+        """交割数据类型路由"""
+        router = UnifiedDataRouter(db_dir=self.temp_dir)
+        resp = router.get_delivery('RB')
+        assert resp.data_type == 'delivery'
+        assert isinstance(resp, DataResponse)
+
+    def test_top_list_with_mock_akshare(self):
+        """龙虎榜数据 AkShare mock 测试"""
+        router = UnifiedDataRouter(db_dir=self.temp_dir)
+        router._routing['top_list'] = ['akshare']
+
+        top_data = {
+            'symbol': 'RB', 'date': '2026-06-17',
+            'top_buy': [{'broker': '永安期货', 'volume': 5000}],
+            'top_sell': [{'broker': '中信期货', 'volume': 3000}],
+            'concentration_buy': 65.0,
+            'interpretation': '多头集中度较高，主力做多意愿强',
+        }
+        mock_ak = MagicMock()
+        mock_ak.is_available.return_value = True
+        mock_ak.get_top_list.return_value = top_data
+        router._sources['akshare'] = mock_ak
+
+        resp = router.get_top_list('RB')
+        assert resp.ok is True
+        assert resp.data['concentration_buy'] == 65.0
+
+    def test_margin_with_mock_akshare(self):
+        """保证金数据 AkShare mock 测试"""
+        router = UnifiedDataRouter(db_dir=self.temp_dir)
+        router._routing['margin'] = ['akshare']
+
+        margin_data = {
+            'symbol': 'RB', 'exchange_margin_ratio': 10.0,
+            'broker_margin_ratio': 10.5, 'margin_per_lot': 3600,
+            'date': '2026-06-17',
+        }
+        mock_ak = MagicMock()
+        mock_ak.is_available.return_value = True
+        mock_ak.get_margin.return_value = margin_data
+        router._sources['akshare'] = mock_ak
+
+        resp = router.get_margin('RB')
+        assert resp.ok is True
+        assert resp.data['exchange_margin_ratio'] == 10.0
+
+    def test_macro_with_mock_akshare(self):
+        """宏观经济数据 AkShare mock 测试"""
+        router = UnifiedDataRouter(db_dir=self.temp_dir)
+        router._routing['macro'] = ['akshare']
+
+        macro_data = {
+            'symbol': 'RB', 'gdp_growth': 5.2, 'cpi_yoy': 0.3,
+            'pmi': 50.5, 'interpretation': 'PMI=50.5，制造业扩张',
+        }
+        mock_ak = MagicMock()
+        mock_ak.is_available.return_value = True
+        mock_ak.get_macro.return_value = macro_data
+        router._sources['akshare'] = mock_ak
+
+        resp = router.get_macro('RB')
+        assert resp.ok is True
+        assert resp.data['pmi'] == 50.5
+
+    def test_delivery_with_mock_akshare(self):
+        """交割数据 AkShare mock 测试"""
+        router = UnifiedDataRouter(db_dir=self.temp_dir)
+        router._routing['delivery'] = ['akshare']
+
+        delivery_data = {
+            'symbol': 'RB', 'delivery_month': '2026-09',
+            'days_to_delivery': 89,
+            'interpretation': '距交割月89天，交割因素影响较小',
+        }
+        mock_ak = MagicMock()
+        mock_ak.is_available.return_value = True
+        mock_ak.get_delivery.return_value = delivery_data
+        router._sources['akshare'] = mock_ak
+
+        resp = router.get_delivery('RB')
+        assert resp.ok is True
+        assert resp.data['days_to_delivery'] == 89
     def setup_method(self):
         reset_router()
         self.temp_dir = tempfile.mkdtemp()

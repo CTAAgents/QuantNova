@@ -105,14 +105,22 @@
       "quote":       ["duckdb", "tqsdk", "pytdx"],
       "basis":       ["akshare", "pytdx"],
       "seasonality": ["akshare", "csv"],
-      "inventory":   ["akshare"]
+      "inventory":   ["akshare"],
+      "top_list":    ["akshare"],
+      "margin":      ["akshare"],
+      "macro":       ["akshare"],
+      "delivery":    ["akshare"]
     },
     "staleness_threshold": {
       "kline": 4,
       "quote": 0.5,
       "basis": 24,
       "seasonality": 168,
-      "inventory": 24
+      "inventory": 24,
+      "top_list": 24,
+      "margin": 168,
+      "macro": 168,
+      "delivery": 720
     }
   },
 

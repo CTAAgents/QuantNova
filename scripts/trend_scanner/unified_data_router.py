@@ -4,9 +4,13 @@
 提供单一入口点，按数据类型智能路由到最佳数据源：
 - K线：  DuckDB → TqSdk → Pytdx(通达信) → CSV
 - 行情：  DuckDB → TqSdk → Pytdx(通达信)
-- 基差：  AkShare → Pytdx(通达信)  [新增]
-- 季节性： AkShare → 本地CSV       [新增]
-- 仓单：  AkShare                  [新增]
+- 基差：  AkShare → Pytdx(通达信)
+- 季节性： AkShare → 本地CSV
+- 仓单：  AkShare
+- 龙虎榜： AkShare
+- 保证金： AkShare
+- 宏观：  AkShare
+- 交割：  AkShare
 
 设计原则：
 1. 扩展不替换 — 兼容现有 DataSource 体系
@@ -76,6 +80,10 @@ DEFAULT_ROUTING = {
     "basis":        ["akshare", "pytdx"],
     "seasonality":  ["akshare", "csv"],
     "inventory":    ["akshare"],
+    "top_list":     ["akshare"],
+    "margin":       ["akshare"],
+    "macro":        ["akshare"],
+    "delivery":     ["akshare"],
 }
 
 # 数据时效性阈值（小时）
@@ -85,6 +93,10 @@ DEFAULT_STALENESS_THRESHOLD = {
     "basis": 24,         # 基差允许1天
     "seasonality": 168,  # 季节性允许1周
     "inventory": 24,     # 仓单允许1天
+    "top_list": 24,      # 龙虎榜允许1天
+    "margin": 168,       # 保证金允许1周
+    "macro": 168,        # 宏观数据允许1周
+    "delivery": 720,     # 交割数据允许1月
 }
 
 
@@ -584,6 +596,340 @@ class AkShareSource:
             logger.debug(f"AkShare get_inventory 异常: {e}")
             return None
 
+    def get_top_list(self, symbol: str) -> Optional[Dict[str, Any]]:
+        """获取龙虎榜数据（交易所每日公布的多空持仓排名）
+
+        返回:
+            {
+                'symbol': str,
+                'date': str,
+                'top_buy': List[Dict],   # 多头前5/10 名: [{broker, volume, change}, ...]
+                'top_sell': List[Dict],  # 空头前5/10 名
+                'net_buy': float,        # 多头净买入量
+                'net_sell': float,       # 空头净卖出量
+                'concentration_buy': float,   # 多头集中度(%)
+                'concentration_sell': float,  # 空头集中度(%)
+                'interpretation': str,        # 一句话解读
+            }
+        """
+        try:
+            import akshare as ak
+            variety = normalize_symbol(symbol)
+            cn_name = AKSHARE_FUTURES_MAP.get(variety)
+            if not cn_name:
+                return None
+
+            # 获取主力合约代码
+            contract_code = None
+            try:
+                main_df = ak.futures_main_sina(symbol=cn_name)
+                if main_df is not None and len(main_df) > 0:
+                    contract_code = str(main_df.iloc[-1].get('symbol', '') or main_df.iloc[-1].get('合约代码', ''))
+            except Exception:
+                pass
+
+            if not contract_code:
+                return None
+
+            # 获取龙虎榜数据
+            try:
+                df = ak.futures_dce_position_rank(date=datetime.now().strftime('%Y%m%d'))
+                if df is None or len(df) == 0:
+                    # 尝试其他日期
+                    for d in range(1, 5):
+                        df = ak.futures_dce_position_rank(
+                            date=(datetime.now() - timedelta(days=d)).strftime('%Y%m%d')
+                        )
+                        if df is not None and len(df) > 0:
+                            break
+
+                if df is not None and len(df) > 0:
+                    # 过滤当前合约
+                    contract_df = df[df.iloc[:, 0].astype(str).str.contains(contract_code, case=False, na=False)]
+                    if len(contract_df) == 0:
+                        contract_df = df  # 使用全部数据
+
+                    # 解析多空头排名
+                    top_buy = []
+                    top_sell = []
+
+                    # 标准化列名
+                    cols = [str(c).strip() for c in contract_df.columns]
+
+                    # 尝试找到经纪商/会员名称列和持仓量列
+                    name_col = None
+                    vol_col = None
+                    for i, c in enumerate(cols):
+                        if '会员' in c or '经纪' in c or '公司' in c:
+                            name_col = i
+                        if '持仓' in c and '买' in c:
+                            vol_col = i
+
+                    if name_col is not None and vol_col is not None:
+                        for _, row in contract_df.head(10).iterrows():
+                            entry = {
+                                'broker': str(row.iloc[name_col]),
+                                'volume': int(row.iloc[vol_col]) if pd.notna(row.iloc[vol_col]) else 0,
+                            }
+                            top_buy.append(entry)
+
+                    # 计算集中度
+                    total_buy_vol = sum(e['volume'] for e in top_buy)
+                    top5_buy = sum(e['volume'] for e in top_buy[:5])
+                    concentration_buy = (top5_buy / total_buy_vol * 100) if total_buy_vol > 0 else 0
+
+                    interpretation = ""
+                    if concentration_buy > 60:
+                        interpretation = f"多头集中度较高({concentration_buy:.0f}%)，主力做多意愿强"
+                    elif concentration_buy < 30:
+                        interpretation = f"多头分散({concentration_buy:.0f}%)，做多意愿弱"
+                    else:
+                        interpretation = f"多头集中度适中({concentration_buy:.0f}%)"
+
+                    return {
+                        'symbol': variety,
+                        'date': datetime.now().strftime('%Y-%m-%d'),
+                        'top_buy': top_buy[:10],
+                        'top_sell': top_sell[:10],
+                        'net_buy': total_buy_vol,
+                        'net_sell': sum(e['volume'] for e in top_sell),
+                        'concentration_buy': round(concentration_buy, 1),
+                        'concentration_sell': 0.0,
+                        'interpretation': interpretation,
+                    }
+
+            except Exception as e:
+                logger.debug(f"AkShare 龙虎榜获取失败({variety}): {e}")
+
+            return None
+
+        except Exception as e:
+            logger.debug(f"AkShare get_top_list 异常: {e}")
+            return None
+
+    def get_margin(self, symbol: str) -> Optional[Dict[str, Any]]:
+        """获取保证金数据
+
+        返回:
+            {
+                'symbol': str,
+                'exchange_margin_ratio': float,  # 交易所保证金比例(%)
+                'broker_margin_ratio': float,    # 经纪商保证金比例(%)
+                'margin_per_lot': float,          # 每手保证金(元)
+                'date': str,
+            }
+        """
+        try:
+            import akshare as ak
+            variety = normalize_symbol(symbol)
+            exchange = VARIETY_EXCHANGE_MAP.get(variety, '')
+            if not exchange:
+                return None
+
+            # 获取交易所保证金数据
+            try:
+                df = ak.futures_margin_em()
+                if df is not None and len(df) > 0:
+                    # 过滤当前品种
+                    variety_row = df[df.iloc[:, 0].astype(str).str.contains(variety, case=False, na=False)]
+                    if len(variety_row) > 0:
+                        row = variety_row.iloc[0]
+                        # 标准化列名
+                        cols = [str(c).strip() for c in row.index]
+                        margin_ratio = 0
+                        for i, c in enumerate(cols):
+                            if '保证金' in c and '比例' in c:
+                                margin_ratio = float(row.iloc[i]) if pd.notna(row.iloc[i]) else 0
+                                break
+
+                        if margin_ratio == 0:
+                            # 尝试找到所有数字列
+                            for i, val in enumerate(row):
+                                if pd.notna(val):
+                                    try:
+                                        v = float(val)
+                                        if 1 <= v <= 30:  # 保证金比例通常在1%-30%
+                                            margin_ratio = v
+                                            break
+                                    except (ValueError, TypeError):
+                                        continue
+
+                        return {
+                            'symbol': variety,
+                            'exchange_margin_ratio': margin_ratio,
+                            'broker_margin_ratio': margin_ratio * 1.05 if margin_ratio > 0 else 0,
+                            'margin_per_lot': 0,
+                            'date': datetime.now().strftime('%Y-%m-%d'),
+                        }
+            except Exception as e:
+                logger.debug(f"AkShare 保证金获取失败({variety}): {e}")
+
+            return None
+
+        except Exception as e:
+            logger.debug(f"AkShare get_margin 异常: {e}")
+            return None
+
+    def get_macro(self, symbol: str) -> Optional[Dict[str, Any]]:
+        """获取宏观经济数据（GDP、CPI、PMI、利率等）
+
+        返回:
+            {
+                'symbol': str,
+                'indicators': Dict[str, Any],  # {指标名: 值}
+                'gdp_growth': float,           # GDP同比增速(%)
+                'cpi_yoy': float,              # CPI同比(%)
+                'pmi': float,                  # 制造业PMI
+                'interest_rate': float,        # 基准利率(%)
+                'date': str,
+                'interpretation': str,
+            }
+        """
+        try:
+            import akshare as ak
+            variety = normalize_symbol(symbol)
+            indicators = {}
+
+            # GDP
+            try:
+                gdp_df = ak.macro_china_gdp()
+                if gdp_df is not None and len(gdp_df) > 0:
+                    latest = gdp_df.iloc[-1]
+                    for col in gdp_df.columns:
+                        if '同比' in str(col) or '增速' in str(col):
+                            indicators['gdp_growth'] = float(latest[col]) if pd.notna(latest[col]) else None
+                            break
+            except Exception:
+                pass
+
+            # CPI
+            try:
+                cpi_df = ak.macro_china_cpi_yearly()
+                if cpi_df is not None and len(cpi_df) > 0:
+                    latest = cpi_df.iloc[-1]
+                    for col in cpi_df.columns:
+                        if '同比' in str(col):
+                            indicators['cpi_yoy'] = float(latest[col]) if pd.notna(latest[col]) else None
+                            break
+            except Exception:
+                pass
+
+            # PMI
+            try:
+                pmi_df = ak.macro_china_pmi()
+                if pmi_df is not None and len(pmi_df) > 0:
+                    latest = pmi_df.iloc[-1]
+                    for col in pmi_df.columns:
+                        if '制造业' in str(col) and 'PMI' in str(col).upper():
+                            indicators['pmi'] = float(latest[col]) if pd.notna(latest[col]) else None
+                            break
+            except Exception:
+                pass
+
+            if not indicators:
+                return None
+
+            # 解读
+            pmi = indicators.get('pmi')
+            gdp = indicators.get('gdp_growth')
+            parts = []
+            if pmi is not None:
+                if pmi > 50:
+                    parts.append(f"PMI={pmi:.1f}，制造业扩张")
+                else:
+                    parts.append(f"PMI={pmi:.1f}，制造业收缩")
+            if gdp is not None:
+                if gdp > 5:
+                    parts.append(f"GDP增速{gdp:.1f}%，经济较强")
+                elif gdp > 0:
+                    parts.append(f"GDP增速{gdp:.1f}%，经济温和增长")
+                else:
+                    parts.append(f"GDP增速{gdp:.1f}%，经济衰退风险")
+
+            return {
+                'symbol': variety,
+                'indicators': indicators,
+                'gdp_growth': indicators.get('gdp_growth'),
+                'cpi_yoy': indicators.get('cpi_yoy'),
+                'pmi': indicators.get('pmi'),
+                'interest_rate': indicators.get('interest_rate'),
+                'date': datetime.now().strftime('%Y-%m-%d'),
+                'interpretation': "；".join(parts) if parts else "数据有限",
+            }
+
+        except Exception as e:
+            logger.debug(f"AkShare get_macro 异常: {e}")
+            return None
+
+    def get_delivery(self, symbol: str) -> Optional[Dict[str, Any]]:
+        """获取交割数据（交割月、交割量、仓单注册量）
+
+        返回:
+            {
+                'symbol': str,
+                'delivery_month': str,           # 交割月份
+                'next_delivery_date': str,       # 下次交割日
+                'registered_warrants': int,      # 注册仓单量
+                'delivery_volume': int,          # 交割量
+                'days_to_delivery': int,         # 距离交割天数
+                'interpretation': str,
+            }
+        """
+        try:
+            import akshare as ak
+            variety = normalize_symbol(symbol)
+            cn_name = AKSHARE_FUTURES_MAP.get(variety)
+            if not cn_name:
+                return None
+
+            # 计算交割月（商品期货通常在1/5/9月或合约月份交割）
+            now = datetime.now()
+            delivery_months = [1, 5, 9]  # 黑色系、农产品等常见交割月
+            if variety in ['CU', 'AL', 'ZN', 'PB', 'NI', 'SN']:  # 有色系
+                delivery_months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+
+            # 找到最近的交割月
+            next_delivery = None
+            for month in delivery_months:
+                if month > now.month:
+                    next_delivery = datetime(now.year, month, 15)  # 通常月中交割
+                    break
+            if next_delivery is None:
+                next_delivery = datetime(now.year + 1, delivery_months[0], 15)
+
+            days_to_delivery = (next_delivery - now).days
+
+            # 获取仓单数据
+            registered_warrants = 0
+            try:
+                inv = self.get_inventory(symbol)
+                if inv:
+                    registered_warrants = inv.get('warehouse_receipts', 0)
+            except Exception:
+                pass
+
+            interpretation = ""
+            if days_to_delivery <= 30:
+                interpretation = f"距交割月{days_to_delivery}天，注意移仓换月风险"
+            elif days_to_delivery <= 60:
+                interpretation = f"距交割月{days_to_delivery}天，关注交割逻辑"
+            else:
+                interpretation = f"距交割月{days_to_delivery}天，交割因素影响较小"
+
+            return {
+                'symbol': variety,
+                'delivery_month': next_delivery.strftime('%Y-%m'),
+                'next_delivery_date': next_delivery.strftime('%Y-%m-%d'),
+                'registered_warrants': registered_warrants,
+                'delivery_volume': 0,
+                'days_to_delivery': days_to_delivery,
+                'interpretation': interpretation,
+            }
+
+        except Exception as e:
+            logger.debug(f"AkShare get_delivery 异常: {e}")
+            return None
+
 
 # ---------------------------------------------------------------------------
 # UnifiedDataRouter — 统一数据路由器
@@ -880,6 +1226,102 @@ class UnifiedDataRouter:
         return DataResponse(
             ok=False, source="", fallback_used=False, data_type='inventory',
             count=0, data=None, error="无法获取仓单数据", timestamp=ts,
+            staleness_hours=staleness,
+        )
+
+    def get_top_list(self, symbol: str) -> DataResponse:
+        """获取龙虎榜数据 [新增]
+
+        优先级: AkShare
+        """
+        variety = normalize_symbol(symbol)
+        ts = datetime.now().isoformat()
+        staleness = self._check_staleness(variety, 'top_list')
+
+        for i, source_name in enumerate(self._routing.get('top_list', DEFAULT_ROUTING['top_list'])):
+            result = self._try_source(source_name, 'get_top_list', symbol=variety)
+            if result is not None:
+                return DataResponse(
+                    ok=True, source=source_name, fallback_used=(i > 0),
+                    data_type='top_list', count=1, data=result, error=None,
+                    timestamp=ts, staleness_hours=staleness,
+                )
+
+        return DataResponse(
+            ok=False, source="", fallback_used=False, data_type='top_list',
+            count=0, data=None, error="无法获取龙虎榜数据", timestamp=ts,
+            staleness_hours=staleness,
+        )
+
+    def get_margin(self, symbol: str) -> DataResponse:
+        """获取保证金数据 [新增]
+
+        优先级: AkShare
+        """
+        variety = normalize_symbol(symbol)
+        ts = datetime.now().isoformat()
+        staleness = self._check_staleness(variety, 'margin')
+
+        for i, source_name in enumerate(self._routing.get('margin', DEFAULT_ROUTING['margin'])):
+            result = self._try_source(source_name, 'get_margin', symbol=variety)
+            if result is not None:
+                return DataResponse(
+                    ok=True, source=source_name, fallback_used=(i > 0),
+                    data_type='margin', count=1, data=result, error=None,
+                    timestamp=ts, staleness_hours=staleness,
+                )
+
+        return DataResponse(
+            ok=False, source="", fallback_used=False, data_type='margin',
+            count=0, data=None, error="无法获取保证金数据", timestamp=ts,
+            staleness_hours=staleness,
+        )
+
+    def get_macro(self, symbol: str) -> DataResponse:
+        """获取宏观经济数据 [新增]
+
+        优先级: AkShare
+        """
+        variety = normalize_symbol(symbol)
+        ts = datetime.now().isoformat()
+        staleness = self._check_staleness(variety, 'macro')
+
+        for i, source_name in enumerate(self._routing.get('macro', DEFAULT_ROUTING['macro'])):
+            result = self._try_source(source_name, 'get_macro', symbol=variety)
+            if result is not None:
+                return DataResponse(
+                    ok=True, source=source_name, fallback_used=(i > 0),
+                    data_type='macro', count=1, data=result, error=None,
+                    timestamp=ts, staleness_hours=staleness,
+                )
+
+        return DataResponse(
+            ok=False, source="", fallback_used=False, data_type='macro',
+            count=0, data=None, error="无法获取宏观经济数据", timestamp=ts,
+            staleness_hours=staleness,
+        )
+
+    def get_delivery(self, symbol: str) -> DataResponse:
+        """获取交割数据 [新增]
+
+        优先级: AkShare
+        """
+        variety = normalize_symbol(symbol)
+        ts = datetime.now().isoformat()
+        staleness = self._check_staleness(variety, 'delivery')
+
+        for i, source_name in enumerate(self._routing.get('delivery', DEFAULT_ROUTING['delivery'])):
+            result = self._try_source(source_name, 'get_delivery', symbol=variety)
+            if result is not None:
+                return DataResponse(
+                    ok=True, source=source_name, fallback_used=(i > 0),
+                    data_type='delivery', count=1, data=result, error=None,
+                    timestamp=ts, staleness_hours=staleness,
+                )
+
+        return DataResponse(
+            ok=False, source="", fallback_used=False, data_type='delivery',
+            count=0, data=None, error="无法获取交割数据", timestamp=ts,
             staleness_hours=staleness,
         )
 

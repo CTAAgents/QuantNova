@@ -1,21 +1,21 @@
 # 测试文档
 
-> 版本：v1.2 | 创建日期：2026-06-17
+> 版本：v1.3 | 创建日期：2026-06-17
 > 最后更新：2026-06-17
 
 ## 测试概览
 
 | 指标 | 数值 |
 |------|------|
-| **总测试数** | 301+ |
-| **通过** | 301+ |
+| **总测试数** | 475 |
+| **通过** | 475 |
 | **跳过** | 1 |
 | **失败** | 0 |
 | **覆盖率** | 100%（核心模块） |
 
 ## 测试文件清单
 
-### 单元测试（209+ 个）
+### 单元测试（272 个）
 
 | 测试文件 | 测试数 | 覆盖模块 |
 |----------|--------|----------|
@@ -35,6 +35,9 @@
 | `test_multi_timeframe_vgrsi_factor.py` | 10 | MultiTimeframeVGRSIFactor |
 | `test_volatility_anchor.py` | 14 | VolatilityAnchor |
 | `test_unified_data_router.py` | 68 | UnifiedDataRouter（DuckDB/TqSdk/Pytdx/AkShare 路由） |
+| `test_validation_matrix.py` | 19 | ValidationMatrix（7种改动类型验证标准+红线检查） |
+| `test_indicator_hub.py` | 15 | IndicatorHub（维度分组+字段映射+缓存+维度加载） |
+| `test_multi_dimension_screener.py` | 29 | MultiDimensionScreener（五维度评分+归一化+信号分类） |
 
 ### 端到端测试（14 个）
 
@@ -59,16 +62,6 @@
 | 测试文件 | 测试数 | 说明 |
 |----------|--------|------|
 | `test_memory_system.py` | 12 | 记忆系统各组件测试 |
-
-## 五维度筛选评分模块（待补充测试）
-
-以下模块已实现但尚无独立测试文件，功能通过集成测试验证：
-
-| 模块 | 文件 | 功能 |
-|------|------|------|
-| IndicatorHub | `indicator_hub.py` | 统一指标加载层（DuckDB→宽表→维度分组） |
-| MultiDimensionScreener | `multi_dimension_screener.py` | 五维度加权评分引擎 |
-| ValidationMatrix | `validation_matrix.py` | 改动类型→验证标准路由 |
 
 ## 运行测试
 

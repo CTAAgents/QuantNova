@@ -359,3 +359,6 @@ class FuturesTradingEnv(gym.Env):
   - 创建 `scripts/trend_scanner/rl/agent_ppo.py`（AgentPPO, AgentPPOShared）
   - 创建 `scripts/trend_scanner/rl/trainer.py`（RLTrainer, TrainingLogger, evaluate_agent）
   - 创建 `tests/test_ppo.py`（30个测试全部通过）
+- [x] Phase 4: Walk-Forward + RL 验证（完成）
+  - 创建 `scripts/trend_scanner/rl/walk_forward_rl.py`（RLWalkForwardValidator, walk_forward_validate_rl）
+  - 创建 `tests/test_walk_forward_rl.py`（11个测试全部通过）

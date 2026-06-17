@@ -462,12 +462,13 @@ def check_symbol_changes(symbols: List[str], data_source,
     return new_signals
 
 
-def heartbeat(positions_only: bool = False) -> Dict[str, Any]:
+def heartbeat(positions_only: bool = False, all_symbols: bool = False) -> Dict[str, Any]:
     """
     执行一次心跳检查（混合模式）
 
     参数:
         positions_only: 是否只监控持仓
+        all_symbols: 是否扫描全部品种（非僵尸品种）
 
     返回:
         心跳结果
@@ -500,10 +501,25 @@ def heartbeat(positions_only: bool = False) -> Dict[str, Any]:
 
     # 检查全品种变化（如果不是只监控持仓）
     new_signals = []
+    symbols_to_scan = []
+    
     if not positions_only:
-        symbols = config.get('scanner', {}).get('symbols', [])
-        if symbols:
-            new_signals = check_symbol_changes(symbols, data_source, signal_filter, prev_state)
+        if all_symbols:
+            # 扫描全部品种（非僵尸品种）
+            print("  获取全部主力合约品种...", flush=True)
+            all_contracts = get_all_main_contracts()
+            print(f"  发现 {len(all_contracts)} 个主力合约", flush=True)
+            
+            # 筛选活跃品种
+            print("  筛选活跃品种（持仓量≥10000，成交量≥1000）...", flush=True)
+            symbols_to_scan = filter_active_symbols(all_contracts, min_oi=10000, min_volume=1000)
+            print(f"  筛选后 {len(symbols_to_scan)} 个活跃品种", flush=True)
+        else:
+            # 使用配置文件中的品种
+            symbols_to_scan = config.get('scanner', {}).get('symbols', [])
+        
+        if symbols_to_scan:
+            new_signals = check_symbol_changes(symbols_to_scan, data_source, signal_filter, prev_state)
 
     # 保存状态
     save_state(prev_state)
@@ -512,7 +528,7 @@ def heartbeat(positions_only: bool = False) -> Dict[str, Any]:
     result = {
         'heartbeat_time': datetime.now().isoformat(),
         'positions_checked': len(positions),
-        'symbols_checked': len(config.get('scanner', {}).get('symbols', [])) if not positions_only else 0,
+        'symbols_checked': len(symbols_to_scan) if not positions_only else 0,
         'alerts': alerts,
         'new_signals': new_signals,
         'has_events': len(alerts) > 0 or len(new_signals) > 0,
@@ -527,6 +543,7 @@ def main():
     parser.add_argument("--loop", action="store_true", help="持续循环（每 5 分钟）")
     parser.add_argument("--interval", type=int, default=300, help="心跳间隔（秒，默认 300）")
     parser.add_argument("--positions-only", action="store_true", help="只监控持仓")
+    parser.add_argument("--all", action="store_true", help="扫描全部品种（非僵尸品种）")
     parser.add_argument("--output", choices=["json", "text"], default="text", help="输出格式")
     parser.add_argument("--save", action="store_true", help="保存结果到 data/latest_heartbeat.json")
     
@@ -539,7 +556,7 @@ def main():
         
         while True:
             try:
-                result = heartbeat(positions_only=args.positions_only)
+                result = heartbeat(positions_only=args.positions_only, all_symbols=args.all)
                 
                 if result['has_events']:
                     print(f"\n[{datetime.now().strftime('%H:%M:%S')}] 检测到事件:")

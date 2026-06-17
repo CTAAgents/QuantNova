@@ -1,7 +1,7 @@
 {
-  "heartbeat_time": "2026-06-17T09:09:51.632994",
+  "heartbeat_time": "2026-06-17T09:32:41.794926",
   "positions_checked": 3,
-  "symbols_checked": 86,
+  "symbols_checked": 21,
   "alerts": [
     {
       "symbol": "JM",
@@ -14,7 +14,7 @@
         "current_price": 1351.5
       },
       "trigger_reason": "ER=0.242 极低，趋势效率丧失",
-      "alert_time": "2026-06-17T09:09:32.734340"
+      "alert_time": "2026-06-17T09:00:28.208051"
     },
     {
       "symbol": "HC",
@@ -27,7 +27,7 @@
         "current_price": 3376.0
       },
       "trigger_reason": "ER=0.126 极低，趋势效率丧失",
-      "alert_time": "2026-06-17T09:09:32.916242"
+      "alert_time": "2026-06-17T09:00:28.359973"
     }
   ],
   "new_signals": [],

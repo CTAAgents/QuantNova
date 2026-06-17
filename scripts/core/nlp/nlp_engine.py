@@ -61,12 +61,12 @@ class NLPEngine:
             # 构建完整命令
             full_cmd = [sys.executable] + command.command.split()[1:] + command.args
 
-            # 执行命令
+            # 执行命令（超时时间增加到5分钟）
             result = subprocess.run(
                 full_cmd,
                 capture_output=True,
                 text=True,
-                timeout=60,
+                timeout=300,
                 cwd=str(Path(__file__).parent.parent.parent.parent),
             )
 
@@ -80,7 +80,7 @@ class NLPEngine:
                 return f"命令执行失败：{result.stderr}"
 
         except subprocess.TimeoutExpired:
-            return "命令执行超时，请稍后重试。"
+            return "命令执行超时（超过5分钟）。这可能是因为：\n1. 数据量较大，处理需要时间\n2. 网络连接较慢\n3. 系统资源不足\n\n建议：请稍后重试，或使用 CLI 命令直接执行。"
         except Exception as e:
             return f"执行命令时出错：{e}"
 

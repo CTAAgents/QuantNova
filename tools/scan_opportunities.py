@@ -126,6 +126,8 @@ def scan_symbol(
     use_dynamic_factors: bool = False,
     allow_tqsdk_fallback: bool = True,
     use_multi_dimension: bool = False,
+    use_rl: bool = False,
+    rl_generator=None,
 ) -> dict[str, Any] | None:
     """
     扫描单个品种，返回信号（如果有）
@@ -323,6 +325,31 @@ def scan_symbol(
         if stop_loss_info:
             signal["stop_loss"] = stop_loss_info
 
+        # RL 信号生成（可选）
+        if use_rl and rl_generator is not None:
+            try:
+                # 准备状态特征
+                state_features = np.array([
+                    float(latest.get("return", 0)),
+                    float(latest.get("rsi", 50)) / 100,  # 归一化到 [0, 1]
+                    float(latest.get("bb_width", 0)),
+                    float(latest.get("volume_change", 0)),
+                ])
+                
+                # 获取当前持仓（默认为 0）
+                current_position = 0.0
+                
+                # 生成 RL 信号
+                rl_signal = rl_generator.generate_signal(state_features, current_position)
+                
+                # 集成 RL 信号到 Scanner 结果
+                from trend_scanner.rl.scanner_integration import integrate_rl_signal_to_scanner
+                signal = integrate_rl_signal_to_scanner(signal, rl_signal, rl_weight=0.3)
+                
+                logger.debug(f"RL 信号: {rl_signal['direction']}, strength={rl_signal['strength']:.2f}")
+            except Exception as e:
+                logger.warning(f"RL 信号生成失败: {e}")
+
         # 多维度筛选评分（可选）
         if use_multi_dimension:
             try:
@@ -396,6 +423,7 @@ def scan_all(
     use_dynamic_factors: bool = False,
     use_memory: bool = True,
     use_multi_dimension: bool = False,
+    use_rl: bool = False,
 ) -> dict[str, Any]:
     """
     扫描所有品种
@@ -431,6 +459,29 @@ def scan_all(
 
     # 获取数据源
     data_source = DataSourceFactory.create()
+
+    # 初始化 RL 信号生成器（如果启用）
+    rl_generator = None
+    if use_rl:
+        try:
+            from trend_scanner.rl.scanner_integration import RLSignalGenerator
+            import os
+            
+            # 查找训练好的模型
+            model_dir = "models/rl"
+            if os.path.exists(model_dir):
+                # 优先使用最优模型
+                model_files = [f for f in os.listdir(model_dir) if f.endswith("_best.pth")]
+                if model_files:
+                    model_path = os.path.join(model_dir, model_files[0])
+                    rl_generator = RLSignalGenerator(model_path, state_dim=6)
+                    print(f"RL 信号生成器已加载: {model_path}")
+                else:
+                    print("未找到训练好的 RL 模型，跳过 RL 信号生成")
+            else:
+                print("RL 模型目录不存在，跳过 RL 信号生成")
+        except Exception as e:
+            print(f"RL 信号生成器初始化失败: {e}")
 
     # TqSdk 健康检查：快速验证连通性，不可用时跳过 TqSdk 兜底
     tqsdk_healthy = False
@@ -475,6 +526,8 @@ def scan_all(
             use_dynamic_factors,
             allow_tqsdk_fallback=tqsdk_healthy,
             use_multi_dimension=use_multi_dimension,
+            use_rl=use_rl,
+            rl_generator=rl_generator,
         )
         if result:
             signals.append(result)
@@ -526,6 +579,7 @@ def main():
         help="启用五维度筛选评分（trend+momentum+volume+volatility+channel）",
     )
     parser.add_argument("--arbitrage", action="store_true", help="启用套利分析（跨期/跨品种价差扫描）")
+    parser.add_argument("--use-rl", action="store_true", help="启用 RL 信号生成（需要先训练模型）")
 
     args = parser.parse_args()
 
@@ -547,7 +601,10 @@ def main():
     # 执行扫描
     print(f"[{datetime.now().strftime('%H:%M:%S')}] 开始扫描...")
     result = scan_all(
-        symbols, use_dynamic_factors=args.use_dynamic_factors, use_multi_dimension=args.use_multi_dimension
+        symbols, 
+        use_dynamic_factors=args.use_dynamic_factors, 
+        use_multi_dimension=args.use_multi_dimension,
+        use_rl=args.use_rl,
     )
 
     # 套利分析（如果启用）

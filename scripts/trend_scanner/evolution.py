@@ -282,6 +282,10 @@ class EnhancedEvolutionEngine:
         bypass_report = self.silent_bypass_detector.detect(trades)
         result["bypass_report"] = bypass_report
 
+        # 5.5 RL 策略诊断（新增）
+        rl_diagnosis = self._diagnose_rl_strategy(trades, current_config)
+        result["rl_diagnosis"] = rl_diagnosis
+
         # 6. 应用通过验证的提案（简化版：直接应用高置信度提案）
         applied_proposals = []
         for proposal in all_proposals:
@@ -298,6 +302,86 @@ class EnhancedEvolutionEngine:
         result["applied_config"] = current_config
 
         return result
+
+    def _diagnose_rl_strategy(self, trades: list[Any], current_config: dict[str, Any]) -> dict[str, Any]:
+        """
+        诊断 RL 策略的健康状态
+        
+        Args:
+            trades: 交易记录列表
+            current_config: 当前策略配置
+        
+        Returns:
+            RL 诊断结果
+        """
+        diagnosis = {
+            "has_rl_model": False,
+            "model_status": "not_found",
+            "recommendations": [],
+        }
+        
+        # 检查是否有训练好的 RL 模型
+        import os
+        model_dir = "models/rl"
+        
+        if not os.path.exists(model_dir):
+            diagnosis["recommendations"].append("未找到 RL 模型目录，建议先训练 RL 策略")
+            return diagnosis
+        
+        # 查找模型文件
+        model_files = [f for f in os.listdir(model_dir) if f.endswith(".pth")]
+        if not model_files:
+            diagnosis["recommendations"].append("未找到训练好的 RL 模型，建议运行 python tools/train_ppo.py")
+            return diagnosis
+        
+        diagnosis["has_rl_model"] = True
+        diagnosis["model_count"] = len(model_files)
+        diagnosis["model_files"] = model_files
+        
+        # 检查 Walk-Forward 验证结果
+        wf_result_files = [f for f in os.listdir(model_dir) if f.endswith("_wf_result.json")]
+        if wf_result_files:
+            try:
+                import json
+                latest_wf = os.path.join(model_dir, wf_result_files[-1])
+                with open(latest_wf, 'r') as f:
+                    wf_result = json.load(f)
+                
+                pass_rate = wf_result.get("pass_rate", 0)
+                avg_oos_reward = wf_result.get("avg_oos_reward", 0)
+                avg_reward_ratio = wf_result.get("avg_reward_ratio", 0)
+                
+                diagnosis["wf_validation"] = {
+                    "pass_rate": pass_rate,
+                    "avg_oos_reward": avg_oos_reward,
+                    "avg_reward_ratio": avg_reward_ratio,
+                }
+                
+                # 生成建议
+                if pass_rate < 0.5:
+                    diagnosis["recommendations"].append(
+                        f"Walk-Forward 通过率过低 ({pass_rate:.0%})，建议重新设计状态空间或奖励函数"
+                    )
+                
+                if avg_reward_ratio < 0.5:
+                    diagnosis["recommendations"].append(
+                        f"IS/OOS 一致性差 (ratio={avg_reward_ratio:.2f})，建议减少训练步数或增加正则化"
+                    )
+                
+                if avg_oos_reward < 0:
+                    diagnosis["recommendations"].append(
+                        "OOS 平均奖励为负，建议检查数据质量或调整奖励函数"
+                    )
+                
+                if not diagnosis["recommendations"]:
+                    diagnosis["recommendations"].append("RL 策略健康状态良好")
+                    
+            except Exception as e:
+                diagnosis["recommendations"].append(f"读取 Walk-Forward 结果失败: {e}")
+        else:
+            diagnosis["recommendations"].append("未找到 Walk-Forward 验证结果，建议运行验证")
+        
+        return diagnosis
 
     def generate_review_report(self, symbol: str = None) -> dict[str, Any]:
         """

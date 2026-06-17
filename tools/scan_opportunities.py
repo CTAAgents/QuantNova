@@ -141,16 +141,16 @@ def check_data_timeliness() -> dict[str, Any]:
 
             if days_behind > 1:
                 result["is_latest"] = False
-                result["message"] = f"⚠️ 数据滞后 {days_behind} 天（最新: {latest_date}，当前: {current_date}）"
+                result["message"] = f"[!] 数据滞后 {days_behind} 天（最新: {latest_date}，当前: {current_date}）"
             else:
-                result["message"] = f"✅ 数据最新（{latest_date}）"
+                result["message"] = f"[OK] 数据最新（{latest_date}）"
         else:
             result["is_latest"] = False
-            result["message"] = "⚠️ 数据库为空，请先执行数据同步"
+            result["message"] = "[!] 数据库为空，请先执行数据同步"
 
     except Exception as e:
         result["is_latest"] = False
-        result["message"] = f"⚠️ 检查数据时效性失败: {e}"
+        result["message"] = f"[!] 检查数据时效性失败: {e}"
 
     return result
 
@@ -652,7 +652,7 @@ def main():
     print(timeliness["message"])
 
     if not timeliness["is_latest"]:
-        print(f"\n⚠️ 数据滞后 {timeliness['days_behind']} 天，分析结果可能不准确。")
+        print(f"\n[!] 数据滞后 {timeliness['days_behind']} 天，分析结果可能不准确。")
         print("建议先执行数据同步: python tools/sync_data.py sync --days 5")
         print("继续分析将在结果中标注数据截止时间。\n")
 
@@ -787,7 +787,7 @@ def main():
         if result.get("reasoner_analyzed"):
             print("深度分析: 已完成")
         if not timeliness["is_latest"]:
-            print(f"⚠️ 数据截止: {timeliness['latest_date']}（滞后 {timeliness['days_behind']} 天）")
+            print(f"[!] 数据截止: {timeliness['latest_date']}（滞后 {timeliness['days_behind']} 天）")
         print("-" * 60)
 
         if result["signals"]:

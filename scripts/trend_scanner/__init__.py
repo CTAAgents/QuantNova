@@ -311,6 +311,32 @@ from .macro_state import MacroStateDetector
 # 记忆桥接器
 from .memory_bridge import MemoryBridge
 
+# v6.0 新增模块（论文吸收 arXiv:2605.01300）
+from .visibility_graph import (
+    VisibilityGraph,
+    VGRSI,
+    MultiTimeframeVGRSI,
+    MultiTimeframeVGRSIFactor,
+    consensus_factor,
+    calculate_vgrsi,
+    calculate_vgrsi_multi_timeframe,
+)
+from .walk_forward_validator import (
+    WalkForwardValidator,
+    WalkForwardConfig,
+    WalkForwardResult,
+    walk_forward_validate,
+)
+from .visibility_graph_operator import (
+    VisibilityGraphOperator,
+    get_visibility_operator_descriptions,
+    get_visibility_example_factors,
+)
+from .volatility_anchor import (
+    VolatilityAnchor,
+    volatility_anchor,
+)
+
 # 交易记录（兼容旧版测试）
 from .models import TradeRecord, TradeSignal, TrendPhaseInfo
 
@@ -445,4 +471,13 @@ __all__ = [
     "MacroStateDetector",
     # 记忆桥接器
     "MemoryBridge",
+    # v6.0 新增模块（论文吸收 arXiv:2605.01300）
+    "VisibilityGraph", "VGRSI", "MultiTimeframeVGRSI",
+    "MultiTimeframeVGRSIFactor", "consensus_factor",
+    "calculate_vgrsi", "calculate_vgrsi_multi_timeframe",
+    "WalkForwardValidator", "WalkForwardConfig", "WalkForwardResult",
+    "walk_forward_validate",
+    "VisibilityGraphOperator",
+    "get_visibility_operator_descriptions", "get_visibility_example_factors",
+    "VolatilityAnchor", "volatility_anchor",
 ]

@@ -70,7 +70,11 @@ class FactorGenerator:
         # 加载因子知识库
         self.factor_knowledge = self._load_factor_knowledge()
         
-        logger.info("FactorGenerator 初始化完成")
+        # 可见图算子（v6.0 新增）
+        from .visibility_graph_operator import VisibilityGraphOperator
+        self.visibility_operator = VisibilityGraphOperator()
+        
+        logger.info("FactorGenerator 初始化完成（含可见图算子）")
     
     def generate_factor(self, market_context: str, research_report: str = None) -> FactorResult:
         """

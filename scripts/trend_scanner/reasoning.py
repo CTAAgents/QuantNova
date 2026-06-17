@@ -245,6 +245,8 @@ class ReasoningEngine:
         similar_experiences: List[ExperienceMatch],
         experience_aggregation: dict,
         multi_dimension_result: Optional[dict] = None,
+        trade_history: Optional[List[float]] = None,
+        circuit_breaker_status: Optional[dict] = None,
     ) -> dict:
         """
         执行推理
@@ -253,7 +255,9 @@ class ReasoningEngine:
             context: 当前市场上下文
             similar_experiences: 相似经验列表
             experience_aggregation: 经验聚合结果
-            multi_dimension_result: 多维度筛选评分结果（可选，由 IndicatorHub + MultiDimensionScreener 生成）
+            multi_dimension_result: 多维度筛选评分结果（可选）
+            trade_history: 历史交易盈亏列表（可选，用于蒙特卡洛模拟）
+            circuit_breaker_status: 熔断器状态（可选）
 
         返回:
             推理结果（包含操作方案、约束、不确定性等）
@@ -270,6 +274,8 @@ class ReasoningEngine:
         user_prompt = self._build_user_prompt(
             context, similar_experiences, experience_aggregation,
             multi_dimension_result=multi_dimension_result,
+            trade_history=trade_history,
+            circuit_breaker_status=circuit_breaker_status,
         )
 
         # 4. 调用 LLM
@@ -680,6 +686,8 @@ class ReasoningEngine:
         similar_experiences: List[ExperienceMatch],
         experience_aggregation: dict,
         multi_dimension_result: Optional[dict] = None,
+        trade_history: Optional[List[float]] = None,
+        circuit_breaker_status: Optional[dict] = None,
     ) -> str:
         """
         构建用户提示词
@@ -965,6 +973,66 @@ class ReasoningEngine:
 
             except Exception as e:
                 logger.warning(f"注入多维度评分失败: {e}")
+
+        # 8.5 蒙特卡洛模拟（Davey Step 5）
+        if trade_history and len(trade_history) >= 3:
+            try:
+                from trend_scanner.monte_carlo import MonteCarloSimulator
+                sim = MonteCarloSimulator(n_simulations=1000, random_seed=42)
+                mc_result = sim.simulate(trade_history, initial_capital=100000)
+
+                parts.append("")
+                parts.append("# 蒙特卡洛模拟（风险评估）")
+                parts.append("基于历史交易结果的1000次随机重排模拟，评估最坏情况：")
+                parts.append("")
+                parts.append(f"- **破产概率**: {mc_result.ruin_probability:.2%}")
+                parts.append(f"- **预期最大回撤（中位数）**: {mc_result.max_drawdown_median:.2%}")
+                parts.append(f"- **95%置信回撤**: {mc_result.max_drawdown_95:.2%}")
+                parts.append(f"- **99%置信回撤**: {mc_result.max_drawdown_99:.2%}")
+                parts.append(f"- **最差情景**: 资金降至{mc_result.worst_case.get('final_capital', 0):.0f}")
+
+                if mc_result.ruin_probability > 0.1:
+                    parts.append("")
+                    parts.append("**风险警告**: 破产概率超过10%，建议降低仓位或暂停交易。")
+                elif mc_result.max_drawdown_95 > 0.3:
+                    parts.append("")
+                    parts.append("**风险警告**: 95%置信回撤超过30%，注意资金管理。")
+            except Exception as e:
+                logger.debug(f"蒙特卡洛模拟失败: {e}")
+
+        # 8.6 熔断器状态（Davey Step 7）
+        if circuit_breaker_status:
+            try:
+                is_paused = circuit_breaker_status.get("is_paused", False)
+                if is_paused:
+                    parts.append("")
+                    parts.append("# 策略熔断状态")
+                    parts.append("**该策略已触发熔断，当前处于暂停交易状态。**")
+                    parts.append(f"- 暂停原因: {circuit_breaker_status.get('pause_reason', '未知')}")
+                    parts.append(f"- 累计亏损: {circuit_breaker_status.get('total_loss', 0):.0f}")
+                    parts.append(f"- 最大回撤: {circuit_breaker_status.get('max_drawdown', 0):.2%}")
+                    parts.append(f"- 连续亏损: {circuit_breaker_status.get('consecutive_losses', 0)}次")
+                    parts.append("")
+                    parts.append("**建议**: 等待冷却期结束或手动重置后再考虑交易。")
+                else:
+                    # 未熔断，但提供风险指标
+                    total_loss = circuit_breaker_status.get("total_loss", 0)
+                    max_dd = circuit_breaker_status.get("max_drawdown", 0)
+                    consec = circuit_breaker_status.get("consecutive_losses", 0)
+
+                    if total_loss < 0 or max_dd > 0.1 or consec >= 3:
+                        parts.append("")
+                        parts.append("# 风控指标")
+                        parts.append("当前策略的风控指标提醒：")
+                        if total_loss < 0:
+                            parts.append(f"- 累计亏损: {abs(total_loss):.0f}")
+                        if max_dd > 0.1:
+                            parts.append(f"- 最大回撤: {max_dd:.2%}")
+                        if consec >= 3:
+                            parts.append(f"- 连续亏损: {consec}次")
+                        parts.append("**建议**: 关注风控指标，必要时降低仓位。")
+            except Exception as e:
+                logger.debug(f"熔断器状态注入失败: {e}")
 
         # 9. 请求推理
         parts.append("")

@@ -20,6 +20,7 @@ class Command:
     args: List[str]
     kwargs: Dict[str, Any]
     description: str
+    action: str = ""  # 命令动作名称
 
 
 class CommandParser:
@@ -93,6 +94,7 @@ class CommandParser:
             args=args,
             kwargs={},
             description=cmd_info["description"],
+            action=intent.action,
         )
 
     def get_help(self) -> str:

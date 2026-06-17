@@ -45,7 +45,8 @@ class IntentRecognizer:
         """初始化意图模式"""
         return {
             IntentType.QUERY: [
-                {"pattern": r"(查看|显示|查询|获取).*(信号|行情|持仓|状态)", "action": "query"},
+                {"pattern": r"(查看|显示|查询|获取).*(当前)?信号", "action": "signals"},
+                {"pattern": r"(查看|显示|查询|获取).*(行情|持仓|状态)", "action": "query"},
                 {"pattern": r"(什么|哪些).*(品种|合约|信号)", "action": "query"},
                 {"pattern": r"(现在|当前).*(价格|行情)", "action": "query"},
             ],

@@ -521,6 +521,52 @@ class ReasoningEngine:
 
         return revision
 
+    def _calculate_volatility_anchor(self, context: MarketContext) -> Optional[Dict[str, Any]]:
+        """
+        计算波动幅度止损锚点
+        
+        Args:
+            context: 市场上下文
+            
+        Returns:
+            锚点信息字典，如果计算失败返回 None
+        """
+        try:
+            # 从上下文中获取价格数据
+            # 注意：这里使用上下文中的指标数据来估算
+            snapshot = context.snapshot
+            
+            # 获取当前价格
+            current_price = snapshot.close if hasattr(snapshot, 'close') else None
+            if current_price is None:
+                return None
+            
+            # 使用 ATR 作为波动幅度的近似值
+            # ATR 是 Average True Range，与 K 线高度类似
+            atr = snapshot.atr if hasattr(snapshot, 'atr') else None
+            if atr is None:
+                return None
+            
+            # 计算锚点距离（ATR * 2.0）
+            anchor_distance = atr * 2.0
+            anchor_distance_pct = anchor_distance / current_price * 100
+            
+            # 计算多头和空头止损
+            long_stop_loss = current_price - anchor_distance
+            short_stop_loss = current_price + anchor_distance
+            
+            return {
+                'current_price': current_price,
+                'median_height': atr,  # 使用 ATR 近似
+                'anchor_distance': anchor_distance,
+                'anchor_distance_pct': anchor_distance_pct,
+                'long_stop_loss': long_stop_loss,
+                'short_stop_loss': short_stop_loss
+            }
+        except Exception as e:
+            logger.warning(f"计算波动幅度锚点失败: {e}")
+            return None
+
     def _build_revision_trace(self, base_prediction: dict, parsed: dict) -> dict:
         """
         构建修正轨迹

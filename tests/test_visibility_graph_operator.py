@@ -108,10 +108,9 @@ class TestVisibilityGraphOperator:
         operator = VisibilityGraphOperator()
         
         # 创建测试数据
-        prices = np.array([100, 101, 102, 103, 104, 105])
-        visibility = np.array([1, 1, 0, 1, 0, 1])
+        prices = np.array([100.0, 101.0, 102.0, 103.0, 104.0, 105.0])
         
-        result = operator._aggregate_mean(visibility, prices)
+        result = operator._aggregate_mean(prices, window=3)
         
         assert isinstance(result, np.ndarray)
         assert len(result) == len(prices)
@@ -121,10 +120,9 @@ class TestVisibilityGraphOperator:
         operator = VisibilityGraphOperator()
         
         # 创建测试数据
-        prices = np.array([100, 101, 102, 103, 104, 105])
-        visibility = np.array([1, 1, 0, 1, 0, 1])
+        prices = np.array([100.0, 101.0, 102.0, 103.0, 104.0, 105.0])
         
-        result = operator._aggregate_ratio(visibility, prices)
+        result = operator._aggregate_ratio(prices, window=3)
         
         assert isinstance(result, np.ndarray)
         assert len(result) == len(prices)

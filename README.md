@@ -213,7 +213,7 @@ python tools/scan_opportunities.py --evolve --evolve-rounds 5
 | ReasonerAgent | `reasoner.py` | Reasoner Agent 深度分析（LLM推理→决策简报） |
 | TqSdkBridge | `tqsdk_bridge.py` | TqSdk 桥接器（解决 sys.exit 问题） |
 
-### 2.2 v5.0 因子进化子系统（8 个模块）
+### 2.2 v5.0 因子进化子系统（10 个模块）
 
 | 模块 | 文件 | 功能 |
 |------|------|------|
@@ -225,6 +225,8 @@ python tools/scan_opportunities.py --evolve --evolve-rounds 5
 | SeedFactorPool | `seed_factor_pool.py` | 种子因子池管理 |
 | MultiFactorModel | `multi_factor_model.py` | 多因子组合模型 |
 | FactorExperienceDB | `factor_experience_db.py` | 失败经验库 |
+| VGRSI | `visibility_graph.py` | 可见图技术指标（arXiv:2605.01300） |
+| WalkForwardValidator | `walk_forward_validator.py` | Walk-Forward 验证框架 |
 
 ### 2.2 因子生成与验证（4 个模块）
 

@@ -302,6 +302,40 @@ class FactorEvolutionEngine:
 
         round_result.evaluations = evaluations
 
+        # [3.5] Walk-Forward 验证（可选）
+        if self.use_walk_forward and self.walk_forward_validator:
+            for name, eval_data in evaluations.items():
+                # 找到对应的候选因子
+                candidate = next((c for c in candidates if c.get('name') == name), {})
+                fn = candidate.get('function')
+                
+                if fn is not None:
+                    # 使用 Walk-Forward 验证
+                    try:
+                        # 获取价格数据（使用第一个品种的数据）
+                        first_symbol = list(kline_data.keys())[0]
+                        prices = kline_data[first_symbol]['close']
+                        
+                        # 执行 Walk-Forward 验证
+                        wf_result = self.walk_forward_validator.validate(
+                            prices=prices,
+                            factor_func=fn,
+                            param_space={},
+                            optimize_func=lambda p, ps: {}
+                        )
+                        
+                        # 将 Walk-Forward 结果添加到评估数据中
+                        eval_data['walk_forward_pass_rate'] = wf_result.pass_rate
+                        eval_data['walk_forward_oos_sharpe'] = wf_result.avg_oos_sharpe
+                        eval_data['walk_forward_passed'] = wf_result.pass_rate >= 0.5
+                        
+                        logger.info(f"因子 {name} Walk-Forward 验证: "
+                                   f"通过率={wf_result.pass_rate:.2%}, "
+                                   f"OOS Sharpe={wf_result.avg_oos_sharpe:.3f}")
+                    except Exception as e:
+                        logger.warning(f"因子 {name} Walk-Forward 验证失败: {e}")
+                        eval_data['walk_forward_passed'] = False
+
         # [4] 门控决策
         decisions = self.gate.decide_batch(evaluations)
         round_result.decisions = [

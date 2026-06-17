@@ -104,12 +104,13 @@ class TestVolatilityAnchor:
     
     def test_calculate_for_long_position(self):
         """测试多头持仓的止损计算"""
-        # 创建测试数据
+        # 创建测试数据（确保 high > low）
         np.random.seed(42)
         n = 100
+        base = np.cumsum(np.random.randn(n) * 0.5) + 100
         df = pd.DataFrame({
-            'high': np.cumsum(np.random.randn(n) * 0.5) + 100,
-            'low': np.cumsum(np.random.randn(n) * 0.5) + 98
+            'high': base + 1,
+            'low': base - 1
         })
         
         anchor = VolatilityAnchor(window=20, multiplier=2.0)
@@ -123,12 +124,13 @@ class TestVolatilityAnchor:
     
     def test_calculate_for_short_position(self):
         """测试空头持仓的止损计算"""
-        # 创建测试数据
+        # 创建测试数据（确保 high > low）
         np.random.seed(42)
         n = 100
+        base = np.cumsum(np.random.randn(n) * 0.5) + 100
         df = pd.DataFrame({
-            'high': np.cumsum(np.random.randn(n) * 0.5) + 100,
-            'low': np.cumsum(np.random.randn(n) * 0.5) + 98
+            'high': base + 1,
+            'low': base - 1
         })
         
         anchor = VolatilityAnchor(window=20, multiplier=2.0)
@@ -224,12 +226,13 @@ class TestEdgeCases:
         """测试高波动数据"""
         anchor = VolatilityAnchor(window=10)
         
-        # 创建高波动数据
+        # 创建高波动数据（确保 high > low）
         np.random.seed(42)
         n = 50
+        base = np.cumsum(np.random.randn(n) * 5) + 100
         df = pd.DataFrame({
-            'high': np.cumsum(np.random.randn(n) * 5) + 100,
-            'low': np.cumsum(np.random.randn(n) * 5) + 90
+            'high': base + 5,
+            'low': base - 5
         })
         
         result = anchor.calculate(df)
@@ -245,12 +248,13 @@ class TestReasonerIntegration:
     
     def test_anchor_as_reference(self):
         """测试锚点作为参考值"""
-        # 创建测试数据
+        # 创建测试数据（确保 high > low）
         np.random.seed(42)
         n = 100
+        base = np.cumsum(np.random.randn(n) * 0.5) + 100
         df = pd.DataFrame({
-            'high': np.cumsum(np.random.randn(n) * 0.5) + 100,
-            'low': np.cumsum(np.random.randn(n) * 0.5) + 98
+            'high': base + 1,
+            'low': base - 1
         })
         
         anchor = VolatilityAnchor(window=20, multiplier=2.0)

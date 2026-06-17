@@ -52,17 +52,21 @@ class IntentRecognizer:
             ],
             IntentType.ACTION: [
                 {"pattern": r"(扫描|扫描一下|运行扫描)", "action": "scan"},
+                {"pattern": r"(分析|分析一下).*(全部|所有|所有品种)", "action": "scan"},
+                {"pattern": r"(分析|分析一下).*(持仓|仓位).*(健康|状态)", "action": "health_check"},
+                {"pattern": r"(健康度|健康检查|持仓健康)", "action": "health_check"},
                 {"pattern": r"(进化|因子进化|运行进化)", "action": "evolve"},
                 {"pattern": r"(同步|数据同步|更新数据)", "action": "sync"},
                 {"pattern": r"(评估|健康度|检查)", "action": "health_check"},
                 {"pattern": r"(套利|价差|套利分析)", "action": "arbitrage"},
+                {"pattern": r"(给出|提供|生成).*(操作|建议|方案)", "action": "scan"},
             ],
             IntentType.SETTING: [
                 {"pattern": r"(设置|配置|调整).*(参数|配置)", "action": "setting"},
                 {"pattern": r"(开启|启用|关闭).*(功能|模式)", "action": "toggle"},
             ],
             IntentType.ANALYSIS: [
-                {"pattern": r"(分析|深度分析|详细分析)", "action": "analyze"},
+                {"pattern": r"(分析|深度分析|详细分析).*(品种|合约|市场)", "action": "scan"},
                 {"pattern": r"(为什么|原因|解释)", "action": "explain"},
                 {"pattern": r"(预测|预估|预期)", "action": "predict"},
             ],

@@ -111,11 +111,66 @@ def quick_signals() -> str:
         return f"获取信号失败: {e}"
 
 
+def quick_analyze() -> str:
+    """快速分析（简化版扫描）"""
+    try:
+        import json
+        from datetime import datetime
+
+        scan_file = project_root / "data" / "latest_scan.json"
+        if not scan_file.exists():
+            return "暂无扫描结果。请先执行扫描。"
+
+        with open(scan_file, 'r', encoding='utf-8') as f:
+            scan_data = json.load(f)
+
+        signals = scan_data.get('signals', [])
+        scan_time = scan_data.get('timestamp', '未知')
+
+        lines = [f"市场分析（数据时间: {scan_time}）："]
+
+        if not signals:
+            lines.append("当前没有明显信号。")
+        else:
+            # 按方向分组
+            long_signals = [s for s in signals if s.get('direction') == 'LONG']
+            short_signals = [s for s in signals if s.get('direction') == 'SHORT']
+
+            if long_signals:
+                lines.append(f"\n看多信号 ({len(long_signals)} 个):")
+                for signal in long_signals[:5]:
+                    symbol = signal.get('symbol', '未知')
+                    strength = signal.get('strength', '未知')
+                    lines.append(f"- {symbol}: {strength}")
+
+            if short_signals:
+                lines.append(f"\n看空信号 ({len(short_signals)} 个):")
+                for signal in short_signals[:5]:
+                    symbol = signal.get('symbol', '未知')
+                    strength = signal.get('strength', '未知')
+                    lines.append(f"- {symbol}: {strength}")
+
+            # 操作建议
+            lines.append("\n操作建议:")
+            if long_signals:
+                lines.append("- 可关注看多信号品种，等待回调入场")
+            if short_signals:
+                lines.append("- 可关注看空信号品种，等待反弹做空")
+            lines.append("- 严格执行止损，控制仓位风险")
+
+        return "\n".join(lines)
+
+    except Exception as e:
+        return f"分析失败: {e}"
+
+
 # 命令映射
 QUICK_COMMANDS = {
     "status": quick_status,
     "health_check": quick_health_check,
     "signals": quick_signals,
+    "scan": quick_analyze,
+    "analyze": quick_analyze,
 }
 
 

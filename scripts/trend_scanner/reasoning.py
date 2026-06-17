@@ -234,6 +234,10 @@ class ReasoningEngine:
 
     def __init__(self, llm_provider: Optional[LLMProvider] = None):
         self.llm_provider = llm_provider or WorkBuddyAgentProvider()
+        
+        # 波动幅度止损锚点（v6.0 新增）
+        from .volatility_anchor import VolatilityAnchor
+        self.volatility_anchor = VolatilityAnchor(window=20, multiplier=2.0)
 
     def reason(
         self,

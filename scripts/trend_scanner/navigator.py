@@ -12,19 +12,17 @@
 最终决策权始终在交易者手中。
 """
 
-import os
 import time
-from typing import Optional, List
 
 import pandas as pd
 
+from .brief import BriefFormatter, BriefGenerator
 from .context import ContextAssembler
-from .experience import ExperienceMemory
-from .reasoning import ReasoningEngine, LLMProvider, WorkBuddyAgentProvider
-from .brief import BriefGenerator, BriefFormatter
-from .models import TradingBrief, UserFeedback, Experience, MarketContext
 from .data_store import DataStore
 from .evolution_manager import EvolutionManager
+from .experience import ExperienceMemory
+from .models import Experience, MarketContext, TradingBrief, UserFeedback
+from .reasoning import LLMProvider, ReasoningEngine, WorkBuddyAgentProvider
 
 
 class TradingAssistant:
@@ -41,8 +39,8 @@ class TradingAssistant:
 
     def __init__(
         self,
-        llm_provider: Optional[LLMProvider] = None,
-        experience_db: Optional[str] = None,
+        llm_provider: LLMProvider | None = None,
+        experience_db: str | None = None,
         auto_extract_patterns: bool = True,
         enable_evolution: bool = True,
     ):
@@ -68,7 +66,7 @@ class TradingAssistant:
         if enable_evolution:
             self.evolution_manager = EvolutionManager(
                 experience_memory=self.experience_memory,
-                db_path=experience_db.replace('.db', '_evolution.db') if experience_db else 'evolution.db',
+                db_path=experience_db.replace(".db", "_evolution.db") if experience_db else "evolution.db",
             )
         else:
             self.evolution_manager = None
@@ -108,9 +106,7 @@ class TradingAssistant:
             self._cold_start(df, symbol)
 
         # 检索相似经验
-        similar_experiences = self.experience_memory.retrieve(
-            context, top_k=top_k_experiences
-        )
+        similar_experiences = self.experience_memory.retrieve(context, top_k=top_k_experiences)
 
         # 聚合经验
         experience_aggregation = self.experience_memory.aggregate_routes(similar_experiences)
@@ -171,9 +167,7 @@ class TradingAssistant:
         else:
             return BriefFormatter.to_markdown(brief)
 
-    def record_feedback(self, feedback: UserFeedback,
-                        context: MarketContext = None,
-                        brief: TradingBrief = None):
+    def record_feedback(self, feedback: UserFeedback, context: MarketContext = None, brief: TradingBrief = None):
         """
         记录用户反馈
 
@@ -208,19 +202,18 @@ class TradingAssistant:
     def get_experience_stats(self) -> dict:
         """获取经验池统计"""
         stats = {
-            'total_experiences': self.experience_memory.get_experience_count(),
-            'phase_distribution': self.experience_memory.get_phase_distribution(),
+            "total_experiences": self.experience_memory.get_experience_count(),
+            "phase_distribution": self.experience_memory.get_phase_distribution(),
         }
 
         # 添加进化统计
         if self.evolution_manager:
-            stats['evolution'] = self.evolution_manager.get_evolution_status()
-            stats['experience_details'] = self.evolution_manager.get_experience_stats()
+            stats["evolution"] = self.evolution_manager.get_evolution_status()
+            stats["experience_details"] = self.evolution_manager.get_experience_stats()
 
         return stats
 
-    def run_evolution(self, reason: str = "手动触发",
-                      df: pd.DataFrame = None) -> dict:
+    def run_evolution(self, reason: str = "手动触发", df: pd.DataFrame = None) -> dict:
         """
         手动触发进化
 
@@ -232,7 +225,7 @@ class TradingAssistant:
             进化结果
         """
         if not self.evolution_manager:
-            return {'error': '进化功能未启用'}
+            return {"error": "进化功能未启用"}
 
         return self.evolution_manager.run_evolution(reason, df)
 
@@ -247,9 +240,7 @@ class TradingAssistant:
         当经验池为空时，自动从历史K线中提取相似模式，
         作为推理的初始经验来源。
         """
-        count = self.experience_memory.extract_patterns_from_history(
-            df, symbol, window=20, step=5, forward_days=10
-        )
+        count = self.experience_memory.extract_patterns_from_history(df, symbol, window=20, step=5, forward_days=10)
 
 
 class TradingAssistantFactory:
@@ -262,7 +253,7 @@ class TradingAssistantFactory:
     @staticmethod
     def create(
         llm_type: str = "workbuddy",
-        experience_db: Optional[str] = None,
+        experience_db: str | None = None,
         **kwargs,
     ) -> TradingAssistant:
         """
@@ -277,10 +268,11 @@ class TradingAssistantFactory:
             llm_provider = WorkBuddyAgentProvider()
         elif llm_type == "custom":
             from .reasoning import CustomLLMProvider
+
             llm_provider = CustomLLMProvider(
-                api_url=kwargs.get('api_url', ''),
-                api_key=kwargs.get('api_key', ''),
-                model=kwargs.get('model', 'default'),
+                api_url=kwargs.get("api_url", ""),
+                api_key=kwargs.get("api_key", ""),
+                model=kwargs.get("model", "default"),
             )
         else:
             llm_provider = WorkBuddyAgentProvider()
@@ -288,7 +280,7 @@ class TradingAssistantFactory:
         return TradingAssistant(
             llm_provider=llm_provider,
             experience_db=experience_db,
-            auto_extract_patterns=kwargs.get('auto_extract_patterns', True),
+            auto_extract_patterns=kwargs.get("auto_extract_patterns", True),
         )
 
     @staticmethod
@@ -298,7 +290,7 @@ class TradingAssistantFactory:
         **kwargs,
     ) -> TradingAssistant:
         """使用 DataStore 创建交易辅助系统"""
-        db_path = datastore.db_path.replace('.db', '_experience.db')
+        db_path = datastore.db_path.replace(".db", "_experience.db")
         return TradingAssistantFactory.create(
             llm_type=llm_type,
             experience_db=db_path,

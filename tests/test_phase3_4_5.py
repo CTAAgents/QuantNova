@@ -2,28 +2,22 @@
 Phase 3/4/5 测试: 知识锚点 + 分级输出 + 套利分析
 """
 
-import pytest
-import tempfile
 import os
+import tempfile
 from datetime import datetime
-from unittest.mock import MagicMock
-import pandas as pd
-import numpy as np
 
-from trend_scanner.knowledge_anchors import (
-    KnowledgeAnchor, KnowledgeAnchorManager, DEFAULT_ANCHORS
-)
-from trend_scanner.tiered_output import (
-    TieredOutputFormatter, OUTPUT_LEVELS, _SectionFormatter
-)
-from trend_scanner.arbitrage_analyzer import (
-    ArbitrageAnalyzer, SpreadAnalysis, SPREAD_PAIRS
-)
+import numpy as np
+import pandas as pd
+
+from trend_scanner.arbitrage_analyzer import ArbitrageAnalyzer, SpreadAnalysis
+from trend_scanner.knowledge_anchors import DEFAULT_ANCHORS, KnowledgeAnchor, KnowledgeAnchorManager
+from trend_scanner.tiered_output import TieredOutputFormatter, _SectionFormatter
 
 
 # ===========================================================================
 # 知识锚点测试
 # ===========================================================================
+
 
 class TestKnowledgeAnchor:
     def test_default_anchors_count(self):
@@ -131,6 +125,7 @@ class TestKnowledgeAnchorManager:
 # 分级输出测试
 # ===========================================================================
 
+
 class TestTieredOutputFormatter:
     def setup_method(self):
         self.formatter = TieredOutputFormatter()
@@ -140,10 +135,16 @@ class TestTieredOutputFormatter:
             "confidence": 0.72,
             "trend_phase": "TREND_UP",
             "indicators": {
-                "er": 0.65, "tsi": 25.3, "r_squared": 0.45,
-                "hurst": 0.58, "trend_strength_composite": 0.68,
-                "rsi": 58, "adx": 32, "macd_hist": 15,
-                "atr_14": 45, "bb_bandwidth": 0.03,
+                "er": 0.65,
+                "tsi": 25.3,
+                "r_squared": 0.45,
+                "hurst": 0.58,
+                "trend_strength_composite": 0.68,
+                "rsi": 58,
+                "adx": 32,
+                "macd_hist": 15,
+                "atr_14": 45,
+                "bb_bandwidth": 0.03,
             },
             "operation_plans": [
                 {"action": "LONG", "reason": "趋势确认", "position": "30%", "stop_loss": "3500"},
@@ -198,8 +199,13 @@ class TestTieredOutputFormatter:
         assert "60%" in text
 
     def test_section_formatter_one_liner(self):
-        ctx = {"symbol": "JM", "direction": "HOLD", "confidence": 0.3, "trend_phase": "RANGE",
-               "indicators": {"er": 0.2}}
+        ctx = {
+            "symbol": "JM",
+            "direction": "HOLD",
+            "confidence": 0.3,
+            "trend_phase": "RANGE",
+            "indicators": {"er": 0.2},
+        }
         text = _SectionFormatter.format_one_liner(ctx)
         assert "观望" in text
         assert "ER=" in text
@@ -208,6 +214,7 @@ class TestTieredOutputFormatter:
 # ===========================================================================
 # 套利分析测试
 # ===========================================================================
+
 
 class TestArbitrageAnalyzer:
     def setup_method(self):
@@ -226,17 +233,21 @@ class TestArbitrageAnalyzer:
     def test_analyze_spread_basic(self):
         # 生成模拟数据
         np.random.seed(42)
-        dates = pd.date_range('2026-01-01', periods=100)
-        near_df = pd.DataFrame({
-            'date': dates,
-            'close': 3500 + np.cumsum(np.random.randn(100) * 10),
-        })
-        far_df = pd.DataFrame({
-            'date': dates,
-            'close': 3550 + np.cumsum(np.random.randn(100) * 10),
-        })
-        near_df.attrs['symbol'] = 'RB'
-        far_df.attrs['symbol'] = 'RB2601'
+        dates = pd.date_range("2026-01-01", periods=100)
+        near_df = pd.DataFrame(
+            {
+                "date": dates,
+                "close": 3500 + np.cumsum(np.random.randn(100) * 10),
+            }
+        )
+        far_df = pd.DataFrame(
+            {
+                "date": dates,
+                "close": 3550 + np.cumsum(np.random.randn(100) * 10),
+            }
+        )
+        near_df.attrs["symbol"] = "RB"
+        far_df.attrs["symbol"] = "RB2601"
 
         result = self.analyzer.analyze_spread(near_df, far_df, "test_spread", "测试价差")
         assert isinstance(result, SpreadAnalysis)
@@ -246,33 +257,46 @@ class TestArbitrageAnalyzer:
 
     def test_analyze_spread_ratio(self):
         np.random.seed(42)
-        dates = pd.date_range('2026-01-01', periods=100)
-        near_df = pd.DataFrame({
-            'date': dates,
-            'close': 3500 + np.cumsum(np.random.randn(100) * 10),
-        })
-        far_df = pd.DataFrame({
-            'date': dates,
-            'close': 800 + np.cumsum(np.random.randn(100) * 5),
-        })
+        dates = pd.date_range("2026-01-01", periods=100)
+        near_df = pd.DataFrame(
+            {
+                "date": dates,
+                "close": 3500 + np.cumsum(np.random.randn(100) * 10),
+            }
+        )
+        far_df = pd.DataFrame(
+            {
+                "date": dates,
+                "close": 800 + np.cumsum(np.random.randn(100) * 5),
+            }
+        )
 
         result = self.analyzer.analyze_spread(near_df, far_df, "rb_i_ratio", "螺纹/铁矿比价", is_ratio=True)
         assert result.spread > 0
 
     def test_analyze_insufficient_data(self):
-        near_df = pd.DataFrame({'date': pd.date_range('2026-01-01', periods=5), 'close': [100]*5})
-        far_df = pd.DataFrame({'date': pd.date_range('2026-01-01', periods=5), 'close': [105]*5})
+        near_df = pd.DataFrame({"date": pd.date_range("2026-01-01", periods=5), "close": [100] * 5})
+        far_df = pd.DataFrame({"date": pd.date_range("2026-01-01", periods=5), "close": [105] * 5})
         result = self.analyzer.analyze_spread(near_df, far_df)
         assert result.signal == "NEUTRAL"
 
     def test_format_brief(self):
         results = [
             SpreadAnalysis(
-                pair_name="test", near_symbol="RB", far_symbol="I",
-                description="螺纹-铁矿", spread=0.25, spread_ma20=0.2,
-                spread_std=0.05, z_score=2.5, spread_percentile=95,
-                is_cointegrated=True, coint_pvalue=0.03, half_life=12,
-                signal="SHORT_SPREAD", signal_strength=0.8,
+                pair_name="test",
+                near_symbol="RB",
+                far_symbol="I",
+                description="螺纹-铁矿",
+                spread=0.25,
+                spread_ma20=0.2,
+                spread_std=0.05,
+                z_score=2.5,
+                spread_percentile=95,
+                is_cointegrated=True,
+                coint_pvalue=0.03,
+                half_life=12,
+                signal="SHORT_SPREAD",
+                signal_strength=0.8,
                 reason="Z-Score=2.5，价差显著偏高",
             )
         ]
@@ -286,11 +310,21 @@ class TestArbitrageAnalyzer:
 
     def test_spread_analysis_to_dict(self):
         r = SpreadAnalysis(
-            pair_name="test", near_symbol="RB", far_symbol="HC",
-            description="test", spread=10, spread_ma20=8,
-            spread_std=2, z_score=1.0, spread_percentile=75,
-            is_cointegrated=False, coint_pvalue=0.1, half_life=0,
-            signal="NEUTRAL", signal_strength=0, reason="test",
+            pair_name="test",
+            near_symbol="RB",
+            far_symbol="HC",
+            description="test",
+            spread=10,
+            spread_ma20=8,
+            spread_std=2,
+            z_score=1.0,
+            spread_percentile=75,
+            is_cointegrated=False,
+            coint_pvalue=0.1,
+            half_life=0,
+            signal="NEUTRAL",
+            signal_strength=0,
+            reason="test",
         )
         d = r.to_dict()
         assert d["pair_name"] == "test"
@@ -300,35 +334,36 @@ class TestArbitrageAnalyzer:
         """Z-Score < -2 应生成 LONG_SPREAD"""
         np.random.seed(42)
         # 构造价差序列：近期价差突然大幅下降
-        spread = np.concatenate([
-            np.random.randn(50) * 0.1 + 0,     # 正常波动
-            np.random.randn(20) * 0.1 - 0.5,    # 急跌
-        ])
+        spread = np.concatenate(
+            [
+                np.random.randn(50) * 0.1 + 0,  # 正常波动
+                np.random.randn(20) * 0.1 - 0.5,  # 急跌
+            ]
+        )
         z_score = (spread[-1] - np.mean(spread[-20:])) / np.std(spread[-20:])
         # z_score 应该 < -2
         if z_score < -2:
-            signal, strength, reason = self.analyzer._generate_signal(
-                z_score, 5, False, 0, False
-            )
+            signal, strength, reason = self.analyzer._generate_signal(z_score, 5, False, 0, False)
             assert signal == "LONG_SPREAD"
 
     def test_signal_generation_short_spread(self):
         """Z-Score > 2 应生成 SHORT_SPREAD"""
-        spread = np.concatenate([
-            np.random.randn(50) * 0.1 + 0,
-            np.random.randn(20) * 0.1 + 0.5,
-        ])
+        spread = np.concatenate(
+            [
+                np.random.randn(50) * 0.1 + 0,
+                np.random.randn(20) * 0.1 + 0.5,
+            ]
+        )
         z_score = (spread[-1] - np.mean(spread[-20:])) / np.std(spread[-20:])
         if z_score > 2:
-            signal, strength, reason = self.analyzer._generate_signal(
-                z_score, 95, False, 0, False
-            )
+            signal, strength, reason = self.analyzer._generate_signal(z_score, 95, False, 0, False)
             assert signal == "SHORT_SPREAD"
 
 
 # ===========================================================================
 # 跨模块集成测试
 # ===========================================================================
+
 
 class TestCrossModuleIntegration:
     def test_knowledge_anchor_in_factor_generator(self):
@@ -368,8 +403,4 @@ class TestCrossModuleIntegration:
 
     def test_all_modules_importable(self):
         """所有新模块可正常导入"""
-        from trend_scanner.knowledge_anchors import KnowledgeAnchorManager
-        from trend_scanner.tiered_output import TieredOutputFormatter
-        from trend_scanner.arbitrage_analyzer import ArbitrageAnalyzer
-        from trend_scanner.unified_data_router import UnifiedDataRouter
         assert True

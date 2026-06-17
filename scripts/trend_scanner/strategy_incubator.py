@@ -28,27 +28,27 @@ StrategyIncubator — 策略孵化模块 v1.0
 """
 
 import json
+import logging
 import os
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any
-from pathlib import Path
-import logging
+from datetime import datetime
 
-import pandas as pd
 import numpy as np
+
 
 logger = logging.getLogger(__name__)
 
 
 # ===================== 数据模型 =====================
 
+
 @dataclass
 class IncubationSession:
     """孵化会话"""
+
     strategy_id: str
     start_time: datetime
-    end_time: Optional[datetime] = None
+    end_time: datetime | None = None
     status: str = "active"  # "active" | "completed" | "failed"
 
     # 回测预期指标
@@ -58,13 +58,13 @@ class IncubationSession:
     expected_annual_return: float = 0.0
 
     # 实盘记录
-    actual_signals: List[Dict] = field(default_factory=list)
+    actual_signals: list[dict] = field(default_factory=list)
 
     # 配置
     incubation_days: int = 90
     max_deviation: float = 0.3  # 最大允许偏差 (30%)
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         return {
             "strategy_id": self.strategy_id,
             "start_time": self.start_time.isoformat(),
@@ -85,17 +85,18 @@ class IncubationSession:
 @dataclass
 class IncubationResult:
     """孵化评估结果"""
+
     strategy_id: str
     passed: bool
     signal_consistency: float  # 信号一致性 (0-1)
-    latency_avg: float         # 平均信号延迟（秒）
-    deviation_sharpe: float    # 夏普偏差
+    latency_avg: float  # 平均信号延迟（秒）
+    deviation_sharpe: float  # 夏普偏差
     deviation_win_rate: float  # 胜率偏差
     deviation_drawdown: float  # 回撤偏差
-    recommendation: str        # "approve" | "reject" | "extend"
+    recommendation: str  # "approve" | "reject" | "extend"
     details: str
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         return {
             "strategy_id": self.strategy_id,
             "passed": self.passed,
@@ -113,6 +114,7 @@ class IncubationResult:
 
 # ===================== 孵化器 =====================
 
+
 class StrategyIncubator:
     """
     策略孵化器
@@ -120,9 +122,7 @@ class StrategyIncubator:
     管理多个策略的孵化会话，记录实盘信号，评估回测 vs 实盘偏差。
     """
 
-    def __init__(self, storage_path: str = None,
-                 default_incubation_days: int = 90,
-                 default_max_deviation: float = 0.3):
+    def __init__(self, storage_path: str = None, default_incubation_days: int = 90, default_max_deviation: float = 0.3):
         """
         参数:
             storage_path: 孵化数据存储路径（JSON）
@@ -130,20 +130,18 @@ class StrategyIncubator:
             default_max_deviation: 默认最大允许偏差
         """
         self.storage_path = storage_path or os.path.join(
-            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-            "data", "incubation_sessions.json"
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "incubation_sessions.json"
         )
         self.default_incubation_days = default_incubation_days
         self.default_max_deviation = default_max_deviation
 
         # 内存中的会话 {strategy_id: IncubationSession}
-        self._sessions: Dict[str, IncubationSession] = {}
+        self._sessions: dict[str, IncubationSession] = {}
 
         # 加载已有会话
         self._load_sessions()
 
-    def start_incubation(self, strategy_id: str,
-                          strategy_config: Dict) -> IncubationSession:
+    def start_incubation(self, strategy_id: str, strategy_config: dict) -> IncubationSession:
         """
         开始孵化会话
 
@@ -181,16 +179,20 @@ class StrategyIncubator:
         self._sessions[strategy_id] = session
         self._save_sessions()
 
-        logger.info(f"开始孵化策略 {strategy_id}，预期夏普={session.expected_sharpe:.2f}，"
-                    f"孵化期={session.incubation_days}天")
+        logger.info(
+            f"开始孵化策略 {strategy_id}，预期夏普={session.expected_sharpe:.2f}，孵化期={session.incubation_days}天"
+        )
 
         return session
 
-    def record_signal(self, strategy_id: str,
-                       timestamp: datetime,
-                       signal: float,
-                       market_state: Dict = None,
-                       expected_signal: float = None) -> None:
+    def record_signal(
+        self,
+        strategy_id: str,
+        timestamp: datetime,
+        signal: float,
+        market_state: dict = None,
+        expected_signal: float = None,
+    ) -> None:
         """
         记录实盘信号
 
@@ -267,11 +269,15 @@ class StrategyIncubator:
             )
 
         # 信号一致性
-        expected_signals = [s.get("expected_signal") for s in session.actual_signals
-                           if s.get("expected_signal") is not None]
+        expected_signals = [
+            s.get("expected_signal") for s in session.actual_signals if s.get("expected_signal") is not None
+        ]
         if expected_signals and len(expected_signals) == len(signals):
-            matches = sum(1 for e, a in zip(expected_signals, signals)
-                         if (e > 0 and a > 0) or (e < 0 and a < 0) or (e == 0 and a == 0))
+            matches = sum(
+                1
+                for e, a in zip(expected_signals, signals)
+                if (e > 0 and a > 0) or (e < 0 and a < 0) or (e == 0 and a == 0)
+            )
             signal_consistency = matches / len(signals)
         else:
             # 无预期信号时，用信号方向一致性估算
@@ -298,23 +304,24 @@ class StrategyIncubator:
 
         # 判断是否通过
         max_dev = session.max_deviation
-        passed = (deviation_sharpe <= max_dev and
-                  deviation_win_rate <= max_dev and
-                  signal_consistency >= 0.5)
+        passed = deviation_sharpe <= max_dev and deviation_win_rate <= max_dev and signal_consistency >= 0.5
 
         # 生成建议
         if passed:
             recommendation = "approve"
-            details = (f"孵化通过：信号一致性={signal_consistency:.2f}，"
-                      f"夏普偏差={deviation_sharpe:.2f}，胜率偏差={deviation_win_rate:.2f}")
+            details = (
+                f"孵化通过：信号一致性={signal_consistency:.2f}，"
+                f"夏普偏差={deviation_sharpe:.2f}，胜率偏差={deviation_win_rate:.2f}"
+            )
         elif days_elapsed < session.incubation_days:
             recommendation = "extend"
-            details = (f"建议延长孵化：信号一致性={signal_consistency:.2f}，"
-                      f"偏差较大但孵化期不足")
+            details = f"建议延长孵化：信号一致性={signal_consistency:.2f}，偏差较大但孵化期不足"
         else:
             recommendation = "reject"
-            details = (f"孵化失败：信号一致性={signal_consistency:.2f}，"
-                      f"夏普偏差={deviation_sharpe:.2f}，胜率偏差={deviation_win_rate:.2f}")
+            details = (
+                f"孵化失败：信号一致性={signal_consistency:.2f}，"
+                f"夏普偏差={deviation_sharpe:.2f}，胜率偏差={deviation_win_rate:.2f}"
+            )
 
         # 更新会话状态
         session.end_time = datetime.now()
@@ -333,15 +340,15 @@ class StrategyIncubator:
             details=details,
         )
 
-    def get_session(self, strategy_id: str) -> Optional[IncubationSession]:
+    def get_session(self, strategy_id: str) -> IncubationSession | None:
         """获取策略的孵化会话"""
         return self._sessions.get(strategy_id)
 
-    def get_all_sessions(self) -> List[IncubationSession]:
+    def get_all_sessions(self) -> list[IncubationSession]:
         """获取所有孵化会话"""
         return list(self._sessions.values())
 
-    def get_active_sessions(self) -> List[IncubationSession]:
+    def get_active_sessions(self) -> list[IncubationSession]:
         """获取所有活跃的孵化会话"""
         return [s for s in self._sessions.values() if s.status == "active"]
 
@@ -358,7 +365,7 @@ class StrategyIncubator:
         """从文件加载会话"""
         if os.path.exists(self.storage_path):
             try:
-                with open(self.storage_path, 'r', encoding='utf-8') as f:
+                with open(self.storage_path, encoding="utf-8") as f:
                     data = json.load(f)
                 for sid, sdata in data.items():
                     session = IncubationSession(
@@ -387,7 +394,7 @@ class StrategyIncubator:
                 data[sid] = session.to_dict()
                 data[sid]["actual_signals"] = session.actual_signals
 
-            with open(self.storage_path, 'w', encoding='utf-8') as f:
+            with open(self.storage_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
         except Exception as e:
             logger.warning(f"保存孵化会话失败: {e}")

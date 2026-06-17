@@ -13,11 +13,10 @@
     output = formatter.format(market_context, level="standard")
 """
 
-import json
 import logging
-from dataclasses import dataclass, field
-from typing import Optional, List, Dict, Any
 from datetime import datetime
+from typing import Any
+
 
 logger = logging.getLogger(__name__)
 
@@ -31,9 +30,18 @@ OUTPUT_LEVELS = {
         "name": "正式报告",
         "description": "完整分析报告，包含所有维度、因子验证、风险评估",
         "max_length": 8000,
-        "sections": ["summary", "market_state", "indicator_detail", "multi_dimension",
-                      "factor_validation", "basis_seasonality", "risk_assessment",
-                      "arbitrage", "operation_plans", "disclaimer"],
+        "sections": [
+            "summary",
+            "market_state",
+            "indicator_detail",
+            "multi_dimension",
+            "factor_validation",
+            "basis_seasonality",
+            "risk_assessment",
+            "arbitrage",
+            "operation_plans",
+            "disclaimer",
+        ],
     },
     "standard": {
         "name": "标准简报",
@@ -54,11 +62,12 @@ OUTPUT_LEVELS = {
 # 输出节格式化器
 # ---------------------------------------------------------------------------
 
+
 class _SectionFormatter:
     """节格式化器 — 将各类数据格式化为 Markdown 节"""
 
     @staticmethod
-    def format_summary(ctx: Dict) -> str:
+    def format_summary(ctx: dict) -> str:
         """摘要节"""
         parts = []
         symbol = ctx.get("symbol", "未知品种")
@@ -72,7 +81,7 @@ class _SectionFormatter:
         return "\n".join(parts)
 
     @staticmethod
-    def format_market_state(ctx: Dict) -> str:
+    def format_market_state(ctx: dict) -> str:
         """市场状态节"""
         parts = []
         parts.append("## 市场状态")
@@ -90,7 +99,9 @@ class _SectionFormatter:
             parts.append(f"- ER: {er:.3f} ({'趋势' if er > 0.6 else '震荡' if er < 0.3 else '弱趋势'})")
             parts.append(f"- TSI: {tsi:.1f} ({'多头' if tsi > 20 else '空头' if tsi < -20 else '中性'})")
             parts.append(f"- R²: {r2:.3f}")
-            parts.append(f"- Hurst: {hurst:.3f} ({'趋势持续' if hurst > 0.55 else '均值回归' if hurst < 0.45 else '随机'})")
+            parts.append(
+                f"- Hurst: {hurst:.3f} ({'趋势持续' if hurst > 0.55 else '均值回归' if hurst < 0.45 else '随机'})"
+            )
             parts.append(f"- 复合趋势强度: {trend_strength:.3f}")
             parts.append(f"- RSI: {rsi:.1f}")
             parts.append(f"- ADX: {adx:.1f}")
@@ -98,7 +109,7 @@ class _SectionFormatter:
         return "\n".join(parts)
 
     @staticmethod
-    def format_indicator_detail(ctx: Dict) -> str:
+    def format_indicator_detail(ctx: dict) -> str:
         """指标详情节（仅 formal）"""
         parts = []
         parts.append("## 指标详情")
@@ -122,7 +133,7 @@ class _SectionFormatter:
         return "\n".join(parts)
 
     @staticmethod
-    def format_multi_dimension(ctx: Dict) -> str:
+    def format_multi_dimension(ctx: dict) -> str:
         """多维度评分节"""
         parts = []
         parts.append("## 多维度评分")
@@ -138,7 +149,7 @@ class _SectionFormatter:
         return "\n".join(parts)
 
     @staticmethod
-    def format_basis_seasonality(ctx: Dict) -> str:
+    def format_basis_seasonality(ctx: dict) -> str:
         """基差与季节性节"""
         parts = []
         parts.append("## 基差与季节性")
@@ -146,14 +157,14 @@ class _SectionFormatter:
         basis = ctx.get("basis")
         if basis and basis.get("ok"):
             bd = basis.get("data", {})
-            parts.append(f"### 基差")
+            parts.append("### 基差")
             parts.append(f"- 现货: {bd.get('spot_price', 'N/A')} | 期货: {bd.get('futures_price', 'N/A')}")
             parts.append(f"- 基差: {bd.get('basis', 'N/A')} (基差率 {bd.get('basis_rate', 'N/A')}%)")
 
         seasonality = ctx.get("seasonality")
         if seasonality and seasonality.get("ok"):
             sd = seasonality.get("data", {})
-            parts.append(f"### 季节性")
+            parts.append("### 季节性")
             parts.append(f"- 当前月份信号: {sd.get('current_month_signal', 0):+.2f}%")
             parts.append(f"- 上涨概率: {sd.get('current_month_pos_rate', 0):.0f}%")
             if sd.get("strong_months"):
@@ -165,7 +176,7 @@ class _SectionFormatter:
         return "\n".join(parts)
 
     @staticmethod
-    def format_operation_plans(ctx: Dict) -> str:
+    def format_operation_plans(ctx: dict) -> str:
         """操作方案节"""
         parts = []
         parts.append("## 操作方案")
@@ -194,7 +205,7 @@ class _SectionFormatter:
         return "\n".join(parts)
 
     @staticmethod
-    def format_risk_brief(ctx: Dict) -> str:
+    def format_risk_brief(ctx: dict) -> str:
         """风险简报节"""
         parts = []
         parts.append("## 风险提示")
@@ -209,7 +220,7 @@ class _SectionFormatter:
         return "\n".join(parts)
 
     @staticmethod
-    def format_risk_assessment(ctx: Dict) -> str:
+    def format_risk_assessment(ctx: dict) -> str:
         """风险评估节（formal 详细版）"""
         parts = []
         parts.append("## 风险评估")
@@ -222,7 +233,7 @@ class _SectionFormatter:
         # 波动率锚点
         anchor = ctx.get("volatility_anchor")
         if anchor:
-            parts.append(f"\n### 波动幅度止损锚点")
+            parts.append("\n### 波动幅度止损锚点")
             parts.append(f"- 当前价格: {anchor.get('current_price', 'N/A')}")
             parts.append(f"- 多头止损参考: {anchor.get('long_stop_loss', 'N/A')}")
             parts.append(f"- 空头止损参考: {anchor.get('short_stop_loss', 'N/A')}")
@@ -230,7 +241,7 @@ class _SectionFormatter:
         return "\n".join(parts)
 
     @staticmethod
-    def format_arbitrage(ctx: Dict) -> str:
+    def format_arbitrage(ctx: dict) -> str:
         """套利分析节"""
         parts = []
         parts.append("## 套利分析")
@@ -247,7 +258,7 @@ class _SectionFormatter:
         return "\n".join(parts)
 
     @staticmethod
-    def format_one_liner(ctx: Dict) -> str:
+    def format_one_liner(ctx: dict) -> str:
         """一句话摘要"""
         symbol = ctx.get("symbol", "品种")
         direction = ctx.get("direction", "观望")
@@ -263,7 +274,7 @@ class _SectionFormatter:
             return f"{symbol}: 观望 | 置信度{confidence:.0%} | {trend_phase} | ER={er:.2f}"
 
     @staticmethod
-    def format_disclaimer(ctx: Dict) -> str:
+    def format_disclaimer(ctx: dict) -> str:
         """免责声明"""
         return (
             "---\n\n"
@@ -276,6 +287,7 @@ class _SectionFormatter:
 # TieredOutputFormatter
 # ---------------------------------------------------------------------------
 
+
 class TieredOutputFormatter:
     """分级输出格式化器
 
@@ -286,7 +298,7 @@ class TieredOutputFormatter:
         self._default_level = default_level
         self._formatter = _SectionFormatter()
 
-    def format(self, market_context: Dict[str, Any], level: str = None) -> str:
+    def format(self, market_context: dict[str, Any], level: str = None) -> str:
         """格式化市场上下文为指定级别的输出
 
         参数:
@@ -337,7 +349,7 @@ class TieredOutputFormatter:
 
         return "\n".join(parts).strip()
 
-    def format_json(self, market_context: Dict[str, Any], level: str = None) -> Dict[str, Any]:
+    def format_json(self, market_context: dict[str, Any], level: str = None) -> dict[str, Any]:
         """JSON 格式输出（供 API/前端消费）"""
         level = level or self._default_level
         level_config = OUTPUT_LEVELS.get(level, OUTPUT_LEVELS["standard"])
@@ -355,6 +367,6 @@ class TieredOutputFormatter:
         }
 
     @staticmethod
-    def get_available_levels() -> Dict[str, str]:
+    def get_available_levels() -> dict[str, str]:
         """获取可用输出级别"""
         return {k: v["name"] for k, v in OUTPUT_LEVELS.items()}

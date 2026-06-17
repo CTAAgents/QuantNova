@@ -29,50 +29,34 @@
 - SilentBypassDetector: 静默旁路检测器
 """
 
-from typing import Dict, List, Optional, Tuple, Callable, Any
 from collections import defaultdict
 from datetime import datetime
-import pandas as pd
-import numpy as np
+from typing import Any
 
-from .trajectory_analysis import (
-    TradeTrajectoryAnalyzer,
-    TradeFaultAttributor,
-    StrategyAdapter,
-    TradeTrajectory,
-    Fault,
-    AdaptationProposal,
-    AdaptationStatus,
-)
-from .trade_journal import (
-    TradeJournal,
-    PatternDetector,
-    RulePromoter,
-    TradeJournalEntry,
-    RecurringPattern,
-    StrategyRule,
-    EntryCategory,
-)
-from .skill_reflection import (
-    SkillAwareReflector,
-    SkillReflection,
-    EvidenceType,
-    RevisionAction,
-)
+import numpy as np
+import pandas as pd
+
 from .meta_skill_engine import (
     MetaSkillEngine,
-    GeneratedSkill,
-    SkillGenerationPhase,
 )
 from .overfitting_audit import (
     OverfittingAuditor,
-    AuditCheckType,
-    AuditSeverity,
 )
 from .silent_bypass_detector import (
     SilentBypassDetector,
-    BypassReason,
-    ActionRecommendation,
+)
+from .skill_reflection import (
+    SkillAwareReflector,
+)
+from .trade_journal import (
+    PatternDetector,
+    RulePromoter,
+    TradeJournal,
+)
+from .trajectory_analysis import (
+    StrategyAdapter,
+    TradeFaultAttributor,
+    TradeTrajectoryAnalyzer,
 )
 
 
@@ -83,12 +67,12 @@ class SelfMonitor:
     增强版：集成轨迹分析和故障归因
     """
 
-    def __init__(self, trades: List[Any]):
+    def __init__(self, trades: list[Any]):
         self.trades = trades
         self.trajectory_analyzer = TradeTrajectoryAnalyzer()
         self.fault_attributor = TradeFaultAttributor()
 
-    def analyze_trade_trajectories(self) -> Dict[str, Any]:
+    def analyze_trade_trajectories(self) -> dict[str, Any]:
         """
         分析所有交易的轨迹
 
@@ -97,9 +81,9 @@ class SelfMonitor:
         """
         trajectories = []
         fault_summary = {
-            'total_faults': 0,
-            'fault_types': defaultdict(int),
-            'strategy_responsibility': defaultdict(float),
+            "total_faults": 0,
+            "fault_types": defaultdict(int),
+            "strategy_responsibility": defaultdict(float),
         }
 
         for trade in self.trades:
@@ -113,33 +97,31 @@ class SelfMonitor:
             # 故障归因（仅对亏损交易）
             if trade.pnl < 0:
                 fault_result = self.fault_attributor.attribute(trajectory)
-                if fault_result['has_fault']:
-                    fault_summary['total_faults'] += len(fault_result['faults'])
-                    for fault in fault_result['faults']:
-                        fault_summary['fault_types'][fault.fault_type.value] += 1
-                    for strategy, score in fault_result['strategy_responsibility'].items():
-                        fault_summary['strategy_responsibility'][strategy] += score
+                if fault_result["has_fault"]:
+                    fault_summary["total_faults"] += len(fault_result["faults"])
+                    for fault in fault_result["faults"]:
+                        fault_summary["fault_types"][fault.fault_type.value] += 1
+                    for strategy, score in fault_result["strategy_responsibility"].items():
+                        fault_summary["strategy_responsibility"][strategy] += score
 
         # 归一化策略责任分数
-        total_resp = sum(fault_summary['strategy_responsibility'].values())
+        total_resp = sum(fault_summary["strategy_responsibility"].values())
         if total_resp > 0:
-            fault_summary['strategy_responsibility'] = {
-                k: v / total_resp
-                for k, v in fault_summary['strategy_responsibility'].items()
+            fault_summary["strategy_responsibility"] = {
+                k: v / total_resp for k, v in fault_summary["strategy_responsibility"].items()
             }
 
         return {
-            'trajectory_count': len(trajectories),
-            'avg_quality_score': np.mean([
-                a['metrics'].get('quality_score', 0)
-                for a in trajectories
-            ]) if trajectories else 0,
-            'fault_summary': dict(fault_summary['fault_types']),
-            'strategy_responsibility': dict(fault_summary['strategy_responsibility']),
-            'total_faults': fault_summary['total_faults'],
+            "trajectory_count": len(trajectories),
+            "avg_quality_score": np.mean([a["metrics"].get("quality_score", 0) for a in trajectories])
+            if trajectories
+            else 0,
+            "fault_summary": dict(fault_summary["fault_types"]),
+            "strategy_responsibility": dict(fault_summary["strategy_responsibility"]),
+            "total_faults": fault_summary["total_faults"],
         }
 
-    def generate_enhanced_report(self, symbol: str = "UNKNOWN") -> Dict[str, Any]:
+    def generate_enhanced_report(self, symbol: str = "UNKNOWN") -> dict[str, Any]:
         """
         生成增强版诊断报告（集成轨迹分析）
 
@@ -150,26 +132,29 @@ class SelfMonitor:
         trajectory_analysis = self.analyze_trade_trajectories()
 
         return {
-            'report_type': 'ENHANCED_SELF_DIAGNOSIS',
-            'symbol': symbol,
-            'total_trades': len(self.trades),
-            'trajectory_analysis': trajectory_analysis,
-            'timestamp': datetime.now().isoformat(),
+            "report_type": "ENHANCED_SELF_DIAGNOSIS",
+            "symbol": symbol,
+            "total_trades": len(self.trades),
+            "trajectory_analysis": trajectory_analysis,
+            "timestamp": datetime.now().isoformat(),
         }
 
 
 class WalkForwardOptimizer:
     """Walk-Forward参数优化（防过拟合）"""
+
     pass
 
 
 class StrategyWeightAdjuster:
     """策略权重自适应调整"""
+
     pass
 
 
 class OverfittingGuard:
     """过拟合防护守卫 — 5道防线"""
+
     pass
 
 
@@ -219,9 +204,9 @@ class EnhancedEvolutionEngine:
         self.overfitting_auditor = OverfittingAuditor()
         self.silent_bypass_detector = SilentBypassDetector()
 
-    def run_enhanced_evolution(self, trades: List[Any],
-                              current_config: Dict[str, Any],
-                              df: pd.DataFrame = None) -> Dict[str, Any]:
+    def run_enhanced_evolution(
+        self, trades: list[Any], current_config: dict[str, Any], df: pd.DataFrame = None
+    ) -> dict[str, Any]:
         """
         执行增强版进化流程
 
@@ -234,14 +219,14 @@ class EnhancedEvolutionEngine:
             进化结果
         """
         result = {
-            'proposals': [],
-            'journal_entries': [],
-            'patterns': [],
-            'rules': [],
-            'reflections': [],
-            'audit_report': None,
-            'bypass_report': None,
-            'applied_config': current_config,
+            "proposals": [],
+            "journal_entries": [],
+            "patterns": [],
+            "rules": [],
+            "reflections": [],
+            "audit_report": None,
+            "bypass_report": None,
+            "applied_config": current_config,
         }
 
         if not trades:
@@ -258,36 +243,32 @@ class EnhancedEvolutionEngine:
 
             # 故障归因
             fault_result = self.fault_attributor.attribute(trajectory)
-            if fault_result['has_fault']:
-                all_faults.extend(fault_result['faults'])
+            if fault_result["has_fault"]:
+                all_faults.extend(fault_result["faults"])
 
                 # 生成适应性提案
-                proposals = self.strategy_adapter.generate_proposals(
-                    fault_result, current_config
-                )
+                proposals = self.strategy_adapter.generate_proposals(fault_result, current_config)
                 all_proposals.extend(proposals)
 
             # 记录交易日志
-            journal_entry = self.trade_journal.log_trade_lesson(
-                trade, fault_result
-            )
-            result['journal_entries'].append(journal_entry)
+            journal_entry = self.trade_journal.log_trade_lesson(trade, fault_result)
+            result["journal_entries"].append(journal_entry)
 
             # 技能感知反思 (EmbodiSkill)
             reflection = self.skill_reflector.reflect_on_trade(
                 trade,
-                trajectory_analysis={'trajectory': trajectory, 'metrics': {}},
+                trajectory_analysis={"trajectory": trajectory, "metrics": {}},
                 fault_attribution=fault_result,
             )
-            result['reflections'].append(reflection)
+            result["reflections"].append(reflection)
 
         # 2. 检测重复模式
         patterns = self.pattern_detector.detect_patterns(self.trade_journal)
-        result['patterns'] = patterns
+        result["patterns"] = patterns
 
         # 3. 晋升规则
         new_rules = self.rule_promoter.promote_patterns(patterns)
-        result['rules'] = new_rules
+        result["rules"] = new_rules
 
         # 4. 过拟合审计 (SkillEvolver)
         audit_report = self.overfitting_auditor.audit_skill(
@@ -295,34 +276,30 @@ class EnhancedEvolutionEngine:
             skill_name="当前策略配置",
             trades=trades,
         )
-        result['audit_report'] = audit_report
+        result["audit_report"] = audit_report
 
         # 5. 静默旁路检测 (SkillEvolver)
         bypass_report = self.silent_bypass_detector.detect(trades)
-        result['bypass_report'] = bypass_report
+        result["bypass_report"] = bypass_report
 
         # 6. 应用通过验证的提案（简化版：直接应用高置信度提案）
         applied_proposals = []
         for proposal in all_proposals:
             if proposal.adaptation_type == "weight":
                 # 权重调整直接应用
-                current_config = self.strategy_adapter.apply_proposal(
-                    proposal, current_config
-                )
+                current_config = self.strategy_adapter.apply_proposal(proposal, current_config)
                 applied_proposals.append(proposal)
             elif proposal.adaptation_type == "parameter":
                 # 参数调整需要更多验证，这里简化处理
-                current_config = self.strategy_adapter.apply_proposal(
-                    proposal, current_config
-                )
+                current_config = self.strategy_adapter.apply_proposal(proposal, current_config)
                 applied_proposals.append(proposal)
 
-        result['proposals'] = applied_proposals
-        result['applied_config'] = current_config
+        result["proposals"] = applied_proposals
+        result["applied_config"] = current_config
 
         return result
 
-    def generate_review_report(self, symbol: str = None) -> Dict[str, Any]:
+    def generate_review_report(self, symbol: str = None) -> dict[str, Any]:
         """
         生成复盘报告
 
@@ -343,36 +320,36 @@ class EnhancedEvolutionEngine:
         # 获取旁路检测汇总
         bypass_report = self.silent_bypass_detector.get_latest_report()
         bypass_summary = {
-            'total_strategies': bypass_report.total_strategies if bypass_report else 0,
-            'active_strategies': bypass_report.active_strategies if bypass_report else 0,
-            'bypassed_strategies': bypass_report.bypassed_strategies if bypass_report else 0,
+            "total_strategies": bypass_report.total_strategies if bypass_report else 0,
+            "active_strategies": bypass_report.active_strategies if bypass_report else 0,
+            "bypassed_strategies": bypass_report.bypassed_strategies if bypass_report else 0,
         }
 
         return {
-            'report_type': 'WEEKLY_REVIEW',
-            'symbol': symbol,
-            'weekly_review': weekly_review,
-            'active_patterns': [
+            "report_type": "WEEKLY_REVIEW",
+            "symbol": symbol,
+            "weekly_review": weekly_review,
+            "active_patterns": [
                 {
-                    'pattern_id': p.pattern_id,
-                    'description': p.description,
-                    'severity': p.severity.value,
-                    'occurrence_count': p.occurrence_count,
-                    'promoted': p.promoted,
+                    "pattern_id": p.pattern_id,
+                    "description": p.description,
+                    "severity": p.severity.value,
+                    "occurrence_count": p.occurrence_count,
+                    "promoted": p.promoted,
                 }
                 for p in self.pattern_detector.patterns
             ],
-            'active_rules': [
+            "active_rules": [
                 {
-                    'rule_id': r.rule_id,
-                    'name': r.name,
-                    'condition': r.condition,
-                    'action': r.action,
-                    'hit_count': r.hit_count,
+                    "rule_id": r.rule_id,
+                    "name": r.name,
+                    "condition": r.condition,
+                    "action": r.action,
+                    "hit_count": r.hit_count,
                 }
                 for r in self.rule_promoter.rules
             ],
-            'skill_reflection': reflection_summary,
-            'audit_summary': audit_summary,
-            'bypass_summary': bypass_summary,
+            "skill_reflection": reflection_summary,
+            "audit_summary": audit_summary,
+            "bypass_summary": bypass_summary,
         }

@@ -12,17 +12,17 @@ StrategyPortfolio 单元测试
 - 边界条件
 """
 
-import sys
 import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import sys
 
-import pytest
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 import numpy as np
 import pandas as pd
+import pytest
 
-from scripts.trend_scanner.strategy_portfolio import (
-    StrategyPortfolio, StrategyInfo, PortfolioStats
-)
+from scripts.trend_scanner.strategy_portfolio import PortfolioStats, StrategyInfo, StrategyPortfolio
 
 
 class TestStrategyInfo:

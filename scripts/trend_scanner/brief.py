@@ -4,11 +4,14 @@
 将推理引擎的输出转换为用户可读的交易决策简报。
 """
 
-from typing import List, Optional
-
 from .models import (
-    MarketContext, TradingBrief, MarketAssessment, Route,
-    Constraint, Uncertainty, ExperienceMatch, TrendPhase,
+    Constraint,
+    ExperienceMatch,
+    MarketAssessment,
+    MarketContext,
+    Route,
+    TradingBrief,
+    Uncertainty,
 )
 
 
@@ -23,7 +26,7 @@ class BriefGenerator:
         self,
         context: MarketContext,
         reasoning_result: dict,
-        similar_experiences: List[ExperienceMatch],
+        similar_experiences: list[ExperienceMatch],
     ) -> TradingBrief:
         """
         生成交易决策简报
@@ -52,9 +55,7 @@ class BriefGenerator:
         routes = self._build_routes(reasoning_result, context, similar_experiences)
 
         # 4. 构建不确定性
-        uncertainty = self._build_uncertainty(
-            trend_phase.confidence, similar_experiences, reasoning_result
-        )
+        uncertainty = self._build_uncertainty(trend_phase.confidence, similar_experiences, reasoning_result)
 
         # 5. 构建简报
         brief = TradingBrief(
@@ -62,13 +63,13 @@ class BriefGenerator:
             timestamp=context.timestamp,
             trend_phase=trend_phase,
             assessment=assessment,
-            warnings=reasoning_result.get('warnings', []),
+            warnings=reasoning_result.get("warnings", []),
             routes=routes,
-            recommended_route=reasoning_result.get('recommended_route', ''),
+            recommended_route=reasoning_result.get("recommended_route", ""),
             uncertainty=uncertainty,
-            reasoning_model=reasoning_result.get('reasoning_model', ''),
+            reasoning_model=reasoning_result.get("reasoning_model", ""),
             experience_count=len(similar_experiences),
-            generation_time_ms=reasoning_result.get('generation_time_ms', 0),
+            generation_time_ms=reasoning_result.get("generation_time_ms", 0),
         )
 
         return brief
@@ -83,18 +84,18 @@ class BriefGenerator:
         composite = snapshot.trend_strength_composite
 
         parts = []
-        if phase.phase in ('DEVELOPING', 'MATURE'):
-            if 'BULL' in ma:
+        if phase.phase in ("DEVELOPING", "MATURE"):
+            if "BULL" in ma:
                 parts.append("多头趋势")
-            elif 'BEAR' in ma:
+            elif "BEAR" in ma:
                 parts.append("空头趋势")
-        elif phase.phase == 'CONSOLIDATING':
+        elif phase.phase == "CONSOLIDATING":
             parts.append("震荡整理")
-        elif phase.phase == 'EMERGING':
+        elif phase.phase == "EMERGING":
             parts.append("趋势萌芽")
-        elif phase.phase == 'FATIGUING':
+        elif phase.phase == "FATIGUING":
             parts.append("趋势衰竭")
-        elif phase.phase == 'REVERSING':
+        elif phase.phase == "REVERSING":
             parts.append("趋势反转")
 
         # 使用四维复合指标判断趋势强度
@@ -142,45 +143,45 @@ class BriefGenerator:
         self,
         reasoning_result: dict,
         context: MarketContext,
-        similar_experiences: List[ExperienceMatch],
-    ) -> List[Route]:
+        similar_experiences: list[ExperienceMatch],
+    ) -> list[Route]:
         """构建操作方案"""
         routes = []
 
-        for route_data in reasoning_result.get('routes', []):
+        for route_data in reasoning_result.get("routes", []):
             # 构建约束
             constraints = []
-            for c_data in route_data.get('constraints', []):
+            for c_data in route_data.get("constraints", []):
                 constraint = Constraint(
-                    constraint_type=c_data.get('constraint_type', 'UNKNOWN'),
-                    value=c_data.get('value', ''),
-                    numeric_value=c_data.get('numeric_value', 0.0),
-                    confidence=c_data.get('confidence', 0.5),
-                    reasoning=c_data.get('reasoning', ''),
-                    historical_basis=c_data.get('historical_basis', ''),
-                    uncertainty_range=c_data.get('uncertainty_range', ''),
+                    constraint_type=c_data.get("constraint_type", "UNKNOWN"),
+                    value=c_data.get("value", ""),
+                    numeric_value=c_data.get("numeric_value", 0.0),
+                    confidence=c_data.get("confidence", 0.5),
+                    reasoning=c_data.get("reasoning", ""),
+                    historical_basis=c_data.get("historical_basis", ""),
+                    uncertainty_range=c_data.get("uncertainty_range", ""),
                 )
                 constraints.append(constraint)
 
             # 找到支撑这条方案的经验
             supporting = []
-            action = route_data.get('action', '')
+            action = route_data.get("action", "")
             for exp_match in similar_experiences:
                 if exp_match.experience.action_taken in action or action in exp_match.experience.action_taken:
                     supporting.append(exp_match)
 
             route = Route(
-                route_id=route_data.get('route_id', 'A'),
-                name=route_data.get('name', '未命名'),
-                action=route_data.get('action', '无操作'),
-                confidence=route_data.get('confidence', 0.5),
-                reasoning=route_data.get('reasoning', ''),
+                route_id=route_data.get("route_id", "A"),
+                name=route_data.get("name", "未命名"),
+                action=route_data.get("action", "无操作"),
+                confidence=route_data.get("confidence", 0.5),
+                reasoning=route_data.get("reasoning", ""),
                 constraints=constraints,
-                risks=route_data.get('risks', []),
-                trigger_conditions=route_data.get('trigger_conditions', []),
-                opportunity_cost=route_data.get('opportunity_cost', ''),
-                historical_analog=route_data.get('historical_analog', ''),
-                historical_outcome=route_data.get('historical_outcome', ''),
+                risks=route_data.get("risks", []),
+                trigger_conditions=route_data.get("trigger_conditions", []),
+                opportunity_cost=route_data.get("opportunity_cost", ""),
+                historical_analog=route_data.get("historical_analog", ""),
+                historical_outcome=route_data.get("historical_outcome", ""),
                 supporting_experiences=supporting[:3],
             )
             routes.append(route)
@@ -190,7 +191,7 @@ class BriefGenerator:
     def _build_uncertainty(
         self,
         phase_confidence: float,
-        similar_experiences: List[ExperienceMatch],
+        similar_experiences: list[ExperienceMatch],
         reasoning_result: dict,
     ) -> Uncertainty:
         """构建不确定性量化"""
@@ -206,10 +207,10 @@ class BriefGenerator:
 
         # 约束置信度
         constraint_confidences = []
-        for route in reasoning_result.get('routes', []):
-            for c in route.get('constraints', []):
-                if 'confidence' in c:
-                    constraint_confidences.append(c['confidence'])
+        for route in reasoning_result.get("routes", []):
+            for c in route.get("constraints", []):
+                if "confidence" in c:
+                    constraint_confidences.append(c["confidence"])
 
         if constraint_confidences:
             constraint_confidence = sum(constraint_confidences) / len(constraint_confidences)
@@ -217,11 +218,7 @@ class BriefGenerator:
             constraint_confidence = 0.4
 
         # 综合置信度
-        overall_confidence = (
-            cluster_confidence * 0.3 +
-            retrieval_confidence * 0.4 +
-            constraint_confidence * 0.3
-        )
+        overall_confidence = cluster_confidence * 0.3 + retrieval_confidence * 0.4 + constraint_confidence * 0.3
 
         return Uncertainty(
             cluster_confidence=round(cluster_confidence, 2),

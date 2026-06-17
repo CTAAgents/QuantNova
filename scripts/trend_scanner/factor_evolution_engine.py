@@ -17,11 +17,11 @@
 import json
 import logging
 import os
+from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Dict, List, Optional, Callable, Any
-from dataclasses import dataclass, field, asdict
 
 import pandas as pd
+
 
 logger = logging.getLogger(__name__)
 
@@ -29,22 +29,24 @@ logger = logging.getLogger(__name__)
 @dataclass
 class EvolutionRound:
     """单轮进化记录"""
+
     round_num: int
-    candidates: List[Dict]           # 候选因子信息
-    evaluations: Dict[str, Dict]     # 评估结果
-    decisions: List[Dict]            # 门控决策
-    promoted: List[str]              # 本轮晋升的因子
-    eliminated: List[str]            # 本轮淘汰的因子
-    timestamp: str = ''
+    candidates: list[dict]  # 候选因子信息
+    evaluations: dict[str, dict]  # 评估结果
+    decisions: list[dict]  # 门控决策
+    promoted: list[str]  # 本轮晋升的因子
+    eliminated: list[str]  # 本轮淘汰的因子
+    timestamp: str = ""
 
 
 @dataclass
 class EvolutionResult:
     """进化结果"""
+
     total_rounds: int
     total_candidates: int
-    promoted_factors: List[Dict]
-    rounds: List[EvolutionRound]
+    promoted_factors: list[dict]
+    rounds: list[EvolutionRound]
     duration_seconds: float
     status: str  # 'completed' / 'early_stop' / 'max_rounds'
 
@@ -63,11 +65,20 @@ class FactorEvolutionEngine:
             6. 检查终止条件
     """
 
-    def __init__(self, generator=None, executor=None, evaluator=None,
-                 gate=None, knowledge_manager=None,
-                 seed_pool=None, experience_db=None,
-                 report_parser=None, trajectory_analyzer=None,
-                 use_walk_forward=False, walk_forward_config=None):
+    def __init__(
+        self,
+        generator=None,
+        executor=None,
+        evaluator=None,
+        gate=None,
+        knowledge_manager=None,
+        seed_pool=None,
+        experience_db=None,
+        report_parser=None,
+        trajectory_analyzer=None,
+        use_walk_forward=False,
+        walk_forward_config=None,
+    ):
         """
         初始化进化引擎
 
@@ -87,31 +98,39 @@ class FactorEvolutionEngine:
         # 延迟导入，避免循环依赖
         if generator is None:
             from trend_scanner.factor_generator import FactorGenerator
+
             generator = FactorGenerator()
         if executor is None:
             from trend_scanner.factor_executor import FactorExecutor
+
             executor = FactorExecutor()
         if evaluator is None:
             from trend_scanner.factor_evaluator import FactorEvaluator
+
             evaluator = FactorEvaluator()
         if gate is None:
             from trend_scanner.factor_gate import FactorGate
+
             gate = FactorGate()
         if seed_pool is None:
             from trend_scanner.seed_factor_pool import SeedFactorPool
+
             seed_pool = SeedFactorPool()
         if experience_db is None:
             from trend_scanner.factor_experience_db import FactorExperienceDB
+
             experience_db = FactorExperienceDB()
         if report_parser is None:
             try:
                 from trend_scanner.report_parser import ReportParser
+
                 report_parser = ReportParser()
             except Exception:
                 report_parser = None
         if trajectory_analyzer is None:
             try:
                 from trend_scanner.trajectory_analyzer import TrajectoryAnalyzer
+
                 trajectory_analyzer = TrajectoryAnalyzer()
             except Exception:
                 trajectory_analyzer = None
@@ -129,7 +148,8 @@ class FactorEvolutionEngine:
         # Walk-Forward 验证（v6.0 新增）
         self.use_walk_forward = use_walk_forward
         if use_walk_forward:
-            from .walk_forward_validator import WalkForwardValidator, WalkForwardConfig
+            from .walk_forward_validator import WalkForwardConfig, WalkForwardValidator
+
             config = walk_forward_config or WalkForwardConfig()
             self.walk_forward_validator = WalkForwardValidator(config)
             logger.info("Walk-Forward 验证已启用")
@@ -137,16 +157,19 @@ class FactorEvolutionEngine:
             self.walk_forward_validator = None
 
         # 进化状态
-        self.promoted_factors: List[Dict] = []
-        self.rounds: List[EvolutionRound] = []
-        self.feedback_history: List[str] = []
+        self.promoted_factors: list[dict] = []
+        self.rounds: list[EvolutionRound] = []
+        self.feedback_history: list[str] = []
 
-    def evolve(self, kline_data: Dict[str, pd.DataFrame] = None,
-               max_rounds: int = 10,
-               candidates_per_round: int = 5,
-               target_promoted: int = 5,
-               db_path: str = None,
-               days: int = 120) -> EvolutionResult:
+    def evolve(
+        self,
+        kline_data: dict[str, pd.DataFrame] = None,
+        max_rounds: int = 10,
+        candidates_per_round: int = 5,
+        target_promoted: int = 5,
+        db_path: str = None,
+        days: int = 120,
+    ) -> EvolutionResult:
         """
         运行闭环进化
 
@@ -162,6 +185,7 @@ class FactorEvolutionEngine:
             EvolutionResult
         """
         import time
+
         start_time = time.time()
 
         # 加载数据
@@ -173,10 +197,12 @@ class FactorEvolutionEngine:
             logger.info(f"从 DuckDB 加载 {count} 个品种的数据")
             if count < 10:
                 return EvolutionResult(
-                    total_rounds=0, total_candidates=0,
-                    promoted_factors=[], rounds=[],
+                    total_rounds=0,
+                    total_candidates=0,
+                    promoted_factors=[],
+                    rounds=[],
                     duration_seconds=0,
-                    status='insufficient_data'
+                    status="insufficient_data",
                 )
             kline_data = self.evaluator._kline_data
         else:
@@ -203,7 +229,7 @@ class FactorEvolutionEngine:
 
         duration = time.time() - start_time
 
-        status = 'completed' if len(self.promoted_factors) >= target_promoted else 'max_rounds'
+        status = "completed" if len(self.promoted_factors) >= target_promoted else "max_rounds"
 
         return EvolutionResult(
             total_rounds=len(self.rounds),
@@ -214,9 +240,9 @@ class FactorEvolutionEngine:
             status=status,
         )
 
-    def _evolve_one_round(self, round_num: int,
-                           kline_data: Dict[str, pd.DataFrame],
-                           candidates_per_round: int) -> EvolutionRound:
+    def _evolve_one_round(
+        self, round_num: int, kline_data: dict[str, pd.DataFrame], candidates_per_round: int
+    ) -> EvolutionRound:
         """
         执行一轮进化
 
@@ -241,31 +267,31 @@ class FactorEvolutionEngine:
         # [1] 生成候选因子
         candidates = self._generate_candidates(candidates_per_round, round_num)
         round_result.candidates = [
-            {'name': c.get('name', f'factor_{i}'), 'source': c.get('source', 'unknown')}
+            {"name": c.get("name", f"factor_{i}"), "source": c.get("source", "unknown")}
             for i, c in enumerate(candidates)
         ]
 
         # [2] 执行因子 + [3] 评估因子
         evaluations = {}
         for candidate in candidates:
-            name = candidate.get('name', f'factor_{round_num}_{len(evaluations)}')
-            code = candidate.get('code', '')
-            fn = candidate.get('function')
+            name = candidate.get("name", f"factor_{round_num}_{len(evaluations)}")
+            code = candidate.get("code", "")
+            fn = candidate.get("function")
 
             if fn is not None:
                 # 直接使用函数
                 eval_result = self.evaluator.evaluate(name, fn)
                 evaluations[name] = {
-                    'ic_mean': eval_result.ic_mean,
-                    'ic_std': eval_result.ic_std,
-                    'icir': eval_result.icir,
-                    'rank_ic_mean': eval_result.rank_ic_mean,
-                    'rank_icir': eval_result.rank_icir,
-                    'ic_positive_pct': eval_result.ic_positive_pct,
-                    't_stat': eval_result.t_stat,
-                    'long_short_sharpe': eval_result.long_short_sharpe,
-                    'ic_days': eval_result.ic_days,
-                    'cross_section_size_avg': eval_result.cross_section_size_avg,
+                    "ic_mean": eval_result.ic_mean,
+                    "ic_std": eval_result.ic_std,
+                    "icir": eval_result.icir,
+                    "rank_ic_mean": eval_result.rank_ic_mean,
+                    "rank_icir": eval_result.rank_icir,
+                    "ic_positive_pct": eval_result.ic_positive_pct,
+                    "t_stat": eval_result.t_stat,
+                    "long_short_sharpe": eval_result.long_short_sharpe,
+                    "ic_days": eval_result.ic_days,
+                    "cross_section_size_avg": eval_result.cross_section_size_avg,
                 }
             elif code:
                 # 从代码执行
@@ -277,7 +303,6 @@ class FactorEvolutionEngine:
 
                     if len(ic) > 0:
                         import numpy as np
-                        from scipy import stats as sp_stats
 
                         ic_mean = float(ic.mean())
                         ic_std = float(ic.std())
@@ -286,18 +311,16 @@ class FactorEvolutionEngine:
                         t_stat = ic_mean / (ic_std / np.sqrt(n)) if ic_std > 0 else 0
 
                         evaluations[name] = {
-                            'ic_mean': ic_mean,
-                            'ic_std': ic_std,
-                            'icir': icir,
-                            'rank_ic_mean': ic_mean,
-                            'rank_icir': icir,
-                            'ic_positive_pct': float((ic > 0).mean()),
-                            't_stat': float(t_stat),
-                            'long_short_sharpe': 0,  # 简化计算
-                            'ic_days': len(ic),
-                            'cross_section_size_avg': float(
-                                factor_values.notna().sum(axis=1).mean()
-                            ),
+                            "ic_mean": ic_mean,
+                            "ic_std": ic_std,
+                            "icir": icir,
+                            "rank_ic_mean": ic_mean,
+                            "rank_icir": icir,
+                            "ic_positive_pct": float((ic > 0).mean()),
+                            "t_stat": float(t_stat),
+                            "long_short_sharpe": 0,  # 简化计算
+                            "ic_days": len(ic),
+                            "cross_section_size_avg": float(factor_values.notna().sum(axis=1).mean()),
                         }
 
         round_result.evaluations = evaluations
@@ -306,118 +329,116 @@ class FactorEvolutionEngine:
         if self.use_walk_forward and self.walk_forward_validator:
             for name, eval_data in evaluations.items():
                 # 找到对应的候选因子
-                candidate = next((c for c in candidates if c.get('name') == name), {})
-                fn = candidate.get('function')
-                
+                candidate = next((c for c in candidates if c.get("name") == name), {})
+                fn = candidate.get("function")
+
                 if fn is not None:
                     # 使用 Walk-Forward 验证
                     try:
                         # 获取价格数据（使用第一个品种的数据）
                         first_symbol = list(kline_data.keys())[0]
-                        prices = kline_data[first_symbol]['close']
-                        
+                        prices = kline_data[first_symbol]["close"]
+
                         # 执行 Walk-Forward 验证
                         wf_result = self.walk_forward_validator.validate(
-                            prices=prices,
-                            factor_func=fn,
-                            param_space={},
-                            optimize_func=lambda p, ps: {}
+                            prices=prices, factor_func=fn, param_space={}, optimize_func=lambda p, ps: {}
                         )
-                        
+
                         # 将 Walk-Forward 结果添加到评估数据中
-                        eval_data['walk_forward_pass_rate'] = wf_result.pass_rate
-                        eval_data['walk_forward_oos_sharpe'] = wf_result.avg_oos_sharpe
-                        eval_data['walk_forward_passed'] = wf_result.pass_rate >= 0.5
-                        
-                        logger.info(f"因子 {name} Walk-Forward 验证: "
-                                   f"通过率={wf_result.pass_rate:.2%}, "
-                                   f"OOS Sharpe={wf_result.avg_oos_sharpe:.3f}")
+                        eval_data["walk_forward_pass_rate"] = wf_result.pass_rate
+                        eval_data["walk_forward_oos_sharpe"] = wf_result.avg_oos_sharpe
+                        eval_data["walk_forward_passed"] = wf_result.pass_rate >= 0.5
+
+                        logger.info(
+                            f"因子 {name} Walk-Forward 验证: "
+                            f"通过率={wf_result.pass_rate:.2%}, "
+                            f"OOS Sharpe={wf_result.avg_oos_sharpe:.3f}"
+                        )
                     except Exception as e:
                         logger.warning(f"因子 {name} Walk-Forward 验证失败: {e}")
-                        eval_data['walk_forward_passed'] = False
+                        eval_data["walk_forward_passed"] = False
 
         # [4] 门控决策
         decisions = self.gate.decide_batch(evaluations)
         round_result.decisions = [
             {
-                'factor_name': d.factor_name,
-                'decision': d.decision,
-                'score': d.score,
-                'reasons': d.reasons,
+                "factor_name": d.factor_name,
+                "decision": d.decision,
+                "score": d.score,
+                "reasons": d.reasons,
             }
             for d in decisions
         ]
 
         # 分类结果
         for d in decisions:
-            if d.decision == 'promote':
+            if d.decision == "promote":
                 # Walk-Forward 验证检查（如果启用）
                 if self.use_walk_forward:
                     eval_data = evaluations.get(d.factor_name, {})
-                    if not eval_data.get('walk_forward_passed', True):
+                    if not eval_data.get("walk_forward_passed", True):
                         # Walk-Forward 验证失败，降级为观察
                         logger.info(f"因子 {d.factor_name} Walk-Forward 验证失败，降级为观察")
-                        d.decision = 'observe'
-                        d.reasons.append('Walk-Forward 验证未通过')
+                        d.decision = "observe"
+                        d.reasons.append("Walk-Forward 验证未通过")
                         continue
-                
+
                 round_result.promoted.append(d.factor_name)
                 # 保存到晋升列表
-                factor_info = next(
-                    (c for c in candidates if c.get('name') == d.factor_name), {}
+                factor_info = next((c for c in candidates if c.get("name") == d.factor_name), {})
+                self.promoted_factors.append(
+                    {
+                        "name": d.factor_name,
+                        "score": d.score,
+                        "metrics": d.metrics,
+                        "reasons": d.reasons,
+                        "code": factor_info.get("code", ""),
+                        "source": factor_info.get("source", "unknown"),
+                        "promoted_at": datetime.now().isoformat(),
+                        "round": round_num,
+                    }
                 )
-                self.promoted_factors.append({
-                    'name': d.factor_name,
-                    'score': d.score,
-                    'metrics': d.metrics,
-                    'reasons': d.reasons,
-                    'code': factor_info.get('code', ''),
-                    'source': factor_info.get('source', 'unknown'),
-                    'promoted_at': datetime.now().isoformat(),
-                    'round': round_num,
-                })
                 # 反馈：成功模式
                 self.feedback_history.append(
                     f"第{round_num}轮: {d.factor_name} 晋升, ICIR={d.metrics.get('icir', 0):.2f}"
                 )
-            elif d.decision == 'eliminate':
+            elif d.decision == "eliminate":
                 round_result.eliminated.append(d.factor_name)
                 # 反馈：失败模式
-                self.feedback_history.append(
-                    f"第{round_num}轮: {d.factor_name} 淘汰, 原因: {', '.join(d.reasons[:2])}"
-                )
+                self.feedback_history.append(f"第{round_num}轮: {d.factor_name} 淘汰, 原因: {', '.join(d.reasons[:2])}")
 
         # [5] 保存到知识库
         if self.knowledge_manager:
             for d in decisions:
-                if d.decision == 'promote':
-                    factor_info = next(
-                        (c for c in candidates if c.get('name') == d.factor_name), {}
-                    )
-                    if factor_info.get('code'):
+                if d.decision == "promote":
+                    factor_info = next((c for c in candidates if c.get("name") == d.factor_name), {})
+                    if factor_info.get("code"):
                         from trend_scanner.factor_generator import FactorResult
+
                         result = FactorResult(
-                            code=factor_info['code'],
-                            metadata={'name': d.factor_name, 'description': '进化引擎生成'},
-                            validation={'is_valid': True},
-                            source='evolution_engine',
+                            code=factor_info["code"],
+                            metadata={"name": d.factor_name, "description": "进化引擎生成"},
+                            validation={"is_valid": True},
+                            source="evolution_engine",
                         )
                         self.knowledge_manager.add_factor(result)
 
         # [6] 记录到经验数据库
         if self.experience_db:
             for d in decisions:
-                trajectory = [{
-                    'round': round_num,
-                    'factor_name': d.factor_name,
-                    'logic': '',
-                    'params': {},
-                    'icir': d.metrics.get('icir', 0),
-                    't_stat': d.metrics.get('t_stat', 0),
-                    'decision': d.decision,
-                    'reasons': d.reasons,
-                    'timestamp': datetime.now().isoformat(),
-                }]
+                trajectory = [
+                    {
+                        "round": round_num,
+                        "factor_name": d.factor_name,
+                        "logic": "",
+                        "params": {},
+                        "icir": d.metrics.get("icir", 0),
+                        "t_stat": d.metrics.get("t_stat", 0),
+                        "decision": d.decision,
+                        "reasons": d.reasons,
+                        "timestamp": datetime.now().isoformat(),
+                    }
+                ]
                 self.experience_db.record_trajectory(
                     factor_id=f"{d.factor_name}_r{round_num}",
                     trajectory=trajectory,
@@ -426,10 +447,10 @@ class FactorEvolutionEngine:
         # [7] 更新种子因子池状态
         if self.seed_pool:
             for d in decisions:
-                if d.decision == 'promote':
-                    self.seed_pool.update_status(d.factor_name, 'validated', d.metrics)
-                elif d.decision == 'eliminate':
-                    self.seed_pool.update_status(d.factor_name, 'discarded', d.metrics)
+                if d.decision == "promote":
+                    self.seed_pool.update_status(d.factor_name, "validated", d.metrics)
+                elif d.decision == "eliminate":
+                    self.seed_pool.update_status(d.factor_name, "discarded", d.metrics)
 
         logger.info(
             f"轮次 {round_num}: 候选 {len(candidates)}, "
@@ -438,7 +459,7 @@ class FactorEvolutionEngine:
 
         return round_result
 
-    def _generate_candidates(self, count: int, round_num: int) -> List[Dict]:
+    def _generate_candidates(self, count: int, round_num: int) -> list[dict]:
         """
         生成候选因子
 
@@ -461,24 +482,29 @@ class FactorEvolutionEngine:
         # 方式 1：从内置因子库选取（第 1 轮）
         if round_num == 1:
             from trend_scanner.factor_evaluator import BUILTIN_FACTORS
+
             for name, fn in list(BUILTIN_FACTORS.items())[:count]:
-                candidates.append({
-                    'name': name,
-                    'function': fn,
-                    'source': 'builtin',
-                })
+                candidates.append(
+                    {
+                        "name": name,
+                        "function": fn,
+                        "source": "builtin",
+                    }
+                )
 
         # 方式 2：从种子因子池选取（待验证的种子）
         if self.seed_pool and len(candidates) < count:
             pending = self.seed_pool.get_pending_seeds()
-            for seed in pending[:count - len(candidates)]:
+            for seed in pending[: count - len(candidates)]:
                 fn = self._compile_seed_code(seed.code)
                 if fn:
-                    candidates.append({
-                        'name': seed.name,
-                        'function': fn,
-                        'source': f'seed_pool:{seed.source}',
-                    })
+                    candidates.append(
+                        {
+                            "name": seed.name,
+                            "function": fn,
+                            "source": f"seed_pool:{seed.source}",
+                        }
+                    )
 
         # 方式 3：LLM 因子生成（需要 LLM 客户端可用）
         if self.generator and self.generator.llm_client and len(candidates) < count:
@@ -493,16 +519,18 @@ class FactorEvolutionEngine:
 
             try:
                 result = self.generator.generate_factor(market_context)
-                if result and result.code and 'def factor' in result.code:
+                if result and result.code and "def factor" in result.code:
                     fn = self._compile_seed_code(result.code)
                     if fn:
-                        name = result.metadata.get('name', f'llm_factor_r{round_num}')
-                        candidates.append({
-                            'name': name,
-                            'function': fn,
-                            'code': result.code,
-                            'source': 'llm_generated',
-                        })
+                        name = result.metadata.get("name", f"llm_factor_r{round_num}")
+                        candidates.append(
+                            {
+                                "name": name,
+                                "function": fn,
+                                "code": result.code,
+                                "source": "llm_generated",
+                            }
+                        )
                         logger.info(f"LLM 生成因子: {name}")
             except Exception as e:
                 logger.debug(f"LLM 因子生成失败: {e}")
@@ -510,12 +538,14 @@ class FactorEvolutionEngine:
         # 方式 4：从因子知识库选取
         if self.knowledge_manager and len(candidates) < count:
             kb_factors = self.knowledge_manager.get_all_factors()
-            for f in kb_factors[:count - len(candidates)]:
-                candidates.append({
-                    'name': f.get('name', 'kb_factor'),
-                    'code': f.get('code', ''),
-                    'source': 'knowledge_base',
-                })
+            for f in kb_factors[: count - len(candidates)]:
+                candidates.append(
+                    {
+                        "name": f.get("name", "kb_factor"),
+                        "code": f.get("code", ""),
+                        "source": "knowledge_base",
+                    }
+                )
 
         # 方式 5：用规则生成变体因子（无 LLM 时）
         if len(candidates) < count:
@@ -527,16 +557,17 @@ class FactorEvolutionEngine:
     def _compile_seed_code(self, code: str):
         """编译种子因子代码为函数"""
         try:
-            import pandas as pd
             import numpy as np
-            exec_globals = {'pd': pd, 'np': np}
+            import pandas as pd
+
+            exec_globals = {"pd": pd, "np": np}
             exec(code, exec_globals)
-            return exec_globals.get('factor')
+            return exec_globals.get("factor")
         except Exception as e:
             logger.debug(f"编译种子因子代码失败: {e}")
             return None
 
-    def _generate_rule_variants(self, count: int, round_num: int) -> List[Dict]:
+    def _generate_rule_variants(self, count: int, round_num: int) -> list[dict]:
         """
         用规则生成因子变体（无 LLM 时的降级方案）
 
@@ -550,6 +581,7 @@ class FactorEvolutionEngine:
             [{name, code, source}]
         """
         import random
+
         random.seed(42 + round_num)  # 确定性种子
 
         variants = []
@@ -562,11 +594,13 @@ class FactorEvolutionEngine:
     import pandas as pd
     return df['close'].pct_change({w}).fillna(0)
 '''
-            variants.append({
-                'name': f'momentum_{w}d',
-                'code': code,
-                'source': f'rule_variant_r{round_num}',
-            })
+            variants.append(
+                {
+                    "name": f"momentum_{w}d",
+                    "code": code,
+                    "source": f"rule_variant_r{round_num}",
+                }
+            )
 
         # 波动率因子变体
         vol_windows = [5, 10, 20, 30]
@@ -576,11 +610,13 @@ class FactorEvolutionEngine:
     import pandas as pd
     return -df['close'].pct_change().rolling({w}).std().fillna(0)
 '''
-            variants.append({
-                'name': f'volatility_{w}d',
-                'code': code,
-                'source': f'rule_variant_r{round_num}',
-            })
+            variants.append(
+                {
+                    "name": f"volatility_{w}d",
+                    "code": code,
+                    "source": f"rule_variant_r{round_num}",
+                }
+            )
 
         # 量价相关性变体
         if len(variants) < count:
@@ -591,11 +627,13 @@ class FactorEvolutionEngine:
     vol = df['volume'].pct_change()
     return ret.rolling(20).corr(vol).fillna(0)
 '''
-            variants.append({
-                'name': 'volume_price_corr_20d',
-                'code': code,
-                'source': f'rule_variant_r{round_num}',
-            })
+            variants.append(
+                {
+                    "name": "volume_price_corr_20d",
+                    "code": code,
+                    "source": f"rule_variant_r{round_num}",
+                }
+            )
 
         # RSI 变体
         if len(variants) < count:
@@ -611,11 +649,13 @@ class FactorEvolutionEngine:
     rsi = 100 - (100 / (1 + rs))
     return ((rsi - 50) / 50).fillna(0)
 '''
-                variants.append({
-                    'name': f'rsi_{period}d',
-                    'code': code,
-                    'source': f'rule_variant_r{round_num}',
-                })
+                variants.append(
+                    {
+                        "name": f"rsi_{period}d",
+                        "code": code,
+                        "source": f"rule_variant_r{round_num}",
+                    }
+                )
                 if len(variants) >= count:
                     break
 
@@ -628,16 +668,17 @@ class FactorEvolutionEngine:
     ema60 = df['close'].ewm(span=60, adjust=False).mean()
     return ((ema20 - ema60) / df['close']).fillna(0)
 '''
-            variants.append({
-                'name': 'trend_strength_ema',
-                'code': code,
-                'source': f'rule_variant_r{round_num}',
-            })
+            variants.append(
+                {
+                    "name": "trend_strength_ema",
+                    "code": code,
+                    "source": f"rule_variant_r{round_num}",
+                }
+            )
 
         return variants[:count]
 
-    def load_seeds_from_report(self, report_content: str,
-                                report_metadata: Dict = None) -> int:
+    def load_seeds_from_report(self, report_content: str, report_metadata: dict = None) -> int:
         """
         从研报内容中提取因子并加载到种子池
 
@@ -663,7 +704,7 @@ class FactorEvolutionEngine:
             count = 0
             for suggestion in analysis.factor_suggestions:
                 # 将因子建议转为代码（如果解析器没有直接生成代码，则跳过）
-                if hasattr(suggestion, 'code') and suggestion.code:
+                if hasattr(suggestion, "code") and suggestion.code:
                     self.seed_pool.add_seed(
                         name=suggestion.name,
                         code=suggestion.code,
@@ -694,7 +735,7 @@ class FactorEvolutionEngine:
             return 0
         return self.seed_pool.load_from_report_parser(path)
 
-    def analyze_trade_trajectories(self, trade_records: List[Dict]) -> Dict:
+    def analyze_trade_trajectories(self, trade_records: list[dict]) -> dict:
         """
         分析交易轨迹，提取失败/成功模式
 
@@ -711,29 +752,30 @@ class FactorEvolutionEngine:
         try:
             # 转换为 TradeRecord 对象
             from trend_scanner.trajectory_analyzer import TradeRecord
+
             records = []
             for t in trade_records:
                 record = TradeRecord(
-                    trade_id=t.get('trade_id', ''),
-                    symbol=t.get('symbol', ''),
-                    direction=t.get('direction', ''),
-                    entry_price=t.get('entry_price', 0),
-                    exit_price=t.get('exit_price', 0),
-                    entry_time=t.get('entry_time', ''),
-                    exit_time=t.get('exit_time', ''),
-                    pnl=t.get('pnl', 0),
-                    pnl_percent=t.get('pnl_percent', 0),
-                    holding_period=t.get('holding_period', 0),
-                    market_state=t.get('market_state', ''),
-                    trend_phase=t.get('trend_phase', ''),
-                    volatility=t.get('volatility', ''),
-                    er=t.get('er', 0),
-                    tsi=t.get('tsi', 0),
-                    rsi=t.get('rsi', 0),
-                    adx=t.get('adx', 0),
-                    max_drawdown=t.get('max_drawdown', 0),
-                    sharpe_ratio=t.get('sharpe_ratio', 0),
-                    failure_reason=t.get('failure_reason'),
+                    trade_id=t.get("trade_id", ""),
+                    symbol=t.get("symbol", ""),
+                    direction=t.get("direction", ""),
+                    entry_price=t.get("entry_price", 0),
+                    exit_price=t.get("exit_price", 0),
+                    entry_time=t.get("entry_time", ""),
+                    exit_time=t.get("exit_time", ""),
+                    pnl=t.get("pnl", 0),
+                    pnl_percent=t.get("pnl_percent", 0),
+                    holding_period=t.get("holding_period", 0),
+                    market_state=t.get("market_state", ""),
+                    trend_phase=t.get("trend_phase", ""),
+                    volatility=t.get("volatility", ""),
+                    er=t.get("er", 0),
+                    tsi=t.get("tsi", 0),
+                    rsi=t.get("rsi", 0),
+                    adx=t.get("adx", 0),
+                    max_drawdown=t.get("max_drawdown", 0),
+                    sharpe_ratio=t.get("sharpe_ratio", 0),
+                    failure_reason=t.get("failure_reason"),
                 )
                 records.append(record)
 
@@ -742,21 +784,23 @@ class FactorEvolutionEngine:
 
             # 将分析结果注入经验数据库
             if self.experience_db and analysis:
-                patterns = analysis.get('patterns', [])
+                patterns = analysis.get("patterns", [])
                 for pattern in patterns:
                     self.experience_db.record_trajectory(
                         factor_id=f"trade_pattern_{pattern.get('type', 'unknown')}",
-                        trajectory=[{
-                            'round': 0,
-                            'factor_name': pattern.get('name', ''),
-                            'logic': pattern.get('description', ''),
-                            'params': {},
-                            'icir': 0,
-                            't_stat': 0,
-                            'decision': 'observe',
-                            'reasons': [pattern.get('insight', '')],
-                            'timestamp': datetime.now().isoformat(),
-                        }],
+                        trajectory=[
+                            {
+                                "round": 0,
+                                "factor_name": pattern.get("name", ""),
+                                "logic": pattern.get("description", ""),
+                                "params": {},
+                                "icir": 0,
+                                "t_stat": 0,
+                                "decision": "observe",
+                                "reasons": [pattern.get("insight", "")],
+                                "timestamp": datetime.now().isoformat(),
+                            }
+                        ],
                     )
 
             return analysis
@@ -794,7 +838,7 @@ class FactorEvolutionEngine:
 
             for d in r.decisions:
                 lines.append(f"    {d['factor_name']}: {d['decision']} (score={d['score']:.2f})")
-                if d.get('reasons'):
+                if d.get("reasons"):
                     lines.append(f"      原因: {', '.join(d['reasons'][:2])}")
 
         # 晋升因子汇总
@@ -804,12 +848,12 @@ class FactorEvolutionEngine:
             lines.append(f"{'=' * 70}")
             for f in result.promoted_factors:
                 lines.append(f"  {f['name']}: score={f['score']:.2f}, source={f['source']}")
-                if f.get('metrics'):
-                    m = f['metrics']
+                if f.get("metrics"):
+                    m = f["metrics"]
                     lines.append(f"    ICIR={m.get('icir', 0):.2f}, t={m.get('t_stat', 0):.2f}")
 
         lines.append(f"\n{'=' * 70}")
-        return '\n'.join(lines)
+        return "\n".join(lines)
 
     def save_result(self, result: EvolutionResult, path: str = None):
         """
@@ -820,23 +864,20 @@ class FactorEvolutionEngine:
             path: 保存路径
         """
         if path is None:
-            path = os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                '..', '..', 'data', 'factor_evolution.json'
-            )
+            path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "factor_evolution.json")
 
         data = {
-            'evolution_time': datetime.now().isoformat(),
-            'total_rounds': result.total_rounds,
-            'total_candidates': result.total_candidates,
-            'duration_seconds': result.duration_seconds,
-            'status': result.status,
-            'promoted_factors': result.promoted_factors,
-            'rounds': [asdict(r) for r in result.rounds],
-            'feedback_history': self.feedback_history,
+            "evolution_time": datetime.now().isoformat(),
+            "total_rounds": result.total_rounds,
+            "total_candidates": result.total_candidates,
+            "duration_seconds": result.duration_seconds,
+            "status": result.status,
+            "promoted_factors": result.promoted_factors,
+            "rounds": [asdict(r) for r in result.rounds],
+            "feedback_history": self.feedback_history,
         }
 
-        with open(path, 'w', encoding='utf-8') as f:
+        with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
         logger.info(f"进化结果已保存到 {path}")
@@ -846,23 +887,24 @@ class FactorEvolutionEngine:
 # 命令行入口
 # ============================================================
 
+
 def main():
     """命令行入口"""
     import argparse
     import sys
 
     # 确保 scripts 目录在路径中
-    scripts_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
+    scripts_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
     if scripts_dir not in sys.path:
         sys.path.insert(0, scripts_dir)
 
-    parser = argparse.ArgumentParser(description='因子进化引擎')
-    parser.add_argument('--db', type=str, default=None, help='DuckDB 路径')
-    parser.add_argument('--days', type=int, default=120, help='数据天数')
-    parser.add_argument('--rounds', type=int, default=5, help='最大轮数')
-    parser.add_argument('--candidates', type=int, default=5, help='每轮候选数')
-    parser.add_argument('--target', type=int, default=3, help='目标晋升数')
-    parser.add_argument('--save', action='store_true', help='保存结果')
+    parser = argparse.ArgumentParser(description="因子进化引擎")
+    parser.add_argument("--db", type=str, default=None, help="DuckDB 路径")
+    parser.add_argument("--days", type=int, default=120, help="数据天数")
+    parser.add_argument("--rounds", type=int, default=5, help="最大轮数")
+    parser.add_argument("--candidates", type=int, default=5, help="每轮候选数")
+    parser.add_argument("--target", type=int, default=3, help="目标晋升数")
+    parser.add_argument("--save", action="store_true", help="保存结果")
 
     args = parser.parse_args()
 
@@ -889,5 +931,5 @@ def main():
         print("\n结果已保存到 data/factor_evolution.json")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

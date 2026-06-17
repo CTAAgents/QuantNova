@@ -12,19 +12,17 @@ CircuitBreaker 单元测试
 - 边界条件
 """
 
-import sys
 import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import sys
 
-import pytest
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 import tempfile
-import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
 
-from scripts.trend_scanner.circuit_breaker import (
-    CircuitBreaker, CircuitBreakerConfig, CircuitBreakerResult, StrategyState
-)
+import pandas as pd
+
+from scripts.trend_scanner.circuit_breaker import CircuitBreaker, CircuitBreakerConfig, StrategyState
 
 
 class TestCircuitBreakerConfig:
@@ -92,7 +90,8 @@ class TestCircuitBreaker:
     def test_trigger_consecutive_losses(self):
         """连续亏损超过阈值触发熔断"""
         trades = [
-            {"pnl": 100}, {"pnl": -50},  # 连续亏损1
+            {"pnl": 100},
+            {"pnl": -50},  # 连续亏损1
             {"pnl": -30},  # 连续亏损2
             {"pnl": -20},  # 连续亏损3
             {"pnl": -40},  # 连续亏损4

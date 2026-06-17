@@ -12,26 +12,26 @@
   分析 → 记录 → 归因 → 反思 → 优化 → 验证
 """
 
-import json
 import time
-from typing import Dict, List, Optional, Any
 from datetime import datetime
+from typing import Any
+
 import pandas as pd
 
-from .models import (
-    MarketContext, TradingBrief, UserFeedback,
-    Experience, Route,
-)
-from .experience import ExperienceMemory
 from .evolution import EnhancedEvolutionEngine
-from .trajectory_analysis import (
-    TradeTrajectoryAnalyzer, TradeFaultAttributor, StrategyAdapter
-)
-from .trade_journal import TradeJournal, PatternDetector, RulePromoter
-from .skill_reflection import SkillAwareReflector
+from .experience import ExperienceMemory
 from .meta_skill_engine import MetaSkillEngine
+from .models import (
+    Experience,
+    MarketContext,
+    TradingBrief,
+    UserFeedback,
+)
 from .overfitting_audit import OverfittingAuditor
 from .silent_bypass_detector import SilentBypassDetector
+from .skill_reflection import SkillAwareReflector
+from .trade_journal import PatternDetector, RulePromoter, TradeJournal
+from .trajectory_analysis import StrategyAdapter, TradeFaultAttributor, TradeTrajectoryAnalyzer
 
 
 class EvolutionManager:
@@ -46,8 +46,7 @@ class EvolutionManager:
     5. 反思策略，优化规则
     """
 
-    def __init__(self, experience_memory: ExperienceMemory = None,
-                 db_path: str = "evolution.db"):
+    def __init__(self, experience_memory: ExperienceMemory = None, db_path: str = "evolution.db"):
         """
         初始化进化管理器
 
@@ -87,21 +86,21 @@ class EvolutionManager:
             brief: 交易决策简报
         """
         record = {
-            'timestamp': datetime.now().isoformat(),
-            'symbol': context.symbol,
-            'trend_phase': context.trend_phase.phase,
-            'phase_confidence': context.trend_phase.confidence,
-            'routes': [
+            "timestamp": datetime.now().isoformat(),
+            "symbol": context.symbol,
+            "trend_phase": context.trend_phase.phase,
+            "phase_confidence": context.trend_phase.confidence,
+            "routes": [
                 {
-                    'route_id': r.route_id,
-                    'name': r.name,
-                    'action': r.action,
-                    'confidence': r.confidence,
+                    "route_id": r.route_id,
+                    "name": r.name,
+                    "action": r.action,
+                    "confidence": r.confidence,
                 }
                 for r in brief.routes
             ],
-            'recommended_route': brief.recommended_route,
-            'warnings': brief.warnings,
+            "recommended_route": brief.recommended_route,
+            "warnings": brief.warnings,
         }
 
         # 存储到交易日志
@@ -109,9 +108,7 @@ class EvolutionManager:
 
         return record
 
-    def record_feedback(self, feedback: UserFeedback,
-                        context: MarketContext = None,
-                        brief: TradingBrief = None):
+    def record_feedback(self, feedback: UserFeedback, context: MarketContext = None, brief: TradingBrief = None):
         """
         记录用户反馈
 
@@ -126,7 +123,7 @@ class EvolutionManager:
             timestamp=feedback.timestamp,
             symbol=feedback.symbol,
             context_snapshot=context.to_dict() if context else {},
-            trend_phase=context.trend_phase.phase if context else 'UNKNOWN',
+            trend_phase=context.trend_phase.phase if context else "UNKNOWN",
             phase_confidence=context.trend_phase.confidence if context else 0.5,
             action_taken=feedback.actual_action,
             action_reasoning=f"用户选择方案{feedback.chosen_route}",
@@ -169,7 +166,7 @@ class EvolutionManager:
         # 检查连续亏损
         consecutive_losses = 0
         for trade in reversed(recent_trades):
-            if trade.get('outcome') == 'LOSS':
+            if trade.get("outcome") == "LOSS":
                 consecutive_losses += 1
             else:
                 break
@@ -179,7 +176,7 @@ class EvolutionManager:
             return
 
         # 检查累计亏损
-        total_pnl = sum(t.get('pnl_pct', 0) for t in recent_trades[-10:])
+        total_pnl = sum(t.get("pnl_pct", 0) for t in recent_trades[-10:])
         if total_pnl <= -10:
             self.run_evolution(reason=f"近10笔累计亏损{total_pnl:.1f}%")
             return
@@ -188,8 +185,7 @@ class EvolutionManager:
         if self.evolution_count == 0 or len(recent_trades) - self.evolution_count >= 20:
             self.run_evolution(reason="定期进化（每20笔交易）")
 
-    def run_evolution(self, reason: str = "手动触发",
-                      df: pd.DataFrame = None) -> Dict[str, Any]:
+    def run_evolution(self, reason: str = "手动触发", df: pd.DataFrame = None) -> dict[str, Any]:
         """
         执行进化流程
 
@@ -214,13 +210,13 @@ class EvolutionManager:
         )
 
         # 补充：技能感知反思
-        if evolution_result.get('faults'):
-            for fault in evolution_result['faults']:
+        if evolution_result.get("faults"):
+            for fault in evolution_result["faults"]:
                 reflection = self.skill_reflector.reflect_on_failure(
                     fault=fault,
-                    current_guidance=current_config.get('guidance', {}),
+                    current_guidance=current_config.get("guidance", {}),
                 )
-                evolution_result.setdefault('reflections', []).append(reflection)
+                evolution_result.setdefault("reflections", []).append(reflection)
 
         # 补充：过拟合审计
         if len(all_trades) >= 30:
@@ -228,7 +224,7 @@ class EvolutionManager:
                 trades=all_trades,
                 config=current_config,
             )
-            evolution_result['audit_report'] = audit_report
+            evolution_result["audit_report"] = audit_report
 
         # 补充：静默旁路检测
         strategy_usage = self._analyze_strategy_usage(all_trades)
@@ -236,150 +232,149 @@ class EvolutionManager:
             strategy_usage=strategy_usage,
             config=current_config,
         )
-        evolution_result['bypass_report'] = bypass_report
+        evolution_result["bypass_report"] = bypass_report
 
         # 更新状态
         self.evolution_count = len(all_trades)
         self.last_evolution_time = datetime.now()
-        self.evolution_history.append({
-            'timestamp': self.last_evolution_time.isoformat(),
-            'reason': reason,
-            'trades_count': len(all_trades),
-            'result_summary': {
-                'proposals_count': len(evolution_result.get('proposals', [])),
-                'patterns_count': len(evolution_result.get('patterns', [])),
-                'rules_count': len(evolution_result.get('rules', [])),
-                'reflections_count': len(evolution_result.get('reflections', [])),
-            },
-            'duration_ms': int((time.time() - start_time) * 1000),
-        })
+        self.evolution_history.append(
+            {
+                "timestamp": self.last_evolution_time.isoformat(),
+                "reason": reason,
+                "trades_count": len(all_trades),
+                "result_summary": {
+                    "proposals_count": len(evolution_result.get("proposals", [])),
+                    "patterns_count": len(evolution_result.get("patterns", [])),
+                    "rules_count": len(evolution_result.get("rules", [])),
+                    "reflections_count": len(evolution_result.get("reflections", [])),
+                },
+                "duration_ms": int((time.time() - start_time) * 1000),
+            }
+        )
 
         # 应用优化建议
         self._apply_evolution_result(evolution_result)
 
         return evolution_result
 
-    def _get_current_config(self) -> Dict[str, Any]:
+    def _get_current_config(self) -> dict[str, Any]:
         """获取当前策略配置"""
         # 从经验记忆池中提取当前使用的策略参数
         return {
-            'enter_threshold': 0.35,
-            'exit_threshold': 0.15,
-            'atr_stop_multiplier': 2.0,
-            'max_position_size': 0.1,
-            'guidance': {
-                'trend_following': '顺势操作，等待确认信号',
-                'risk_management': '严格止损，控制仓位',
+            "enter_threshold": 0.35,
+            "exit_threshold": 0.15,
+            "atr_stop_multiplier": 2.0,
+            "max_position_size": 0.1,
+            "guidance": {
+                "trend_following": "顺势操作，等待确认信号",
+                "risk_management": "严格止损，控制仓位",
             },
         }
 
-    def _analyze_strategy_usage(self, trades: List[Dict]) -> Dict[str, Any]:
+    def _analyze_strategy_usage(self, trades: list[dict]) -> dict[str, Any]:
         """分析策略使用情况"""
         usage = {
-            'total_trades': len(trades),
-            'by_action': {},
-            'by_phase': {},
-            'win_rate_by_action': {},
-            'avg_pnl_by_action': {},
+            "total_trades": len(trades),
+            "by_action": {},
+            "by_phase": {},
+            "win_rate_by_action": {},
+            "avg_pnl_by_action": {},
         }
 
         for trade in trades:
-            action = trade.get('action', 'UNKNOWN')
-            phase = trade.get('trend_phase', 'UNKNOWN')
-            outcome = trade.get('outcome', 'UNKNOWN')
-            pnl = trade.get('pnl_pct', 0)
+            action = trade.get("action", "UNKNOWN")
+            phase = trade.get("trend_phase", "UNKNOWN")
+            outcome = trade.get("outcome", "UNKNOWN")
+            pnl = trade.get("pnl_pct", 0)
 
             # 按动作统计
-            usage['by_action'][action] = usage['by_action'].get(action, 0) + 1
-            usage['by_phase'][phase] = usage['by_phase'].get(phase, 0) + 1
+            usage["by_action"][action] = usage["by_action"].get(action, 0) + 1
+            usage["by_phase"][phase] = usage["by_phase"].get(phase, 0) + 1
 
             # 计算胜率
-            if action not in usage['win_rate_by_action']:
-                usage['win_rate_by_action'][action] = {'wins': 0, 'total': 0}
-            usage['win_rate_by_action'][action]['total'] += 1
-            if outcome == 'WIN':
-                usage['win_rate_by_action'][action]['wins'] += 1
+            if action not in usage["win_rate_by_action"]:
+                usage["win_rate_by_action"][action] = {"wins": 0, "total": 0}
+            usage["win_rate_by_action"][action]["total"] += 1
+            if outcome == "WIN":
+                usage["win_rate_by_action"][action]["wins"] += 1
 
             # 计算平均收益
-            if action not in usage['avg_pnl_by_action']:
-                usage['avg_pnl_by_action'][action] = []
-            usage['avg_pnl_by_action'][action].append(pnl)
+            if action not in usage["avg_pnl_by_action"]:
+                usage["avg_pnl_by_action"][action] = []
+            usage["avg_pnl_by_action"][action].append(pnl)
 
         # 计算胜率和平均收益
-        for action in usage['win_rate_by_action']:
-            stats = usage['win_rate_by_action'][action]
-            stats['rate'] = stats['wins'] / stats['total'] if stats['total'] > 0 else 0
+        for action in usage["win_rate_by_action"]:
+            stats = usage["win_rate_by_action"][action]
+            stats["rate"] = stats["wins"] / stats["total"] if stats["total"] > 0 else 0
 
-        for action in usage['avg_pnl_by_action']:
-            pnls = usage['avg_pnl_by_action'][action]
-            usage['avg_pnl_by_action'][action] = sum(pnls) / len(pnls) if pnls else 0
+        for action in usage["avg_pnl_by_action"]:
+            pnls = usage["avg_pnl_by_action"][action]
+            usage["avg_pnl_by_action"][action] = sum(pnls) / len(pnls) if pnls else 0
 
         return usage
 
-    def _apply_evolution_result(self, result: Dict[str, Any]):
+    def _apply_evolution_result(self, result: dict[str, Any]):
         """应用进化结果"""
         # 1. 应用规则晋升
-        if result.get('rules'):
-            for rule in result['rules']:
-                if rule.get('promoted'):
+        if result.get("rules"):
+            for rule in result["rules"]:
+                if rule.get("promoted"):
                     # 将晋升的规则存入经验记忆池
                     self.experience_memory.add_rule(rule)
 
         # 2. 更新策略权重
-        if result.get('proposals'):
-            accepted_proposals = [
-                p for p in result['proposals']
-                if p.get('status') == 'ACCEPTED'
-            ]
+        if result.get("proposals"):
+            accepted_proposals = [p for p in result["proposals"] if p.get("status") == "ACCEPTED"]
             if accepted_proposals:
                 # 应用接受的策略适配建议
                 for proposal in accepted_proposals:
                     self._apply_strategy_adaptation(proposal)
 
         # 3. 记录反思结果
-        if result.get('reflections'):
-            for reflection in result['reflections']:
-                if reflection.get('revision_action') == 'UPDATE_RULE':
+        if result.get("reflections"):
+            for reflection in result["reflections"]:
+                if reflection.get("revision_action") == "UPDATE_RULE":
                     # 更新技能指导
                     self._update_guidance(reflection)
 
-    def _apply_strategy_adaptation(self, proposal: Dict[str, Any]):
+    def _apply_strategy_adaptation(self, proposal: dict[str, Any]):
         """应用策略适配建议"""
         # 记录适配历史
         self.trade_journal.log_adaptation(proposal)
 
-    def _update_guidance(self, reflection: Dict[str, Any]):
+    def _update_guidance(self, reflection: dict[str, Any]):
         """更新技能指导"""
         # 记录指导更新
         self.trade_journal.log_guidance_update(reflection)
 
-    def get_evolution_status(self) -> Dict[str, Any]:
+    def get_evolution_status(self) -> dict[str, Any]:
         """获取进化状态"""
         return {
-            'evolution_count': self.evolution_count,
-            'last_evolution_time': self.last_evolution_time.isoformat() if self.last_evolution_time else None,
-            'total_experiences': self.experience_memory.get_experience_count(),
-            'evolution_history': self.evolution_history[-5:],  # 最近5次进化
+            "evolution_count": self.evolution_count,
+            "last_evolution_time": self.last_evolution_time.isoformat() if self.last_evolution_time else None,
+            "total_experiences": self.experience_memory.get_experience_count(),
+            "evolution_history": self.evolution_history[-5:],  # 最近5次进化
         }
 
-    def get_experience_stats(self) -> Dict[str, Any]:
+    def get_experience_stats(self) -> dict[str, Any]:
         """获取经验统计"""
         return {
-            'total_experiences': self.experience_memory.get_experience_count(),
-            'phase_distribution': self.experience_memory.get_phase_distribution(),
-            'action_distribution': self._get_action_distribution(),
-            'win_rate': self._get_overall_win_rate(),
+            "total_experiences": self.experience_memory.get_experience_count(),
+            "phase_distribution": self.experience_memory.get_phase_distribution(),
+            "action_distribution": self._get_action_distribution(),
+            "win_rate": self._get_overall_win_rate(),
         }
 
-    def _get_action_distribution(self) -> Dict[str, int]:
+    def _get_action_distribution(self) -> dict[str, int]:
         """获取动作分布"""
         # 由于 ExperienceMemory 没有 get_all_experiences 方法，
         # 我们返回一个基于 phase_distribution 的近似值
         phase_dist = self.experience_memory.get_phase_distribution()
         # 将阶段分布转换为动作分布的近似
         return {
-            'estimated_from_phases': sum(phase_dist.values()),
-            'phase_distribution': phase_dist,
+            "estimated_from_phases": sum(phase_dist.values()),
+            "phase_distribution": phase_dist,
         }
 
     def _get_overall_win_rate(self) -> float:
@@ -393,8 +388,7 @@ class EvolutionManagerFactory:
     """进化管理器工厂"""
 
     @staticmethod
-    def create(experience_memory: ExperienceMemory = None,
-               db_path: str = "evolution.db") -> EvolutionManager:
+    def create(experience_memory: ExperienceMemory = None, db_path: str = "evolution.db") -> EvolutionManager:
         """创建进化管理器"""
         return EvolutionManager(
             experience_memory=experience_memory,

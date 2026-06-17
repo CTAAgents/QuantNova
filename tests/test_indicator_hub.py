@@ -12,27 +12,25 @@ IndicatorHub 单元测试
 只测试纯逻辑部分。
 """
 
-import sys
 import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import sys
 
-import pytest
-import pandas as pd
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from unittest.mock import MagicMock, patch
+
 import numpy as np
-from unittest.mock import patch, MagicMock
+import pandas as pd
 
-from scripts.trend_scanner.indicator_hub import (
-    IndicatorHub, DIMENSION_GROUPS, FIELD_NAME_MAP, REVERSE_FIELD_MAP
-)
+from scripts.trend_scanner.indicator_hub import DIMENSION_GROUPS, FIELD_NAME_MAP, REVERSE_FIELD_MAP, IndicatorHub
 
 
 class TestDimensionGroups:
     """维度分组定义测试"""
 
     def test_five_dimensions_exist(self):
-        assert set(DIMENSION_GROUPS.keys()) == {
-            "trend", "momentum", "volume", "volatility", "channel"
-        }
+        assert set(DIMENSION_GROUPS.keys()) == {"trend", "momentum", "volume", "volatility", "channel"}
 
     def test_trend_has_core_indicators(self):
         trend = DIMENSION_GROUPS["trend"]
@@ -139,15 +137,17 @@ class TestIndicatorHub:
         hub._mem_cache = {}
 
         # mock load to return a DataFrame with some indicators
-        mock_df = pd.DataFrame({
-            "timestamp": pd.date_range("2026-01-01", periods=10),
-            "adx": np.random.randn(10),
-            "rsi": np.random.randn(10),
-            "obv": np.random.randn(10),
-            "atr": np.random.randn(10),
-            "dc_upper": np.random.randn(10),
-            "close": np.random.randn(10) + 100,
-        })
+        mock_df = pd.DataFrame(
+            {
+                "timestamp": pd.date_range("2026-01-01", periods=10),
+                "adx": np.random.randn(10),
+                "rsi": np.random.randn(10),
+                "obv": np.random.randn(10),
+                "atr": np.random.randn(10),
+                "dc_upper": np.random.randn(10),
+                "close": np.random.randn(10) + 100,
+            }
+        )
 
         with patch.object(hub, "load", return_value=mock_df):
             dims = hub.get_dimensions("DCE.jm")
@@ -169,13 +169,15 @@ class TestIndicatorHub:
         hub.cache_dir = "/tmp/test_cache"
         hub._mem_cache = {}
 
-        mock_df = pd.DataFrame({
-            "timestamp": pd.to_datetime(["2026-01-01"]),
-            "adx": [25.0],
-            "rsi": [55.0],
-            "close": [100.0],
-            "volume": [1000.0],
-        })
+        mock_df = pd.DataFrame(
+            {
+                "timestamp": pd.to_datetime(["2026-01-01"]),
+                "adx": [25.0],
+                "rsi": [55.0],
+                "close": [100.0],
+                "volume": [1000.0],
+            }
+        )
 
         with patch.object(hub, "load", return_value=mock_df):
             latest = hub.get_latest("DCE.jm")
@@ -204,6 +206,7 @@ class TestConvenienceFunctions:
         with patch.object(IndicatorHub, "load") as mock_load:
             mock_load.return_value = pd.DataFrame({"close": [100]})
             from scripts.trend_scanner.indicator_hub import load_indicators
+
             result = load_indicators("DCE.jm", db_path=":memory:")
             assert isinstance(result, pd.DataFrame)
 
@@ -211,6 +214,7 @@ class TestConvenienceFunctions:
         with patch.object(IndicatorHub, "get_dimensions") as mock_get:
             mock_get.return_value = {"trend": pd.DataFrame()}
             from scripts.trend_scanner.indicator_hub import get_dimensions
+
             result = get_dimensions("DCE.jm", db_path=":memory:")
             assert isinstance(result, dict)
             assert "trend" in result

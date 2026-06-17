@@ -13,10 +13,10 @@
 import json
 import os
 import uuid
+from datetime import datetime
+
 import numpy as np
 import pandas as pd
-from typing import List, Optional, Tuple, Dict
-from datetime import datetime
 
 from .models import Experience, ExperienceMatch, MarketContext
 
@@ -33,8 +33,7 @@ class ExperienceMemory:
     - 持久化（SQLite）
     """
 
-    def __init__(self, db_path: Optional[str] = None, max_experiences: int = 10000,
-                 use_enhanced_vector: bool = True):
+    def __init__(self, db_path: str | None = None, max_experiences: int = 10000, use_enhanced_vector: bool = True):
         """
         初始化经验记忆池
 
@@ -45,18 +44,19 @@ class ExperienceMemory:
         """
         self.db_path = db_path
         self.max_experiences = max_experiences
-        self.experiences: List[Experience] = []
+        self.experiences: list[Experience] = []
         self.use_enhanced_vector = use_enhanced_vector
 
         # 内存中的特征矩阵（用于快速检索）
-        self._feature_matrix: Optional[np.ndarray] = None
-        self._feature_ids: List[str] = []
+        self._feature_matrix: np.ndarray | None = None
+        self._feature_ids: list[str] = []
 
         # 向量增强器（可选）
         self._enhancer = None
         if use_enhanced_vector:
             try:
                 from .vector_enhancement import VectorEnhancer
+
                 self._enhancer = VectorEnhancer()
             except ImportError:
                 pass
@@ -93,7 +93,7 @@ class ExperienceMemory:
         top_k: int = 10,
         min_similarity: float = 0.3,
         time_decay: bool = True,
-    ) -> List[ExperienceMatch]:
+    ) -> list[ExperienceMatch]:
         """
         检索最相似的历史经验
 
@@ -145,7 +145,7 @@ class ExperienceMemory:
 
     def aggregate_routes(
         self,
-        matches: List[ExperienceMatch],
+        matches: list[ExperienceMatch],
     ) -> dict:
         """
         聚合相似经验的动作推荐
@@ -165,23 +165,23 @@ class ExperienceMemory:
             action = match.experience.action_taken
             if action not in groups:
                 groups[action] = {
-                    'count': 0,
-                    'returns': [],
-                    'weights': [],
-                    'max_drawdowns': [],
-                    'holding_days': [],
+                    "count": 0,
+                    "returns": [],
+                    "weights": [],
+                    "max_drawdowns": [],
+                    "holding_days": [],
                 }
-            groups[action]['count'] += 1
-            groups[action]['returns'].append(match.experience.pnl_pct)
-            groups[action]['weights'].append(match.weight)
-            groups[action]['max_drawdowns'].append(match.experience.max_drawdown_pct)
-            groups[action]['holding_days'].append(match.experience.holding_days)
+            groups[action]["count"] += 1
+            groups[action]["returns"].append(match.experience.pnl_pct)
+            groups[action]["weights"].append(match.weight)
+            groups[action]["max_drawdowns"].append(match.experience.max_drawdown_pct)
+            groups[action]["holding_days"].append(match.experience.holding_days)
 
         # 聚合统计
         result = {}
         for action, data in groups.items():
-            returns = np.array(data['returns'])
-            weights = np.array(data['weights'])
+            returns = np.array(data["returns"])
+            weights = np.array(data["weights"])
 
             # 加权平均收益
             if weights.sum() > 0:
@@ -193,17 +193,17 @@ class ExperienceMemory:
             win_rate = (returns > 0).sum() / len(returns)
 
             # 风险调整收益
-            avg_dd = np.mean(data['max_drawdowns'])
+            avg_dd = np.mean(data["max_drawdowns"])
             risk_adj = avg_return / max(avg_dd, 0.1) if avg_dd > 0 else avg_return
 
             result[action] = {
-                'count': data['count'],
-                'avg_return': round(float(avg_return), 2),
-                'win_rate': round(float(win_rate), 2),
-                'avg_weight': round(float(weights.mean()), 2),
-                'avg_max_drawdown': round(float(avg_dd), 2),
-                'risk_adjusted_return': round(float(risk_adj), 2),
-                'avg_holding_days': int(np.mean(data['holding_days'])),
+                "count": data["count"],
+                "avg_return": round(float(avg_return), 2),
+                "win_rate": round(float(win_rate), 2),
+                "avg_weight": round(float(weights.mean()), 2),
+                "avg_max_drawdown": round(float(avg_dd), 2),
+                "risk_adjusted_return": round(float(risk_adj), 2),
+                "avg_holding_days": int(np.mean(data["holding_days"])),
             }
 
         return result
@@ -215,10 +215,10 @@ class ExperienceMemory:
     def retrieve_by_granularity(
         self,
         context: MarketContext,
-        granularity: str = 'all',
+        granularity: str = "all",
         top_k: int = 10,
         min_similarity: float = 0.3,
-    ) -> List[ExperienceMatch]:
+    ) -> list[ExperienceMatch]:
         """
         按时间粒度检索经验
 
@@ -245,19 +245,18 @@ class ExperienceMemory:
 
         for i, exp in enumerate(self.experiences):
             try:
-                exp_time = datetime.fromisoformat(exp.timestamp.replace('Z', '+00:00').split('+')[0])
+                exp_time = datetime.fromisoformat(exp.timestamp.replace("Z", "+00:00").split("+")[0])
                 days_ago = (now - exp_time).days
 
-                if granularity == 'short' and days_ago <= 7:
-                    filtered_indices.append(i)
-                elif granularity == 'medium' and days_ago <= 30:
-                    filtered_indices.append(i)
-                elif granularity == 'long' and days_ago <= 90:
-                    filtered_indices.append(i)
-                elif granularity == 'all':
+                if (
+                    (granularity == "short" and days_ago <= 7)
+                    or (granularity == "medium" and days_ago <= 30)
+                    or (granularity == "long" and days_ago <= 90)
+                    or granularity == "all"
+                ):
                     filtered_indices.append(i)
             except (ValueError, AttributeError):
-                if granularity == 'all':
+                if granularity == "all":
                     filtered_indices.append(i)
 
         if not filtered_indices:
@@ -312,7 +311,7 @@ class ExperienceMemory:
         self,
         context: MarketContext,
         top_k: int = 10,
-    ) -> Dict[str, List[ExperienceMatch]]:
+    ) -> dict[str, list[ExperienceMatch]]:
         """
         多粒度检索
 
@@ -329,10 +328,10 @@ class ExperienceMemory:
             }
         """
         return {
-            'short': self.retrieve_by_granularity(context, 'short', top_k),
-            'medium': self.retrieve_by_granularity(context, 'medium', top_k),
-            'long': self.retrieve_by_granularity(context, 'long', top_k),
-            'all': self.retrieve_by_granularity(context, 'all', top_k),
+            "short": self.retrieve_by_granularity(context, "short", top_k),
+            "medium": self.retrieve_by_granularity(context, "medium", top_k),
+            "long": self.retrieve_by_granularity(context, "long", top_k),
+            "all": self.retrieve_by_granularity(context, "all", top_k),
         }
 
     def get_phase_distribution(self) -> dict:
@@ -373,7 +372,7 @@ class ExperienceMemory:
 
         for i in range(window, len(df) - forward_days, step):
             # 取窗口内的数据
-            window_df = df.iloc[i - window:i + 1].copy()
+            window_df = df.iloc[i - window : i + 1].copy()
 
             try:
                 context = assembler.assemble(window_df)
@@ -381,8 +380,8 @@ class ExperienceMemory:
                 continue
 
             # 计算未来收益
-            future_close = df['close'].iloc[i + forward_days]
-            current_close = df['close'].iloc[i]
+            future_close = df["close"].iloc[i + forward_days]
+            current_close = df["close"].iloc[i]
             if current_close > 0:
                 pnl_pct = (future_close - current_close) / current_close * 100
             else:
@@ -400,13 +399,13 @@ class ExperienceMemory:
             trend_phase = context.trend_phase.phase
 
             # 计算最大回撤
-            future_prices = df['close'].iloc[i:i + forward_days + 1]
-            max_dd = self._calc_max_drawdown(future_prices, direction='long' if action == 'LONG' else 'short')
+            future_prices = df["close"].iloc[i : i + forward_days + 1]
+            max_dd = self._calc_max_drawdown(future_prices, direction="long" if action == "LONG" else "short")
 
             # 创建经验
             exp = Experience(
                 experience_id=f"hist_{symbol}_{i}",
-                timestamp=str(df.index[i] if hasattr(df.index[i], 'isoformat') else df.iloc[i].get('date', i)),
+                timestamp=str(df.index[i] if hasattr(df.index[i], "isoformat") else df.iloc[i].get("date", i)),
                 symbol=symbol,
                 context_snapshot=context.to_dict(),
                 trend_phase=trend_phase,
@@ -510,7 +509,7 @@ class ExperienceMemory:
 
         for exp in self.experiences:
             try:
-                exp_time = datetime.fromisoformat(exp.timestamp.replace('Z', '+00:00').split('+')[0])
+                exp_time = datetime.fromisoformat(exp.timestamp.replace("Z", "+00:00").split("+")[0])
                 days_ago = (now - exp_time).days
                 # 半衰期 90 天
                 decay = 0.5 ** (days_ago / 90)
@@ -520,12 +519,12 @@ class ExperienceMemory:
 
         return np.array(weights)
 
-    def _calc_max_drawdown(self, prices: pd.Series, direction: str = 'long') -> float:
+    def _calc_max_drawdown(self, prices: pd.Series, direction: str = "long") -> float:
         """计算最大回撤"""
         if len(prices) < 2:
             return 0.0
 
-        if direction == 'long':
+        if direction == "long":
             peak = prices.iloc[0]
             max_dd = 0.0
             for p in prices:
@@ -554,7 +553,7 @@ class ExperienceMemory:
     def _evict_old(self):
         """淘汰最旧的经验"""
         if len(self.experiences) > self.max_experiences:
-            self.experiences = self.experiences[-self.max_experiences:]
+            self.experiences = self.experiences[-self.max_experiences :]
             self._invalidate_cache()
 
     # ──────────────────────────────────────────
@@ -568,6 +567,7 @@ class ExperienceMemory:
 
         try:
             import sqlite3
+
             conn = sqlite3.connect(self.db_path)
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS experiences (
@@ -611,11 +611,11 @@ class ExperienceMemory:
                     json.dumps(experience.feature_vector),
                     json.dumps(experience.context_snapshot),
                     json.dumps(experience.to_dict()),
-                )
+                ),
             )
             conn.commit()
             conn.close()
-        except Exception as e:
+        except Exception:
             pass  # 静默失败，不影响主流程
 
     def _load_from_db(self):
@@ -625,14 +625,15 @@ class ExperienceMemory:
 
         try:
             import sqlite3
+
             conn = sqlite3.connect(self.db_path)
-            cursor = conn.execute("SELECT full_data FROM experiences ORDER BY timestamp DESC LIMIT ?",
-                                  (self.max_experiences,))
+            cursor = conn.execute(
+                "SELECT full_data FROM experiences ORDER BY timestamp DESC LIMIT ?", (self.max_experiences,)
+            )
             for row in cursor:
                 try:
                     data = json.loads(row[0])
-                    exp = Experience(**{k: v for k, v in data.items()
-                                       if k in Experience.__dataclass_fields__})
+                    exp = Experience(**{k: v for k, v in data.items() if k in Experience.__dataclass_fields__})
                     self.experiences.append(exp)
                 except Exception:
                     continue

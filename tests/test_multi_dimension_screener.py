@@ -11,17 +11,21 @@ MultiDimensionScreener 单元测试
 - MultiDimensionResult.to_dict() 序列化
 """
 
-import sys
 import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import sys
 
-import pytest
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 import numpy as np
 import pandas as pd
 
 from scripts.trend_scanner.multi_dimension_screener import (
-    MultiDimensionScreener, MultiDimensionResult, DimensionScore,
-    DIMENSION_WEIGHTS, DIMENSION_INDICATORS
+    DIMENSION_INDICATORS,
+    DIMENSION_WEIGHTS,
+    DimensionScore,
+    MultiDimensionResult,
+    MultiDimensionScreener,
 )
 
 
@@ -29,9 +33,7 @@ class TestDimensionWeights:
     """维度权重配置测试"""
 
     def test_five_dimensions(self):
-        assert set(DIMENSION_WEIGHTS.keys()) == {
-            "trend", "momentum", "volume", "volatility", "channel"
-        }
+        assert set(DIMENSION_WEIGHTS.keys()) == {"trend", "momentum", "volume", "volatility", "channel"}
 
     def test_weights_sum_to_one(self):
         total = sum(DIMENSION_WEIGHTS.values())
@@ -61,8 +63,7 @@ class TestDimensionIndicators:
                 name, neutral, lo, hi, scaling = ind
                 assert isinstance(name, str)
                 assert isinstance(neutral, (int, float))
-                assert scaling in ("bounded", "directional", "position",
-                                   "volume", "channel_upper", "channel_lower")
+                assert scaling in ("bounded", "directional", "position", "volume", "channel_upper", "channel_lower")
 
 
 class TestNormalizationRules:
@@ -117,57 +118,59 @@ class TestMultiDimensionScreener:
         """构造测试用 DataFrame"""
         np.random.seed(42)
         n = rows
-        df = pd.DataFrame({
-            "timestamp": pd.date_range("2026-01-01", periods=n, freq="D"),
-            "close": np.linspace(100, 110, n),
-            "high": np.linspace(102, 112, n),
-            "low": np.linspace(98, 108, n),
-            "open": np.linspace(100, 110, n),
-            "volume": np.random.randint(1000, 5000, n).astype(float),
-            # trend
-            "adx": np.linspace(20, 40, n),
-            "plus_di": np.linspace(25, 35, n),
-            "minus_di": np.linspace(20, 15, n),
-            "sar": np.linspace(95, 105, n),
-            "dkx": np.linspace(98, 108, n),
-            "ema20": np.linspace(99, 109, n),
-            "ema60": np.linspace(97, 107, n),
-            "adxr": np.linspace(18, 38, n),
-            "ma20_slope": np.linspace(0.1, 0.5, n),
-            "ma60_slope": np.linspace(0.05, 0.3, n),
-            "lon": np.linspace(45, 55, n),
-            "spread_ma20_ma60": np.linspace(1, 3, n),
-            # momentum
-            "macd": np.linspace(-10, 30, n),
-            "macd_hist": np.linspace(-5, 15, n),
-            "rsi": np.linspace(40, 65, n),
-            "kdj_k": np.linspace(35, 70, n),
-            "roc": np.linspace(-2, 5, n),
-            "mtm": np.linspace(-10, 20, n),
-            "wr": np.linspace(60, 35, n),
-            "cci": np.linspace(-50, 150, n),
-            "priceosc": np.linspace(-1, 3, n),
-            "b36": np.linspace(-5, 10, n),
-            "b612": np.linspace(-8, 15, n),
-            # volume
-            "mfi": np.linspace(40, 65, n),
-            "vr": np.linspace(80, 150, n),
-            "vroc": np.linspace(-10, 20, n),
-            "obv": np.linspace(1000, 2000, n),
-            # volatility
-            "atr_ratio": np.linspace(0.8, 1.5, n),
-            "bb_width": np.linspace(0.02, 0.05, n),
-            "mass": np.linspace(22, 28, n),
-            # channel
-            "dc_upper": np.linspace(102, 112, n),
-            "dc_lower": np.linspace(98, 108, n),
-            "bb_upper": np.linspace(103, 113, n),
-            "bb_lower": np.linspace(97, 107, n),
-            "hcl_upper": np.linspace(104, 114, n),
-            "hcl_lower": np.linspace(96, 106, n),
-            "env_upper": np.linspace(101, 111, n),
-            "env_lower": np.linspace(99, 109, n),
-        })
+        df = pd.DataFrame(
+            {
+                "timestamp": pd.date_range("2026-01-01", periods=n, freq="D"),
+                "close": np.linspace(100, 110, n),
+                "high": np.linspace(102, 112, n),
+                "low": np.linspace(98, 108, n),
+                "open": np.linspace(100, 110, n),
+                "volume": np.random.randint(1000, 5000, n).astype(float),
+                # trend
+                "adx": np.linspace(20, 40, n),
+                "plus_di": np.linspace(25, 35, n),
+                "minus_di": np.linspace(20, 15, n),
+                "sar": np.linspace(95, 105, n),
+                "dkx": np.linspace(98, 108, n),
+                "ema20": np.linspace(99, 109, n),
+                "ema60": np.linspace(97, 107, n),
+                "adxr": np.linspace(18, 38, n),
+                "ma20_slope": np.linspace(0.1, 0.5, n),
+                "ma60_slope": np.linspace(0.05, 0.3, n),
+                "lon": np.linspace(45, 55, n),
+                "spread_ma20_ma60": np.linspace(1, 3, n),
+                # momentum
+                "macd": np.linspace(-10, 30, n),
+                "macd_hist": np.linspace(-5, 15, n),
+                "rsi": np.linspace(40, 65, n),
+                "kdj_k": np.linspace(35, 70, n),
+                "roc": np.linspace(-2, 5, n),
+                "mtm": np.linspace(-10, 20, n),
+                "wr": np.linspace(60, 35, n),
+                "cci": np.linspace(-50, 150, n),
+                "priceosc": np.linspace(-1, 3, n),
+                "b36": np.linspace(-5, 10, n),
+                "b612": np.linspace(-8, 15, n),
+                # volume
+                "mfi": np.linspace(40, 65, n),
+                "vr": np.linspace(80, 150, n),
+                "vroc": np.linspace(-10, 20, n),
+                "obv": np.linspace(1000, 2000, n),
+                # volatility
+                "atr_ratio": np.linspace(0.8, 1.5, n),
+                "bb_width": np.linspace(0.02, 0.05, n),
+                "mass": np.linspace(22, 28, n),
+                # channel
+                "dc_upper": np.linspace(102, 112, n),
+                "dc_lower": np.linspace(98, 108, n),
+                "bb_upper": np.linspace(103, 113, n),
+                "bb_lower": np.linspace(97, 107, n),
+                "hcl_upper": np.linspace(104, 114, n),
+                "hcl_lower": np.linspace(96, 106, n),
+                "env_upper": np.linspace(101, 111, n),
+                "env_lower": np.linspace(99, 109, n),
+            }
+        )
         return df
 
     def test_score_returns_result(self):
@@ -220,76 +223,88 @@ class TestMultiDimensionScreener:
         """构造明确空头场景"""
         np.random.seed(42)
         n = 20
-        df = pd.DataFrame({
-            "timestamp": pd.date_range("2026-01-01", periods=n, freq="D"),
-            "close": np.linspace(110, 95, n),  # 下跌趋势
-            "high": np.linspace(112, 97, n),
-            "low": np.linspace(108, 93, n),
-            "open": np.linspace(110, 95, n),
-            "volume": np.random.randint(1000, 5000, n).astype(float),
-            # trend - 空头
-            "adx": np.linspace(30, 55, n),
-            "plus_di": np.linspace(20, 10, n),
-            "minus_di": np.linspace(30, 50, n),
-            "sar": np.linspace(115, 100, n),  # SAR 在价格上方
-            "dkx": np.linspace(112, 97, n),
-            "ema20": np.linspace(112, 97, n),
-            "ema60": np.linspace(114, 99, n),
-            "adxr": np.linspace(28, 50, n),
-            "ma20_slope": np.linspace(-0.1, -0.8, n),
-            "ma60_slope": np.linspace(-0.05, -0.5, n),
-            "lon": np.linspace(55, 35, n),
-            "spread_ma20_ma60": np.linspace(-1, -5, n),
-            # momentum - 空头
-            "macd": np.linspace(10, -40, n),
-            "macd_hist": np.linspace(5, -30, n),
-            "rsi": np.linspace(60, 25, n),
-            "kdj_k": np.linspace(65, 30, n),
-            "roc": np.linspace(3, -6, n),
-            "mtm": np.linspace(15, -30, n),
-            "wr": np.linspace(40, 75, n),
-            "cci": np.linspace(100, -200, n),
-            "priceosc": np.linspace(2, -4, n),
-            "b36": np.linspace(8, -15, n),
-            "b612": np.linspace(10, -20, n),
-            # volume - 空头
-            "mfi": np.linspace(60, 30, n),
-            "vr": np.linspace(150, 60, n),
-            "vroc": np.linspace(15, -20, n),
-            "obv": np.linspace(2000, 500, n),
-            # volatility
-            "atr_ratio": np.linspace(0.9, 1.4, n),
-            "bb_width": np.linspace(0.03, 0.04, n),
-            "mass": np.linspace(25, 28, n),
-            # channel - 价格在通道下方
-            "dc_upper": np.linspace(114, 100, n),
-            "dc_lower": np.linspace(106, 90, n),
-            "bb_upper": np.linspace(115, 101, n),
-            "bb_lower": np.linspace(105, 89, n),
-            "hcl_upper": np.linspace(116, 102, n),
-            "hcl_lower": np.linspace(104, 88, n),
-            "env_upper": np.linspace(113, 99, n),
-            "env_lower": np.linspace(107, 91, n),
-        })
+        df = pd.DataFrame(
+            {
+                "timestamp": pd.date_range("2026-01-01", periods=n, freq="D"),
+                "close": np.linspace(110, 95, n),  # 下跌趋势
+                "high": np.linspace(112, 97, n),
+                "low": np.linspace(108, 93, n),
+                "open": np.linspace(110, 95, n),
+                "volume": np.random.randint(1000, 5000, n).astype(float),
+                # trend - 空头
+                "adx": np.linspace(30, 55, n),
+                "plus_di": np.linspace(20, 10, n),
+                "minus_di": np.linspace(30, 50, n),
+                "sar": np.linspace(115, 100, n),  # SAR 在价格上方
+                "dkx": np.linspace(112, 97, n),
+                "ema20": np.linspace(112, 97, n),
+                "ema60": np.linspace(114, 99, n),
+                "adxr": np.linspace(28, 50, n),
+                "ma20_slope": np.linspace(-0.1, -0.8, n),
+                "ma60_slope": np.linspace(-0.05, -0.5, n),
+                "lon": np.linspace(55, 35, n),
+                "spread_ma20_ma60": np.linspace(-1, -5, n),
+                # momentum - 空头
+                "macd": np.linspace(10, -40, n),
+                "macd_hist": np.linspace(5, -30, n),
+                "rsi": np.linspace(60, 25, n),
+                "kdj_k": np.linspace(65, 30, n),
+                "roc": np.linspace(3, -6, n),
+                "mtm": np.linspace(15, -30, n),
+                "wr": np.linspace(40, 75, n),
+                "cci": np.linspace(100, -200, n),
+                "priceosc": np.linspace(2, -4, n),
+                "b36": np.linspace(8, -15, n),
+                "b612": np.linspace(10, -20, n),
+                # volume - 空头
+                "mfi": np.linspace(60, 30, n),
+                "vr": np.linspace(150, 60, n),
+                "vroc": np.linspace(15, -20, n),
+                "obv": np.linspace(2000, 500, n),
+                # volatility
+                "atr_ratio": np.linspace(0.9, 1.4, n),
+                "bb_width": np.linspace(0.03, 0.04, n),
+                "mass": np.linspace(25, 28, n),
+                # channel - 价格在通道下方
+                "dc_upper": np.linspace(114, 100, n),
+                "dc_lower": np.linspace(106, 90, n),
+                "bb_upper": np.linspace(115, 101, n),
+                "bb_lower": np.linspace(105, 89, n),
+                "hcl_upper": np.linspace(116, 102, n),
+                "hcl_lower": np.linspace(104, 88, n),
+                "env_upper": np.linspace(113, 99, n),
+                "env_lower": np.linspace(107, 91, n),
+            }
+        )
         result = self.screener.score("DCE.jm", df)
         assert result.overall_score < 0
 
     def test_custom_weights(self):
         """自定义权重不影响功能"""
-        custom = MultiDimensionScreener(weights={
-            "trend": 0.5, "momentum": 0.2, "volume": 0.1,
-            "volatility": 0.1, "channel": 0.1,
-        })
+        custom = MultiDimensionScreener(
+            weights={
+                "trend": 0.5,
+                "momentum": 0.2,
+                "volume": 0.1,
+                "volatility": 0.1,
+                "channel": 0.1,
+            }
+        )
         df = self._make_df()
         result = custom.score("DCE.jm", df)
         assert isinstance(result, MultiDimensionResult)
 
     def test_weight_auto_normalize(self):
         """权重总和不为1时自动归一化"""
-        screener = MultiDimensionScreener(weights={
-            "trend": 6, "momentum": 5, "volume": 4,
-            "volatility": 3, "channel": 2,
-        })
+        screener = MultiDimensionScreener(
+            weights={
+                "trend": 6,
+                "momentum": 5,
+                "volume": 4,
+                "volatility": 3,
+                "channel": 2,
+            }
+        )
         total = sum(screener.weights.values())
         assert abs(total - 1.0) < 0.01
 
@@ -303,9 +318,12 @@ class TestMultiDimensionResult:
             timestamp="2026-01-01T00:00:00",
             dimensions=[
                 DimensionScore(
-                    name="trend", weight=0.3,
+                    name="trend",
+                    weight=0.3,
                     indicator_scores={"adx": 0.5, "rsi": -0.2},
-                    composite=0.3, direction="BULLISH", confidence=0.7,
+                    composite=0.3,
+                    direction="BULLISH",
+                    confidence=0.7,
                 ),
             ],
             overall_score=0.3,

@@ -9,19 +9,19 @@
 - ExecutionEngine: 执行引擎（整合状态机+风控+过滤+日志）
 """
 
-from typing import Dict, List, Optional, Tuple
-from datetime import datetime
-from enum import Enum
 import json
+from enum import Enum
+
 import numpy as np
 import pandas as pd
 
 
 class State(Enum):
     """持仓状态"""
-    FLAT = 'FLAT'
-    LONG = 'LONG'
-    SHORT = 'SHORT'
+
+    FLAT = "FLAT"
+    LONG = "LONG"
+    SHORT = "SHORT"
 
 
 class PositionState:
@@ -34,11 +34,14 @@ class PositionState:
     - 防止在零附近反复横跳
     """
 
-    def __init__(self, enter_threshold: float = 0.35,
-                 exit_threshold: float = 0.15,
-                 atr_stop_multiplier: float = 2.0,
-                 trend_break_threshold: float = 0.6,
-                 max_holding_bars: int = 30):
+    def __init__(
+        self,
+        enter_threshold: float = 0.35,
+        exit_threshold: float = 0.15,
+        atr_stop_multiplier: float = 2.0,
+        trend_break_threshold: float = 0.6,
+        max_holding_bars: int = 30,
+    ):
         """
         参数:
             enter_threshold: 入场门槛（|pos| > 此值才允许开仓）
@@ -70,8 +73,7 @@ class PositionState:
         self.stop_loss = 0.0
         self.direction = 0
 
-    def update(self, pos: float, current_price: float, atr: float,
-               s_trend: float, bar_index: int = 0) -> Dict:
+    def update(self, pos: float, current_price: float, atr: float, s_trend: float, bar_index: int = 0) -> dict:
         """
         更新状态机
 
@@ -87,8 +89,8 @@ class PositionState:
             reason: 出场原因
             target_size: 目标仓位大小 [0, 1]
         """
-        action = 'HOLD'
-        reason = ''
+        action = "HOLD"
+        reason = ""
         target_size = 0.0
 
         # 更新持仓天数
@@ -101,78 +103,78 @@ class PositionState:
         if self.state == State.LONG:
             # 1. 硬止损
             if atr > 0 and current_price <= self.stop_loss:
-                action = 'STOP_LOSS'
-                reason = f'价格{current_price:.0f}跌破止损{self.stop_loss:.0f}'
+                action = "STOP_LOSS"
+                reason = f"价格{current_price:.0f}跌破止损{self.stop_loss:.0f}"
                 self.reset()
-                return {'action': action, 'reason': reason, 'target_size': 0.0}
+                return {"action": action, "reason": reason, "target_size": 0.0}
 
             # 2. 趋势崩溃
             if s_trend < -self.trend_break_threshold:
-                action = 'TREND_BREAK'
-                reason = f'趋势崩溃：S_trend={s_trend:+.2f} < -{self.trend_break_threshold}'
+                action = "TREND_BREAK"
+                reason = f"趋势崩溃：S_trend={s_trend:+.2f} < -{self.trend_break_threshold}"
                 self.reset()
-                return {'action': action, 'reason': reason, 'target_size': 0.0}
+                return {"action": action, "reason": reason, "target_size": 0.0}
 
             # 3. 时间止损
             if self.holding_bars >= self.max_holding_bars:
-                action = 'TIME_STOP'
-                reason = f'持仓{self.holding_bars}根K线，超过最大持仓周期{self.max_holding_bars}'
+                action = "TIME_STOP"
+                reason = f"持仓{self.holding_bars}根K线，超过最大持仓周期{self.max_holding_bars}"
                 self.reset()
-                return {'action': action, 'reason': reason, 'target_size': 0.0}
+                return {"action": action, "reason": reason, "target_size": 0.0}
 
             # 4. 信号消失（pos方向改变或幅度衰减）
             if pos < -self.exit_threshold:
-                action = 'CLOSE'
-                reason = f'信号反转：pos={pos:+.2f}'
+                action = "CLOSE"
+                reason = f"信号反转：pos={pos:+.2f}"
                 self.reset()
-                return {'action': action, 'reason': reason, 'target_size': 0.0}
+                return {"action": action, "reason": reason, "target_size": 0.0}
             elif abs(pos) < self.exit_threshold:
-                action = 'CLOSE'
-                reason = f'信号消失：|pos|={abs(pos):.2f} < {self.exit_threshold}'
+                action = "CLOSE"
+                reason = f"信号消失：|pos|={abs(pos):.2f} < {self.exit_threshold}"
                 self.reset()
-                return {'action': action, 'reason': reason, 'target_size': 0.0}
+                return {"action": action, "reason": reason, "target_size": 0.0}
 
             # 5. 持仓中：目标仓位（只允许减仓/维持，不允许漂成空）
             target_size = max(0, min(1, pos))
-            return {'action': 'HOLD', 'reason': '', 'target_size': target_size}
+            return {"action": "HOLD", "reason": "", "target_size": target_size}
 
         elif self.state == State.SHORT:
             # 1. 硬止损
             if atr > 0 and current_price >= self.stop_loss:
-                action = 'STOP_LOSS'
-                reason = f'价格{current_price:.0f}突破止损{self.stop_loss:.0f}'
+                action = "STOP_LOSS"
+                reason = f"价格{current_price:.0f}突破止损{self.stop_loss:.0f}"
                 self.reset()
-                return {'action': action, 'reason': reason, 'target_size': 0.0}
+                return {"action": action, "reason": reason, "target_size": 0.0}
 
             # 2. 趋势崩溃
             if s_trend > self.trend_break_threshold:
-                action = 'TREND_BREAK'
-                reason = f'趋势崩溃：S_trend={s_trend:+.2f} > +{self.trend_break_threshold}'
+                action = "TREND_BREAK"
+                reason = f"趋势崩溃：S_trend={s_trend:+.2f} > +{self.trend_break_threshold}"
                 self.reset()
-                return {'action': action, 'reason': reason, 'target_size': 0.0}
+                return {"action": action, "reason": reason, "target_size": 0.0}
 
             # 3. 时间止损
             if self.holding_bars >= self.max_holding_bars:
-                action = 'TIME_STOP'
-                reason = f'持仓{self.holding_bars}根K线，超过最大持仓周期{self.max_holding_bars}'
+                action = "TIME_STOP"
+                reason = f"持仓{self.holding_bars}根K线，超过最大持仓周期{self.max_holding_bars}"
                 self.reset()
-                return {'action': action, 'reason': reason, 'target_size': 0.0}
+                return {"action": action, "reason": reason, "target_size": 0.0}
 
             # 4. 信号消失
             if pos > self.exit_threshold:
-                action = 'CLOSE'
-                reason = f'信号反转：pos={pos:+.2f}'
+                action = "CLOSE"
+                reason = f"信号反转：pos={pos:+.2f}"
                 self.reset()
-                return {'action': action, 'reason': reason, 'target_size': 0.0}
+                return {"action": action, "reason": reason, "target_size": 0.0}
             elif abs(pos) < self.exit_threshold:
-                action = 'CLOSE'
-                reason = f'信号消失：|pos|={abs(pos):.2f} < {self.exit_threshold}'
+                action = "CLOSE"
+                reason = f"信号消失：|pos|={abs(pos):.2f} < {self.exit_threshold}"
                 self.reset()
-                return {'action': action, 'reason': reason, 'target_size': 0.0}
+                return {"action": action, "reason": reason, "target_size": 0.0}
 
             # 5. 持仓中：目标仓位（只允许减仓/维持，不允许漂成多）
             target_size = max(-1, min(0, pos))
-            return {'action': 'HOLD', 'reason': '', 'target_size': target_size}
+            return {"action": "HOLD", "reason": "", "target_size": target_size}
 
         # ============================================================
         # 空仓：检查入场条件
@@ -180,13 +182,13 @@ class PositionState:
         else:  # FLAT
             if abs(pos) > self.enter_threshold:
                 if pos > 0:
-                    action = 'OPEN_LONG'
-                    reason = f'多头信号：pos={pos:+.2f} > {self.enter_threshold}'
+                    action = "OPEN_LONG"
+                    reason = f"多头信号：pos={pos:+.2f} > {self.enter_threshold}"
                     self.state = State.LONG
                     self.direction = 1
                 else:
-                    action = 'OPEN_SHORT'
-                    reason = f'空头信号：pos={pos:+.2f} < -{self.enter_threshold}'
+                    action = "OPEN_SHORT"
+                    reason = f"空头信号：pos={pos:+.2f} < -{self.enter_threshold}"
                     self.state = State.SHORT
                     self.direction = -1
 
@@ -202,18 +204,18 @@ class PositionState:
                         self.stop_loss = current_price + self.atr_stop_multiplier * atr
 
                 target_size = abs(pos)
-                return {'action': action, 'reason': reason, 'target_size': target_size}
+                return {"action": action, "reason": reason, "target_size": target_size}
 
-            return {'action': 'HOLD', 'reason': '', 'target_size': 0.0}
+            return {"action": "HOLD", "reason": "", "target_size": 0.0}
 
-    def get_state_info(self) -> Dict:
+    def get_state_info(self) -> dict:
         """获取当前状态信息"""
         return {
-            'state': self.state.value,
-            'direction': self.direction,
-            'entry_price': self.entry_price,
-            'holding_bars': self.holding_bars,
-            'stop_loss': self.stop_loss,
+            "state": self.state.value,
+            "direction": self.direction,
+            "entry_price": self.entry_price,
+            "holding_bars": self.holding_bars,
+            "stop_loss": self.stop_loss,
         }
 
 
@@ -228,10 +230,13 @@ class RiskGuard:
     - 闪崩检测
     """
 
-    def __init__(self, max_daily_loss: float = 0.02,
-                 max_consecutive_losses: int = 3,
-                 target_volatility: float = 0.20,
-                 crash_threshold_atr: float = 4.0):
+    def __init__(
+        self,
+        max_daily_loss: float = 0.02,
+        max_consecutive_losses: int = 3,
+        target_volatility: float = 0.20,
+        crash_threshold_atr: float = 4.0,
+    ):
         """
         参数:
             max_daily_loss: 日最大亏损比例（2%）
@@ -330,9 +335,7 @@ class TradeFilter:
     - 成交量过低检测
     """
 
-    def __init__(self, max_spread_pct: float = 0.5,
-                 min_volume: int = 100,
-                 limit_threshold_pct: float = 0.09):
+    def __init__(self, max_spread_pct: float = 0.5, min_volume: int = 100, limit_threshold_pct: float = 0.09):
         """
         参数:
             max_spread_pct: 最大点差百分比（0.5%）
@@ -343,8 +346,9 @@ class TradeFilter:
         self.min_volume = min_volume
         self.limit_threshold_pct = limit_threshold_pct
 
-    def check_feasibility(self, open_price: float, high: float, low: float,
-                          close: float, volume: int, prev_close: float = 0) -> Dict:
+    def check_feasibility(
+        self, open_price: float, high: float, low: float, close: float, volume: int, prev_close: float = 0
+    ) -> dict:
         """
         检查交易可行性
 
@@ -367,28 +371,27 @@ class TradeFilter:
         if prev_close > 0:
             change_pct = abs(close - prev_close) / prev_close
             if change_pct >= self.limit_threshold_pct:
-                reasons.append(f'接近涨跌停：涨跌幅{change_pct*100:.1f}%')
+                reasons.append(f"接近涨跌停：涨跌幅{change_pct * 100:.1f}%")
 
         # 2. 点差异常检测
         if close > 0:
             spread_pct = (high - low) / close * 100
             if spread_pct > self.max_spread_pct:
-                reasons.append(f'点差异常：振幅{spread_pct:.2f}% > {self.max_spread_pct}%')
+                reasons.append(f"点差异常：振幅{spread_pct:.2f}% > {self.max_spread_pct}%")
         else:
             spread_pct = 0
 
         # 3. 成交量过低检测
         if volume < self.min_volume:
-            reasons.append(f'成交量过低：{volume} < {self.min_volume}')
+            reasons.append(f"成交量过低：{volume} < {self.min_volume}")
 
         return {
-            'feasible': len(reasons) == 0,
-            'reasons': reasons,
-            'spread_pct': round(spread_pct, 3),
+            "feasible": len(reasons) == 0,
+            "reasons": reasons,
+            "spread_pct": round(spread_pct, 3),
         }
 
-    def calc_slippage(self, price: float, atr: float, volume: int,
-                      target_size: float) -> float:
+    def calc_slippage(self, price: float, atr: float, volume: int, target_size: float) -> float:
         """
         计算滑点估计
 
@@ -427,61 +430,77 @@ class ExecutionLog:
         self.logs = []
         self.max_logs = max_logs
         self.filter_stats = {
-            'total_signals': 0,
-            'filtered_count': 0,
-            'filtered_reasons': {},
-            'dimension_filter_count': {},
+            "total_signals": 0,
+            "filtered_count": 0,
+            "filtered_reasons": {},
+            "dimension_filter_count": {},
         }
 
-    def log(self, timestamp, state, pos, target_size, dimensions, z_scores,
-            mad_mask, vote_sign, conflict, discount, action, reason,
-            entry_price=0, current_price=0, pnl=0, filtered_out=None):
+    def log(
+        self,
+        timestamp,
+        state,
+        pos,
+        target_size,
+        dimensions,
+        z_scores,
+        mad_mask,
+        vote_sign,
+        conflict,
+        discount,
+        action,
+        reason,
+        entry_price=0,
+        current_price=0,
+        pnl=0,
+        filtered_out=None,
+    ):
         """记录一条日志"""
         entry = {
-            'timestamp': str(timestamp),
-            'state': state,
-            'pos_target': round(pos, 3),
-            'pos_executed': round(target_size, 3),
-            'dimensions': {k: round(v, 3) for k, v in dimensions.items()},
-            'z_scores': [round(z, 3) for z in z_scores] if z_scores else [],
-            'mad_mask': mad_mask,
-            'vote_sign': vote_sign,
-            'conflict': conflict,
-            'discount': round(discount, 3),
-            'entry_price': round(entry_price, 2),
-            'current_price': round(current_price, 2),
-            'pnl': round(pnl, 2),
-            'action': action,
-            'reason': reason,
+            "timestamp": str(timestamp),
+            "state": state,
+            "pos_target": round(pos, 3),
+            "pos_executed": round(target_size, 3),
+            "dimensions": {k: round(v, 3) for k, v in dimensions.items()},
+            "z_scores": [round(z, 3) for z in z_scores] if z_scores else [],
+            "mad_mask": mad_mask,
+            "vote_sign": vote_sign,
+            "conflict": conflict,
+            "discount": round(discount, 3),
+            "entry_price": round(entry_price, 2),
+            "current_price": round(current_price, 2),
+            "pnl": round(pnl, 2),
+            "action": action,
+            "reason": reason,
         }
         self.logs.append(entry)
 
         # 统计过滤事件
-        self.filter_stats['total_signals'] += 1
-        if action == 'FILTERED':
-            self.filter_stats['filtered_count'] += 1
-            if reason not in self.filter_stats['filtered_reasons']:
-                self.filter_stats['filtered_reasons'][reason] = 0
-            self.filter_stats['filtered_reasons'][reason] += 1
+        self.filter_stats["total_signals"] += 1
+        if action == "FILTERED":
+            self.filter_stats["filtered_count"] += 1
+            if reason not in self.filter_stats["filtered_reasons"]:
+                self.filter_stats["filtered_reasons"][reason] = 0
+            self.filter_stats["filtered_reasons"][reason] += 1
 
         # 统计维度过滤
         if filtered_out:
             for dim in filtered_out:
-                if dim not in self.filter_stats['dimension_filter_count']:
-                    self.filter_stats['dimension_filter_count'][dim] = 0
-                self.filter_stats['dimension_filter_count'][dim] += 1
+                if dim not in self.filter_stats["dimension_filter_count"]:
+                    self.filter_stats["dimension_filter_count"][dim] = 0
+                self.filter_stats["dimension_filter_count"][dim] += 1
 
         # 限制日志数量
         if len(self.logs) > self.max_logs:
-            self.logs = self.logs[-self.max_logs:]
+            self.logs = self.logs[-self.max_logs :]
 
         return entry
 
-    def get_recent(self, n: int = 10) -> List[Dict]:
+    def get_recent(self, n: int = 10) -> list[dict]:
         """获取最近n条日志"""
         return self.logs[-n:]
 
-    def get_factor_attribution(self, n: int = 50) -> Dict:
+    def get_factor_attribution(self, n: int = 50) -> dict:
         """
         4.2 因子贡献归因
 
@@ -500,66 +519,61 @@ class ExecutionLog:
         attribution = {}
 
         for log in recent:
-            dims = log.get('dimensions', {})
+            dims = log.get("dimensions", {})
             for dim_name, score in dims.items():
                 if dim_name not in attribution:
                     attribution[dim_name] = {
-                        'total_contribution': 0,
-                        'positive_count': 0,
-                        'negative_count': 0,
-                        'avg_score': 0,
-                        'scores': [],
+                        "total_contribution": 0,
+                        "positive_count": 0,
+                        "negative_count": 0,
+                        "avg_score": 0,
+                        "scores": [],
                     }
-                attribution[dim_name]['total_contribution'] += abs(score)
-                attribution[dim_name]['scores'].append(score)
+                attribution[dim_name]["total_contribution"] += abs(score)
+                attribution[dim_name]["scores"].append(score)
                 if score > 0:
-                    attribution[dim_name]['positive_count'] += 1
+                    attribution[dim_name]["positive_count"] += 1
                 elif score < 0:
-                    attribution[dim_name]['negative_count'] += 1
+                    attribution[dim_name]["negative_count"] += 1
 
         # 计算平均值和排名
         for dim_name, stats in attribution.items():
-            if stats['scores']:
-                stats['avg_score'] = round(np.mean(stats['scores']), 3)
-            stats['total_contribution'] = round(stats['total_contribution'], 2)
+            if stats["scores"]:
+                stats["avg_score"] = round(np.mean(stats["scores"]), 3)
+            stats["total_contribution"] = round(stats["total_contribution"], 2)
 
         # 按贡献度排序
-        sorted_attribution = dict(sorted(
-            attribution.items(),
-            key=lambda x: x[1]['total_contribution'],
-            reverse=True
-        ))
+        sorted_attribution = dict(sorted(attribution.items(), key=lambda x: x[1]["total_contribution"], reverse=True))
 
         return sorted_attribution
 
-    def get_filter_statistics(self) -> Dict:
+    def get_filter_statistics(self) -> dict:
         """
         4.3 过滤事件统计
 
         返回:
             过滤频率、原因分布、维度过滤统计
         """
-        total = self.filter_stats['total_signals']
+        total = self.filter_stats["total_signals"]
         if total == 0:
-            return {'filter_rate': 0, 'reasons': {}, 'dimension_filters': {}}
+            return {"filter_rate": 0, "reasons": {}, "dimension_filters": {}}
 
         return {
-            'total_signals': total,
-            'filtered_count': self.filter_stats['filtered_count'],
-            'filter_rate': round(self.filter_stats['filtered_count'] / total * 100, 2),
-            'reasons': self.filter_stats['filtered_reasons'],
-            'dimension_filters': self.filter_stats['dimension_filter_count'],
+            "total_signals": total,
+            "filtered_count": self.filter_stats["filtered_count"],
+            "filter_rate": round(self.filter_stats["filtered_count"] / total * 100, 2),
+            "reasons": self.filter_stats["filtered_reasons"],
+            "dimension_filters": self.filter_stats["dimension_filter_count"],
         }
 
     def export_csv(self, path: str):
         """导出为CSV"""
-        import pandas as pd
         df = pd.DataFrame(self.logs)
         df.to_csv(path, index=False)
 
     def export_json(self, path: str):
         """导出为JSON"""
-        with open(path, 'w', encoding='utf-8') as f:
+        with open(path, "w", encoding="utf-8") as f:
             json.dump(self.logs, f, ensure_ascii=False, indent=2)
 
 
@@ -575,13 +589,16 @@ class ExecutionEngine:
     3. 所有决策都有日志记录
     """
 
-    def __init__(self, enter_threshold: float = 0.35,
-                 exit_threshold: float = 0.15,
-                 atr_stop_multiplier: float = 2.0,
-                 max_daily_loss: float = 0.02,
-                 target_volatility: float = 0.20,
-                 max_spread_pct: float = 0.5,
-                 min_volume: int = 100):
+    def __init__(
+        self,
+        enter_threshold: float = 0.35,
+        exit_threshold: float = 0.15,
+        atr_stop_multiplier: float = 2.0,
+        max_daily_loss: float = 0.02,
+        target_volatility: float = 0.20,
+        max_spread_pct: float = 0.5,
+        min_volume: int = 100,
+    ):
         """
         参数:
             enter_threshold: 入场门槛
@@ -611,15 +628,27 @@ class ExecutionEngine:
         self.pending_signal = None
         self.pending_reason = None
 
-    def execute(self, pos: float, current_price: float, atr: float,
-                s_trend: float, bar_index: int = 0,
-                dimensions: Dict = None, z_scores: List = None,
-                mad_mask: List = None, vote_sign: int = 0,
-                conflict: bool = False, discount: float = 1.0,
-                realized_vol: float = 0.0,
-                open_price: float = 0, high: float = 0, low: float = 0,
-                volume: int = 0, prev_close: float = 0,
-                filtered_out: List = None) -> Dict:
+    def execute(
+        self,
+        pos: float,
+        current_price: float,
+        atr: float,
+        s_trend: float,
+        bar_index: int = 0,
+        dimensions: dict = None,
+        z_scores: list = None,
+        mad_mask: list = None,
+        vote_sign: int = 0,
+        conflict: bool = False,
+        discount: float = 1.0,
+        realized_vol: float = 0.0,
+        open_price: float = 0,
+        high: float = 0,
+        low: float = 0,
+        volume: int = 0,
+        prev_close: float = 0,
+        filtered_out: list = None,
+    ) -> dict:
         """
         执行一次决策
 
@@ -651,14 +680,25 @@ class ExecutionEngine:
         # 1. 检查风控
         if not self.risk_guard.is_trading_allowed(bar_index):
             result = {
-                'action': 'BLOCKED',
-                'reason': '交易被禁止（日亏损熔断）',
-                'target_size': 0.0,
-                'execute_price': open_price if open_price > 0 else current_price,
+                "action": "BLOCKED",
+                "reason": "交易被禁止（日亏损熔断）",
+                "target_size": 0.0,
+                "execute_price": open_price if open_price > 0 else current_price,
             }
-            self.logger.log(bar_index, self.state_machine.state.value, pos, 0.0,
-                          dimensions or {}, z_scores or [], mad_mask or [],
-                          vote_sign, conflict, discount, 'BLOCKED', result['reason'])
+            self.logger.log(
+                bar_index,
+                self.state_machine.state.value,
+                pos,
+                0.0,
+                dimensions or {},
+                z_scores or [],
+                mad_mask or [],
+                vote_sign,
+                conflict,
+                discount,
+                "BLOCKED",
+                result["reason"],
+            )
             return result
 
         # 2. 闪崩检测
@@ -666,32 +706,52 @@ class ExecutionEngine:
         if atr > 0 and self.risk_guard.detect_crash(candle_range, atr):
             if self.state_machine.state != State.FLAT:
                 result = {
-                    'action': 'CRASH_REDUCE',
-                    'reason': '检测到异常行情，减仓',
-                    'target_size': 0.0,
-                    'execute_price': open_price if open_price > 0 else current_price,
+                    "action": "CRASH_REDUCE",
+                    "reason": "检测到异常行情，减仓",
+                    "target_size": 0.0,
+                    "execute_price": open_price if open_price > 0 else current_price,
                 }
                 self.state_machine.reset()
-                self.logger.log(bar_index, 'FLAT', pos, 0.0,
-                              dimensions or {}, z_scores or [], mad_mask or [],
-                              vote_sign, conflict, discount, 'CRASH_REDUCE', result['reason'])
+                self.logger.log(
+                    bar_index,
+                    "FLAT",
+                    pos,
+                    0.0,
+                    dimensions or {},
+                    z_scores or [],
+                    mad_mask or [],
+                    vote_sign,
+                    conflict,
+                    discount,
+                    "CRASH_REDUCE",
+                    result["reason"],
+                )
                 return result
 
         # 3. 交易可行性过滤（1.3）
         if open_price > 0 and high > 0 and low > 0:
-            feasibility = self.trade_filter.check_feasibility(
-                open_price, high, low, current_price, volume, prev_close
-            )
-            if not feasibility['feasible']:
+            feasibility = self.trade_filter.check_feasibility(open_price, high, low, current_price, volume, prev_close)
+            if not feasibility["feasible"]:
                 result = {
-                    'action': 'FILTERED',
-                    'reason': f'交易不可行：{"; ".join(feasibility["reasons"])}',
-                    'target_size': 0.0,
-                    'execute_price': open_price,
+                    "action": "FILTERED",
+                    "reason": f"交易不可行：{'; '.join(feasibility['reasons'])}",
+                    "target_size": 0.0,
+                    "execute_price": open_price,
                 }
-                self.logger.log(bar_index, self.state_machine.state.value, pos, 0.0,
-                              dimensions or {}, z_scores or [], mad_mask or [],
-                              vote_sign, conflict, discount, 'FILTERED', result['reason'])
+                self.logger.log(
+                    bar_index,
+                    self.state_machine.state.value,
+                    pos,
+                    0.0,
+                    dimensions or {},
+                    z_scores or [],
+                    mad_mask or [],
+                    vote_sign,
+                    conflict,
+                    discount,
+                    "FILTERED",
+                    result["reason"],
+                )
                 return result
 
         # 4. 波动率仓位上限
@@ -701,12 +761,13 @@ class ExecutionEngine:
         state_result = self.state_machine.update(pos, current_price, atr, s_trend, bar_index)
 
         # 6. 应用波动率仓位上限
-        target_size = state_result['target_size'] * vol_limit * discount
+        target_size = state_result["target_size"] * vol_limit * discount
 
         # 7. 连续亏损降权
-        if state_result['action'] in ('STOP_LOSS', 'CLOSE'):
-            is_loss = (self.state_machine.state == State.LONG and current_price < self.state_machine.entry_price) or \
-                      (self.state_machine.state == State.SHORT and current_price > self.state_machine.entry_price)
+        if state_result["action"] in ("STOP_LOSS", "CLOSE"):
+            is_loss = (self.state_machine.state == State.LONG and current_price < self.state_machine.entry_price) or (
+                self.state_machine.state == State.SHORT and current_price > self.state_machine.entry_price
+            )
             loss_multiplier = self.risk_guard.check_consecutive_losses(is_loss)
             target_size *= loss_multiplier
 
@@ -718,37 +779,47 @@ class ExecutionEngine:
         # 9. 执行价格：signal[t] → execute[t+1] open
         # 当前K线的信号，用下一K线的开盘价执行
         execute_price = open_price if open_price > 0 else current_price
-        if state_result['action'] in ('OPEN_LONG', 'OPEN_SHORT'):
+        if state_result["action"] in ("OPEN_LONG", "OPEN_SHORT"):
             # 开仓：加上滑点
-            if state_result['action'] == 'OPEN_LONG':
+            if state_result["action"] == "OPEN_LONG":
                 execute_price += slippage
             else:
                 execute_price -= slippage
 
         # 10. 记录日志
         self.logger.log(
-            bar_index, self.state_machine.state.value, pos, target_size,
-            dimensions or {}, z_scores or [], mad_mask or [],
-            vote_sign, conflict, discount,
-            state_result['action'], state_result['reason'],
-            self.state_machine.entry_price, execute_price, 0,
-            filtered_out=filtered_out
+            bar_index,
+            self.state_machine.state.value,
+            pos,
+            target_size,
+            dimensions or {},
+            z_scores or [],
+            mad_mask or [],
+            vote_sign,
+            conflict,
+            discount,
+            state_result["action"],
+            state_result["reason"],
+            self.state_machine.entry_price,
+            execute_price,
+            0,
+            filtered_out=filtered_out,
         )
 
         return {
-            'action': state_result['action'],
-            'reason': state_result['reason'],
-            'target_size': round(target_size, 3),
-            'state': self.state_machine.state.value,
-            'entry_price': self.state_machine.entry_price,
-            'stop_loss': self.state_machine.stop_loss,
-            'holding_bars': self.state_machine.holding_bars,
-            'vol_limit': round(vol_limit, 3),
-            'execute_price': round(execute_price, 2),
-            'slippage': round(slippage, 4),
+            "action": state_result["action"],
+            "reason": state_result["reason"],
+            "target_size": round(target_size, 3),
+            "state": self.state_machine.state.value,
+            "entry_price": self.state_machine.entry_price,
+            "stop_loss": self.state_machine.stop_loss,
+            "holding_bars": self.state_machine.holding_bars,
+            "vol_limit": round(vol_limit, 3),
+            "execute_price": round(execute_price, 2),
+            "slippage": round(slippage, 4),
         }
 
-    def generate_signal(self, pos: float, bar_index: int = 0) -> Dict:
+    def generate_signal(self, pos: float, bar_index: int = 0) -> dict:
         """
         生成信号（不执行）
 
@@ -764,17 +835,18 @@ class ExecutionEngine:
             pending: 是否有待执行信号
         """
         self.pending_signal = pos
-        self.pending_reason = f'Signal generated at bar {bar_index}'
+        self.pending_reason = f"Signal generated at bar {bar_index}"
 
         return {
-            'signal': 'LONG' if pos > 0 else ('SHORT' if pos < 0 else 'FLAT'),
-            'pos': round(pos, 3),
-            'pending': True,
-            'bar_index': bar_index,
+            "signal": "LONG" if pos > 0 else ("SHORT" if pos < 0 else "FLAT"),
+            "pos": round(pos, 3),
+            "pending": True,
+            "bar_index": bar_index,
         }
 
-    def execute_pending(self, open_price: float, atr: float, s_trend: float,
-                        bar_index: int = 0, volume: int = 0) -> Dict:
+    def execute_pending(
+        self, open_price: float, atr: float, s_trend: float, bar_index: int = 0, volume: int = 0
+    ) -> dict:
         """
         执行待处理信号
 
@@ -793,9 +865,9 @@ class ExecutionEngine:
         """
         if self.pending_signal is None:
             return {
-                'action': 'NO_SIGNAL',
-                'reason': '没有待执行的信号',
-                'target_size': 0.0,
+                "action": "NO_SIGNAL",
+                "reason": "没有待执行的信号",
+                "target_size": 0.0,
             }
 
         # 执行信号

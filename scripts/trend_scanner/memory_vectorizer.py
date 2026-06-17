@@ -12,13 +12,13 @@
 - 性能优先：使用 FAISS 加速检索
 """
 
-import os
-import json
-import numpy as np
-from typing import List, Dict, Optional, Tuple, Any
-from dataclasses import dataclass, field
-from datetime import datetime
 import logging
+import os
+from dataclasses import dataclass, field
+from typing import Any
+
+import numpy as np
+
 
 logger = logging.getLogger(__name__)
 
@@ -27,24 +27,27 @@ logger = logging.getLogger(__name__)
 # 数据结构定义
 # ===========================================================================
 
+
 @dataclass
 class MemoryEntry:
     """记忆条目"""
+
     memory_id: str
-    text: str                          # 原始文本
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    text: str  # 原始文本
+    metadata: dict[str, Any] = field(default_factory=dict)
     timestamp: str = ""
-    category: str = ""                 # 记忆类别（experience/lesson/pattern）
-    importance: float = 1.0            # 重要性权重 (0-1)
-    vector: Optional[List[float]] = None  # 嵌入向量
+    category: str = ""  # 记忆类别（experience/lesson/pattern）
+    importance: float = 1.0  # 重要性权重 (0-1)
+    vector: list[float] | None = None  # 嵌入向量
 
 
 @dataclass
 class SearchResult:
     """搜索结果"""
+
     memory: MemoryEntry
-    score: float                       # 相似度分数 (0-1)
-    rank: int                          # 排名
+    score: float  # 相似度分数 (0-1)
+    rank: int  # 排名
 
 
 class MemoryVectorizer:
@@ -70,14 +73,14 @@ class MemoryVectorizer:
                 - 高性能: 'BAAI/bge-base-zh-v1.5' (768维)
             use_gpu: 是否使用GPU
         """
-        self.model_name = model_name or 'paraphrase-multilingual-MiniLM-L12-v2'
+        self.model_name = model_name or "paraphrase-multilingual-MiniLM-L12-v2"
         self.use_gpu = use_gpu
         self.model = None
         self.dimension = None
 
         # FAISS 索引
         self.index = None
-        self.memories: List[MemoryEntry] = []
+        self.memories: list[MemoryEntry] = []
 
         # 延迟加载模型
         self._model_loaded = False
@@ -91,10 +94,7 @@ class MemoryVectorizer:
             from sentence_transformers import SentenceTransformer
 
             logger.info(f"Loading embedding model: {self.model_name}")
-            self.model = SentenceTransformer(
-                self.model_name,
-                device='cuda' if self.use_gpu else 'cpu'
-            )
+            self.model = SentenceTransformer(self.model_name, device="cuda" if self.use_gpu else "cpu")
             self.dimension = self.model.get_sentence_embedding_dimension()
             self._model_loaded = True
             logger.info(f"Model loaded. Dimension: {self.dimension}")
@@ -109,7 +109,7 @@ class MemoryVectorizer:
             self._model_loaded = True
             self.dimension = 384
 
-    def encode(self, text: str) -> List[float]:
+    def encode(self, text: str) -> list[float]:
         """
         将文本编码为向量
 
@@ -131,7 +131,7 @@ class MemoryVectorizer:
         # 回退方案：简单的哈希向量
         return self._fallback_encode(text)
 
-    def encode_batch(self, texts: List[str]) -> List[List[float]]:
+    def encode_batch(self, texts: list[str]) -> list[list[float]]:
         """
         批量编码文本
 
@@ -153,7 +153,7 @@ class MemoryVectorizer:
         # 回退方案
         return [self._fallback_encode(text) for text in texts]
 
-    def _fallback_encode(self, text: str) -> List[float]:
+    def _fallback_encode(self, text: str) -> list[float]:
         """
         回退编码方案（当模型不可用时）
 
@@ -166,7 +166,7 @@ class MemoryVectorizer:
             self.dimension = 384
 
         # 生成哈希
-        hash_obj = hashlib.md5(text.encode('utf-8'))
+        hash_obj = hashlib.md5(text.encode("utf-8"))
         hash_bytes = hash_obj.digest()
 
         # 转换为向量
@@ -176,11 +176,11 @@ class MemoryVectorizer:
 
         # 扩展到目标维度
         while len(vector) < self.dimension:
-            vector.extend(vector[:self.dimension - len(vector)])
+            vector.extend(vector[: self.dimension - len(vector)])
 
-        return vector[:self.dimension]
+        return vector[: self.dimension]
 
-    def build_index(self, memories: List[MemoryEntry]):
+    def build_index(self, memories: list[MemoryEntry]):
         """
         构建向量索引
 
@@ -207,7 +207,7 @@ class MemoryVectorizer:
 
         logger.info(f"Built index with {len(memories)} memories.")
 
-    def _build_faiss_index(self, vectors: List[List[float]]):
+    def _build_faiss_index(self, vectors: list[list[float]]):
         """构建 FAISS 索引"""
         try:
             import faiss
@@ -234,8 +234,7 @@ class MemoryVectorizer:
             logger.warning(f"Failed to build FAISS index: {e}. Using brute-force search.")
             self.index = None
 
-    def search(self, query: str, top_k: int = 10,
-               min_score: float = 0.0) -> List[SearchResult]:
+    def search(self, query: str, top_k: int = 10, min_score: float = 0.0) -> list[SearchResult]:
         """
         语义搜索
 
@@ -262,8 +261,7 @@ class MemoryVectorizer:
 
         return results
 
-    def _search_faiss(self, query_vector: List[float], top_k: int,
-                      min_score: float) -> List[SearchResult]:
+    def _search_faiss(self, query_vector: list[float], top_k: int, min_score: float) -> list[SearchResult]:
         """使用 FAISS 搜索"""
         import faiss
 
@@ -278,16 +276,17 @@ class MemoryVectorizer:
         results = []
         for rank, (idx, score) in enumerate(zip(indices[0], scores[0])):
             if idx >= 0 and score >= min_score:
-                results.append(SearchResult(
-                    memory=self.memories[idx],
-                    score=float(score),
-                    rank=rank + 1,
-                ))
+                results.append(
+                    SearchResult(
+                        memory=self.memories[idx],
+                        score=float(score),
+                        rank=rank + 1,
+                    )
+                )
 
         return results
 
-    def _search_brute_force(self, query_vector: List[float], top_k: int,
-                            min_score: float) -> List[SearchResult]:
+    def _search_brute_force(self, query_vector: list[float], top_k: int, min_score: float) -> list[SearchResult]:
         """暴力搜索（回退方案）"""
         query_np = np.array(query_vector)
 
@@ -309,11 +308,13 @@ class MemoryVectorizer:
         results = []
         for rank, (idx, score) in enumerate(scores[:top_k]):
             if score >= min_score:
-                results.append(SearchResult(
-                    memory=self.memories[idx],
-                    score=float(score),
-                    rank=rank + 1,
-                ))
+                results.append(
+                    SearchResult(
+                        memory=self.memories[idx],
+                        score=float(score),
+                        rank=rank + 1,
+                    )
+                )
 
         return results
 
@@ -335,6 +336,7 @@ class MemoryVectorizer:
         if self.index is not None:
             try:
                 import faiss
+
                 vector_np = np.array([vector], dtype=np.float32)
                 faiss.normalize_L2(vector_np)
                 self.index.add(vector_np)
@@ -351,14 +353,14 @@ class MemoryVectorizer:
         import pickle
 
         data = {
-            'memories': self.memories,
-            'dimension': self.dimension,
-            'model_name': self.model_name,
+            "memories": self.memories,
+            "dimension": self.dimension,
+            "model_name": self.model_name,
         }
 
-        os.makedirs(os.path.dirname(path) if os.path.dirname(path) else '.', exist_ok=True)
+        os.makedirs(os.path.dirname(path) if os.path.dirname(path) else ".", exist_ok=True)
 
-        with open(path, 'wb') as f:
+        with open(path, "wb") as f:
             pickle.dump(data, f)
 
         logger.info(f"Saved {len(self.memories)} memories to {path}")
@@ -372,12 +374,12 @@ class MemoryVectorizer:
         """
         import pickle
 
-        with open(path, 'rb') as f:
+        with open(path, "rb") as f:
             data = pickle.load(f)
 
-        self.memories = data['memories']
-        self.dimension = data['dimension']
-        self.model_name = data.get('model_name', self.model_name)
+        self.memories = data["memories"]
+        self.dimension = data["dimension"]
+        self.model_name = data.get("model_name", self.model_name)
 
         # 重建 FAISS 索引
         vectors = [m.vector for m in self.memories if m.vector is not None]
@@ -386,14 +388,14 @@ class MemoryVectorizer:
 
         logger.info(f"Loaded {len(self.memories)} memories from {path}")
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """获取统计信息"""
         return {
-            'total_memories': len(self.memories),
-            'dimension': self.dimension,
-            'model_name': self.model_name,
-            'index_type': 'FAISS' if self.index is not None else 'brute-force',
-            'model_loaded': self._model_loaded,
+            "total_memories": len(self.memories),
+            "dimension": self.dimension,
+            "model_name": self.model_name,
+            "index_type": "FAISS" if self.index is not None else "brute-force",
+            "model_loaded": self._model_loaded,
         }
 
 
@@ -401,19 +403,21 @@ class MemoryVectorizer:
 # 便捷函数
 # ===========================================================================
 
+
 def create_vectorizer(model_name: str = None) -> MemoryVectorizer:
     """创建向量化器"""
     return MemoryVectorizer(model_name)
 
 
-def encode_text(text: str, model_name: str = None) -> List[float]:
+def encode_text(text: str, model_name: str = None) -> list[float]:
     """编码单个文本"""
     vectorizer = MemoryVectorizer(model_name)
     return vectorizer.encode(text)
 
 
-def search_memories(query: str, memories: List[MemoryEntry],
-                    top_k: int = 10, model_name: str = None) -> List[SearchResult]:
+def search_memories(
+    query: str, memories: list[MemoryEntry], top_k: int = 10, model_name: str = None
+) -> list[SearchResult]:
     """搜索记忆"""
     vectorizer = MemoryVectorizer(model_name)
     vectorizer.build_index(memories)

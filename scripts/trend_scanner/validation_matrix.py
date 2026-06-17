@@ -18,24 +18,26 @@ ValidationMatrix — 验证矩阵路由模块 v1.0
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Any
+from typing import Any
 
 
 # ===================== 数据模型 =====================
 
+
 @dataclass
 class ValidationRequirement:
     """验证要求"""
-    minimum: str                                # 最低验证标准描述
-    checks: List[str] = field(default_factory=list)   # 检查要点
-    red_flags: List[str] = field(default_factory=list) # 红线（一经触发需标记）
-    validator: str = ""                         # 推荐的验证器
-    description: str = ""                       # 改动类型说明
+
+    minimum: str  # 最低验证标准描述
+    checks: list[str] = field(default_factory=list)  # 检查要点
+    red_flags: list[str] = field(default_factory=list)  # 红线（一经触发需标记）
+    validator: str = ""  # 推荐的验证器
+    description: str = ""  # 改动类型说明
 
 
 # ===================== 验证矩阵 =====================
 
-VALIDATION_MATRIX: Dict[str, ValidationRequirement] = {
+VALIDATION_MATRIX: dict[str, ValidationRequirement] = {
     "adjust_position": ValidationRequirement(
         minimum="1 次聚焦回测 + 1 个回归测试",
         checks=["仓位限制检查", "敞口检查", "换手率检查", "止损位有效性"],
@@ -46,7 +48,6 @@ VALIDATION_MATRIX: Dict[str, ValidationRequirement] = {
         validator="walk_forward_validator",
         description="调整仓位（加减仓/止损位/止盈位）",
     ),
-
     "add_indicator": ValidationRequirement(
         minimum="固定 fixture 的单元测试",
         checks=["数值稳定性", "前视偏差检查", "NaN 处理", "极端值处理"],
@@ -57,7 +58,6 @@ VALIDATION_MATRIX: Dict[str, ValidationRequirement] = {
         validator="factor_evaluator",
         description="新增技术指标或因子",
     ),
-
     "modify_threshold": ValidationRequirement(
         minimum="聚焦回测 + 1 个回归测试",
         checks=["交易次数变化", "胜率变化", "换手率变化", "基准偏离度"],
@@ -68,7 +68,6 @@ VALIDATION_MATRIX: Dict[str, ValidationRequirement] = {
         validator="walk_forward_validator",
         description="修改信号阈值（如 ER min/TSI min/趋势强度 min）",
     ),
-
     "new_entry": ValidationRequirement(
         minimum="聚焦回测 + Walk-Forward 验证",
         checks=["跨周期稳定性", "样本外表现", "最大回撤控制", "Sharpe 比率"],
@@ -79,7 +78,6 @@ VALIDATION_MATRIX: Dict[str, ValidationRequirement] = {
         validator="walk_forward_validator",
         description="新入场信号",
     ),
-
     "exit": ValidationRequirement(
         minimum="1 个回归测试",
         checks=["平仓后 N 日品种走势跟踪", "假退出信号率"],
@@ -89,7 +87,6 @@ VALIDATION_MATRIX: Dict[str, ValidationRequirement] = {
         validator="walk_forward_validator",
         description="退出/平仓",
     ),
-
     "strategy_logic": ValidationRequirement(
         minimum="Walk-Forward 验证 + 蒙特卡洛模拟",
         checks=["全维度回归测试", "参数敏感度分析", "市场状态分段测试"],
@@ -100,7 +97,6 @@ VALIDATION_MATRIX: Dict[str, ValidationRequirement] = {
         validator="overfitting_auditor",
         description="策略逻辑变更（改变进出场规则/过滤条件）",
     ),
-
     "risk_parameter": ValidationRequirement(
         minimum="风险集成测试 + 聚焦回测",
         checks=["尾部损失分析", "敞口截断验证", "VaR/CVaR 变化"],
@@ -124,7 +120,7 @@ class ValidationMatrix:
     def __init__(self):
         self._matrix = VALIDATION_MATRIX
 
-    def get_requirement(self, change_type: str) -> Optional[ValidationRequirement]:
+    def get_requirement(self, change_type: str) -> ValidationRequirement | None:
         """
         获取改动类型对应的验证要求。
 
@@ -136,8 +132,7 @@ class ValidationMatrix:
         """
         return self._matrix.get(change_type)
 
-    def validate_route(self, change_type: str,
-                        validator_results: Dict[str, Any]) -> Dict[str, Any]:
+    def validate_route(self, change_type: str, validator_results: dict[str, Any]) -> dict[str, Any]:
         """
         根据改动类型路由到适当的验证器并检查红线。
 
@@ -176,8 +171,9 @@ class ValidationMatrix:
             "passed": passed,
             "warnings": vr.get("warnings", []),
             "red_flags_triggered": red_flags_triggered,
-            "recommended_action": "通过验证，可以执行" if passed
-                else f"红线触发: {', '.join(red_flags_triggered)}，建议暂停并复审",
+            "recommended_action": "通过验证，可以执行"
+            if passed
+            else f"红线触发: {', '.join(red_flags_triggered)}，建议暂停并复审",
         }
 
     def get_minimum_standard(self, change_type: str) -> str:
@@ -185,7 +181,7 @@ class ValidationMatrix:
         req = self.get_requirement(change_type)
         return req.minimum if req else "未定义"
 
-    def list_all_types(self) -> List[str]:
+    def list_all_types(self) -> list[str]:
         """列出所有已知改动类型"""
         return list(self._matrix.keys())
 
@@ -215,8 +211,7 @@ class ValidationMatrix:
     # ===================== 内部方法 =====================
 
     @staticmethod
-    def _check_red_flags(red_flags: List[str],
-                          validator_result: Dict[str, Any]) -> List[str]:
+    def _check_red_flags(red_flags: list[str], validator_result: dict[str, Any]) -> list[str]:
         """
         检查验证器结果是否触发红线。
 
@@ -249,7 +244,7 @@ def get_validation_matrix() -> ValidationMatrix:
     return _VALIDATION_MATRIX_INSTANCE
 
 
-def get_requirement(change_type: str) -> Optional[ValidationRequirement]:
+def get_requirement(change_type: str) -> ValidationRequirement | None:
     """便捷函数：获取验证要求"""
     return get_validation_matrix().get_requirement(change_type)
 

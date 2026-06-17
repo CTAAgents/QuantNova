@@ -13,12 +13,10 @@
 - 可审计性：辩论→分歧度
 """
 
-import json
 import time
-from typing import Optional, List, Dict
 
-from .reasoning import ReasoningEngine, LLMProvider, WorkBuddyAgentProvider
-from .models import MarketContext, ExperienceMatch
+from .models import ExperienceMatch, MarketContext
+from .reasoning import LLMProvider, ReasoningEngine, WorkBuddyAgentProvider
 
 
 # ──────────────────────────────────────────────
@@ -62,6 +60,7 @@ DOVE_SYSTEM_PROMPT = """你是一位**鸽派**期货交易分析师。
 # 辩论推理引擎
 # ──────────────────────────────────────────────
 
+
 class DebateReasoningEngine:
     """
     辩论推理引擎
@@ -76,8 +75,8 @@ class DebateReasoningEngine:
 
     def __init__(
         self,
-        hawk_llm: Optional[LLMProvider] = None,
-        dove_llm: Optional[LLMProvider] = None,
+        hawk_llm: LLMProvider | None = None,
+        dove_llm: LLMProvider | None = None,
     ):
         """
         初始化辩论引擎
@@ -96,7 +95,7 @@ class DebateReasoningEngine:
     def reason(
         self,
         context: MarketContext,
-        similar_experiences: List[ExperienceMatch],
+        similar_experiences: list[ExperienceMatch],
         experience_aggregation: dict,
     ) -> dict:
         """
@@ -113,14 +112,10 @@ class DebateReasoningEngine:
         start_time = time.time()
 
         # 1. 鹰派推理
-        hawk_result = self._reason_with_role(
-            context, similar_experiences, experience_aggregation, 'hawk'
-        )
+        hawk_result = self._reason_with_role(context, similar_experiences, experience_aggregation, "hawk")
 
         # 2. 鸽派推理
-        dove_result = self._reason_with_role(
-            context, similar_experiences, experience_aggregation, 'dove'
-        )
+        dove_result = self._reason_with_role(context, similar_experiences, experience_aggregation, "dove")
 
         # 3. 计算分歧度
         divergence = self._calculate_divergence(hawk_result, dove_result)
@@ -129,36 +124,34 @@ class DebateReasoningEngine:
         integrated = self._integrate_debate(hawk_result, dove_result, divergence)
 
         # 5. 添加辩论元信息
-        integrated['hawk_result'] = hawk_result
-        integrated['dove_result'] = dove_result
-        integrated['debate_analysis'] = {
-            'divergence': divergence,
-            'hawk_confidence': hawk_result.get('confidence', 0.5),
-            'dove_confidence': dove_result.get('confidence', 0.5),
-            'hawk_action': self._extract_action(hawk_result),
-            'dove_action': self._extract_action(dove_result),
-            'integration_method': 'divergence_weighted',
+        integrated["hawk_result"] = hawk_result
+        integrated["dove_result"] = dove_result
+        integrated["debate_analysis"] = {
+            "divergence": divergence,
+            "hawk_confidence": hawk_result.get("confidence", 0.5),
+            "dove_confidence": dove_result.get("confidence", 0.5),
+            "hawk_action": self._extract_action(hawk_result),
+            "dove_action": self._extract_action(dove_result),
+            "integration_method": "divergence_weighted",
         }
 
         # 6. 分歧度高时降低仓位
         if divergence > 0.3:
-            integrated['position_scale'] = 1.0 - divergence
-            integrated['warnings'] = integrated.get('warnings', [])
-            integrated['warnings'].append(
-                f'鹰派鸽派分歧较大（{divergence:.0%}），建议降低仓位'
-            )
+            integrated["position_scale"] = 1.0 - divergence
+            integrated["warnings"] = integrated.get("warnings", [])
+            integrated["warnings"].append(f"鹰派鸽派分歧较大（{divergence:.0%}），建议降低仓位")
 
         # 7. 添加元信息
-        integrated['generation_time_ms'] = int((time.time() - start_time) * 1000)
-        integrated['reasoning_model'] = f'debate({self.hawk_llm.name},{self.dove_llm.name})'
-        integrated['experience_count'] = len(similar_experiences)
+        integrated["generation_time_ms"] = int((time.time() - start_time) * 1000)
+        integrated["reasoning_model"] = f"debate({self.hawk_llm.name},{self.dove_llm.name})"
+        integrated["experience_count"] = len(similar_experiences)
 
         return integrated
 
     def _reason_with_role(
         self,
         context: MarketContext,
-        similar_experiences: List[ExperienceMatch],
+        similar_experiences: list[ExperienceMatch],
         experience_aggregation: dict,
         role: str,
     ) -> dict:
@@ -175,30 +168,28 @@ class DebateReasoningEngine:
             推理结果
         """
         # 选择对应的引擎
-        engine = self.hawk_engine if role == 'hawk' else self.dove_engine
+        engine = self.hawk_engine if role == "hawk" else self.dove_engine
 
         # 构建角色特定的提示词
-        system_prompt = HAWK_SYSTEM_PROMPT if role == 'hawk' else DOVE_SYSTEM_PROMPT
+        system_prompt = HAWK_SYSTEM_PROMPT if role == "hawk" else DOVE_SYSTEM_PROMPT
 
         # 构建用户提示词
-        user_prompt = engine._build_user_prompt(
-            context, similar_experiences, experience_aggregation
-        )
+        user_prompt = engine._build_user_prompt(context, similar_experiences, experience_aggregation)
 
         # 调用LLM
         try:
             llm_response = engine.llm_provider.generate(system_prompt, user_prompt)
-        except Exception as e:
+        except Exception:
             llm_response = engine._emergency_fallback(context)
 
         # 解析响应
         try:
             parsed = engine._parse_response(llm_response)
-        except Exception as e:
+        except Exception:
             parsed = engine._emergency_fallback(context)
 
         # 添加角色标记
-        parsed['role'] = role
+        parsed["role"] = role
 
         return parsed
 
@@ -228,14 +219,14 @@ class DebateReasoningEngine:
         divergence_factors.append(direction_divergence)
 
         # 2. 置信度差异
-        hawk_confidence = hawk_result.get('confidence', 0.5)
-        dove_confidence = dove_result.get('confidence', 0.5)
+        hawk_confidence = hawk_result.get("confidence", 0.5)
+        dove_confidence = dove_result.get("confidence", 0.5)
         confidence_divergence = abs(hawk_confidence - dove_confidence)
         divergence_factors.append(confidence_divergence)
 
         # 3. 路线数量差异
-        hawk_routes = len(hawk_result.get('routes', []))
-        dove_routes = len(dove_result.get('routes', []))
+        hawk_routes = len(hawk_result.get("routes", []))
+        dove_routes = len(dove_result.get("routes", []))
         routes_divergence = abs(hawk_routes - dove_routes) / max(hawk_routes, dove_routes, 1)
         divergence_factors.append(routes_divergence)
 
@@ -255,29 +246,29 @@ class DebateReasoningEngine:
         action_lower = action.lower()
 
         # 多头关键词
-        if any(k in action_lower for k in ['多', 'long', '买入', '加仓', '做多']):
+        if any(k in action_lower for k in ["多", "long", "买入", "加仓", "做多"]):
             return 1
 
         # 空头关键词
-        if any(k in action_lower for k in ['空', 'short', '卖出', '减仓', '做空']):
+        if any(k in action_lower for k in ["空", "short", "卖出", "减仓", "做空"]):
             return -1
 
         return 0
 
     def _extract_action(self, result: dict) -> str:
         """提取推荐动作"""
-        routes = result.get('routes', [])
-        recommended = result.get('recommended_route', '')
+        routes = result.get("routes", [])
+        recommended = result.get("recommended_route", "")
 
         for route in routes:
-            if route.get('route_id') == recommended:
-                return route.get('action', '')
+            if route.get("route_id") == recommended:
+                return route.get("action", "")
 
         # 如果没有推荐，返回第一个路线的动作
         if routes:
-            return routes[0].get('action', '')
+            return routes[0].get("action", "")
 
-        return ''
+        return ""
 
     def _integrate_debate(
         self,
@@ -306,30 +297,30 @@ class DebateReasoningEngine:
             # 低分歧：偏向鸽派
             primary = dove_result
             secondary = hawk_result
-            integration_note = '低分歧，偏向鸽派（积极进攻）'
+            integration_note = "低分歧，偏向鸽派（积极进攻）"
         elif divergence > 0.6:
             # 高分歧：偏向鹰派
             primary = hawk_result
             secondary = dove_result
-            integration_note = '高分歧，偏向鹰派（谨慎保守）'
+            integration_note = "高分歧，偏向鹰派（谨慎保守）"
         else:
             # 中分歧：综合两者
             # 选择置信度更高的一方
-            if hawk_result.get('confidence', 0.5) > dove_result.get('confidence', 0.5):
+            if hawk_result.get("confidence", 0.5) > dove_result.get("confidence", 0.5):
                 primary = hawk_result
                 secondary = dove_result
             else:
                 primary = dove_result
                 secondary = hawk_result
-            integration_note = '中分歧，综合两者'
+            integration_note = "中分歧，综合两者"
 
         # 构建整合结果
         integrated = {
-            'routes': primary.get('routes', []),
-            'recommended_route': primary.get('recommended_route', ''),
-            'warnings': primary.get('warnings', []) + secondary.get('warnings', []),
-            'confidence': (primary.get('confidence', 0.5) + secondary.get('confidence', 0.5)) / 2,
-            'integration_note': integration_note,
+            "routes": primary.get("routes", []),
+            "recommended_route": primary.get("recommended_route", ""),
+            "warnings": primary.get("warnings", []) + secondary.get("warnings", []),
+            "confidence": (primary.get("confidence", 0.5) + secondary.get("confidence", 0.5)) / 2,
+            "integration_note": integration_note,
         }
 
         return integrated
@@ -338,6 +329,7 @@ class DebateReasoningEngine:
 # ──────────────────────────────────────────────
 # 便捷函数
 # ──────────────────────────────────────────────
+
 
 def create_debate_engine(
     hawk_api_url: str = None,
@@ -363,9 +355,9 @@ def create_debate_engine(
     dove_llm = None
 
     if hawk_api_url and hawk_api_key:
-        hawk_llm = CustomLLMProvider(hawk_api_url, hawk_api_key, 'hawk-model')
+        hawk_llm = CustomLLMProvider(hawk_api_url, hawk_api_key, "hawk-model")
 
     if dove_api_url and dove_api_key:
-        dove_llm = CustomLLMProvider(dove_api_url, dove_api_key, 'dove-model')
+        dove_llm = CustomLLMProvider(dove_api_url, dove_api_key, "dove-model")
 
     return DebateReasoningEngine(hawk_llm, dove_llm)

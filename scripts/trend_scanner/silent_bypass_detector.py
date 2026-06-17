@@ -19,84 +19,90 @@
 - 错过潜在的交易机会
 """
 
-from typing import Dict, List, Optional, Tuple, Any
-from dataclasses import dataclass, field
-from enum import Enum
-from datetime import datetime, timedelta
 from collections import defaultdict
-import numpy as np
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from enum import Enum
+from typing import Any
 
 
 # ===========================================================================
 # 数据结构定义
 # ===========================================================================
 
+
 class BypassReason(Enum):
     """旁路原因"""
-    OVERLY_STRICT = "overly_strict"              # 触发条件过于严格
-    MARKET_MISMATCH = "market_mismatch"          # 与市场环境不匹配
-    PARAMETER_ISSUE = "parameter_issue"          # 参数设置不合理
-    SHADOWED_BY_OTHERS = "shadowed_by_others"    # 被其他策略遮蔽
-    RARE_EVENT = "rare_event"                    # 策略针对罕见事件
+
+    OVERLY_STRICT = "overly_strict"  # 触发条件过于严格
+    MARKET_MISMATCH = "market_mismatch"  # 与市场环境不匹配
+    PARAMETER_ISSUE = "parameter_issue"  # 参数设置不合理
+    SHADOWED_BY_OTHERS = "shadowed_by_others"  # 被其他策略遮蔽
+    RARE_EVENT = "rare_event"  # 策略针对罕见事件
     UNKNOWN = "unknown"
 
 
 class ActionRecommendation(Enum):
     """动作建议"""
-    ADJUST_PARAMETERS = "adjust_parameters"      # 调整参数
-    RELAX_CONDITIONS = "relax_conditions"        # 放宽条件
-    REMOVE = "remove"                            # 移除策略
-    KEEP_AS_HEDGE = "keep_as_hedge"              # 保留作为对冲
-    INVESTIGATE = "investigate"                  # 需要进一步调查
+
+    ADJUST_PARAMETERS = "adjust_parameters"  # 调整参数
+    RELAX_CONDITIONS = "relax_conditions"  # 放宽条件
+    REMOVE = "remove"  # 移除策略
+    KEEP_AS_HEDGE = "keep_as_hedge"  # 保留作为对冲
+    INVESTIGATE = "investigate"  # 需要进一步调查
 
 
 @dataclass
 class StrategyUsageStats:
     """策略使用统计"""
+
     strategy_name: str
-    total_trades: int = 0                        # 总交易次数
-    triggered_count: int = 0                     # 触发次数
-    trigger_rate: float = 0.0                    # 触发率
-    vote_distribution: Dict[str, int] = field(default_factory=dict)  # 投票分布
-    last_triggered: Optional[datetime] = None    # 最后触发时间
-    avg_confidence_when_triggered: float = 0.0   # 触发时的平均置信度
+    total_trades: int = 0  # 总交易次数
+    triggered_count: int = 0  # 触发次数
+    trigger_rate: float = 0.0  # 触发率
+    vote_distribution: dict[str, int] = field(default_factory=dict)  # 投票分布
+    last_triggered: datetime | None = None  # 最后触发时间
+    avg_confidence_when_triggered: float = 0.0  # 触发时的平均置信度
 
 
 @dataclass
 class BypassPattern:
     """旁路模式"""
+
     pattern_id: str
     strategy_name: str
     reason: BypassReason
-    severity: str = "medium"                     # low / medium / high
+    severity: str = "medium"  # low / medium / high
     description: str = ""
     trigger_condition: str = ""
-    expected_trigger_rate: float = 0.0           # 预期触发率
-    actual_trigger_rate: float = 0.0             # 实际触发率
-    bypass_rate: float = 0.0                     # 旁路率
-    affected_trades: int = 0                     # 受影响的交易次数
-    recommendations: List[ActionRecommendation] = field(default_factory=list)
-    details: Dict[str, Any] = field(default_factory=dict)
+    expected_trigger_rate: float = 0.0  # 预期触发率
+    actual_trigger_rate: float = 0.0  # 实际触发率
+    bypass_rate: float = 0.0  # 旁路率
+    affected_trades: int = 0  # 受影响的交易次数
+    recommendations: list[ActionRecommendation] = field(default_factory=list)
+    details: dict[str, Any] = field(default_factory=dict)
     created_at: datetime = field(default_factory=datetime.now)
 
 
 @dataclass
 class BypassReport:
     """旁路检测报告"""
+
     report_id: str
     total_strategies: int = 0
-    active_strategies: int = 0                   # 活跃策略数
-    bypassed_strategies: int = 0                 # 被旁路的策略数
-    bypass_patterns: List[BypassPattern] = field(default_factory=list)
-    strategy_stats: List[StrategyUsageStats] = field(default_factory=list)
+    active_strategies: int = 0  # 活跃策略数
+    bypassed_strategies: int = 0  # 被旁路的策略数
+    bypass_patterns: list[BypassPattern] = field(default_factory=list)
+    strategy_stats: list[StrategyUsageStats] = field(default_factory=list)
     summary: str = ""
-    recommendations: List[str] = field(default_factory=list)
+    recommendations: list[str] = field(default_factory=list)
     created_at: datetime = field(default_factory=datetime.now)
 
 
 # ===========================================================================
 # 静默旁路检测器
 # ===========================================================================
+
 
 class SilentBypassDetector:
     """
@@ -109,8 +115,7 @@ class SilentBypassDetector:
     4. 生成激活或移除建议
     """
 
-    def __init__(self, trigger_rate_threshold: float = 0.05,
-                 analysis_window_days: int = 30):
+    def __init__(self, trigger_rate_threshold: float = 0.05, analysis_window_days: int = 30):
         """
         参数:
             trigger_rate_threshold: 触发率阈值（低于此值视为旁路）
@@ -118,10 +123,9 @@ class SilentBypassDetector:
         """
         self.trigger_rate_threshold = trigger_rate_threshold
         self.analysis_window_days = analysis_window_days
-        self.reports: List[BypassReport] = []
+        self.reports: list[BypassReport] = []
 
-    def detect(self, trades: List[Any],
-              strategy_pool: Dict[str, Any] = None) -> BypassReport:
+    def detect(self, trades: list[Any], strategy_pool: dict[str, Any] = None) -> BypassReport:
         """
         检测静默旁路
 
@@ -164,13 +168,13 @@ class SilentBypassDetector:
         self.reports.append(report)
         return report
 
-    def _calculate_strategy_stats(self, trades: List[Any]) -> List[StrategyUsageStats]:
+    def _calculate_strategy_stats(self, trades: list[Any]) -> list[StrategyUsageStats]:
         """计算策略使用统计"""
         # 确定分析窗口
         if trades:
-            latest_trade = max(trades, key=lambda t: t.entry_time if hasattr(t, 'entry_time') else datetime.min)
+            latest_trade = max(trades, key=lambda t: t.entry_time if hasattr(t, "entry_time") else datetime.min)
             window_start = latest_trade.entry_time - timedelta(days=self.analysis_window_days)
-            window_trades = [t for t in trades if hasattr(t, 'entry_time') and t.entry_time >= window_start]
+            window_trades = [t for t in trades if hasattr(t, "entry_time") and t.entry_time >= window_start]
         else:
             window_trades = trades
 
@@ -182,7 +186,7 @@ class SilentBypassDetector:
         strategy_confidence_count = defaultdict(int)
 
         for trade in window_trades:
-            if not hasattr(trade, 'strategy_votes_at_entry') or not trade.strategy_votes_at_entry:
+            if not hasattr(trade, "strategy_votes_at_entry") or not trade.strategy_votes_at_entry:
                 continue
 
             for strategy, vote in trade.strategy_votes_at_entry.items():
@@ -191,8 +195,11 @@ class SilentBypassDetector:
                     strategy_counts[strategy] += 1
 
                     # 记录最后触发时间
-                    if hasattr(trade, 'entry_time'):
-                        if strategy not in strategy_last_triggered or trade.entry_time > strategy_last_triggered[strategy]:
+                    if hasattr(trade, "entry_time"):
+                        if (
+                            strategy not in strategy_last_triggered
+                            or trade.entry_time > strategy_last_triggered[strategy]
+                        ):
                             strategy_last_triggered[strategy] = trade.entry_time
 
                 # 统计投票分布
@@ -222,8 +229,9 @@ class SilentBypassDetector:
 
         return stats
 
-    def _identify_bypass_patterns(self, strategy_stats: List[StrategyUsageStats],
-                                 strategy_pool: Dict[str, Any] = None) -> List[BypassPattern]:
+    def _identify_bypass_patterns(
+        self, strategy_stats: list[StrategyUsageStats], strategy_pool: dict[str, Any] = None
+    ) -> list[BypassPattern]:
         """识别旁路模式"""
         patterns = []
 
@@ -231,7 +239,9 @@ class SilentBypassDetector:
             # 检查触发率是否低于阈值
             if stat.trigger_rate < self.trigger_rate_threshold:
                 # 计算旁路率
-                bypass_rate = 1 - (stat.trigger_rate / self.trigger_rate_threshold) if self.trigger_rate_threshold > 0 else 1.0
+                bypass_rate = (
+                    1 - (stat.trigger_rate / self.trigger_rate_threshold) if self.trigger_rate_threshold > 0 else 1.0
+                )
 
                 # 确定严重程度
                 severity = self._determine_severity(stat.trigger_rate, bypass_rate)
@@ -272,9 +282,9 @@ class SilentBypassDetector:
         else:
             return f"策略 {stat.strategy_name} 触发率仅为 {stat.trigger_rate:.1%}，旁路率 {bypass_rate:.1%}"
 
-    def _analyze_bypass_reason(self, pattern: BypassPattern,
-                              strategy_stats: List[StrategyUsageStats],
-                              trades: List[Any]) -> BypassReason:
+    def _analyze_bypass_reason(
+        self, pattern: BypassPattern, strategy_stats: list[StrategyUsageStats], trades: list[Any]
+    ) -> BypassReason:
         """分析旁路原因"""
         strategy_name = pattern.strategy_name
 
@@ -295,11 +305,13 @@ class SilentBypassDetector:
         # 分析触发时的市场状态
         triggered_market_states = defaultdict(int)
         for trade in trades:
-            if (hasattr(trade, 'strategy_votes_at_entry') and
-                trade.strategy_votes_at_entry and
-                strategy_name in trade.strategy_votes_at_entry and
-                trade.strategy_votes_at_entry[strategy_name] != "观望"):
-                if hasattr(trade, 'market_state_at_entry'):
+            if (
+                hasattr(trade, "strategy_votes_at_entry")
+                and trade.strategy_votes_at_entry
+                and strategy_name in trade.strategy_votes_at_entry
+                and trade.strategy_votes_at_entry[strategy_name] != "观望"
+            ):
+                if hasattr(trade, "market_state_at_entry"):
                     triggered_market_states[trade.market_state_at_entry] += 1
 
         # 如果只在少数市场状态下触发，可能是市场环境不匹配
@@ -313,7 +325,7 @@ class SilentBypassDetector:
 
         return BypassReason.UNKNOWN
 
-    def _generate_recommendations(self, pattern: BypassPattern) -> List[ActionRecommendation]:
+    def _generate_recommendations(self, pattern: BypassPattern) -> list[ActionRecommendation]:
         """生成建议"""
         recommendations = []
 
@@ -342,8 +354,7 @@ class SilentBypassDetector:
 
         return recommendations
 
-    def _generate_summary(self, strategy_stats: List[StrategyUsageStats],
-                         bypass_patterns: List[BypassPattern]) -> str:
+    def _generate_summary(self, strategy_stats: list[StrategyUsageStats], bypass_patterns: list[BypassPattern]) -> str:
         """生成摘要"""
         total = len(strategy_stats)
         active = sum(1 for s in strategy_stats if s.trigger_rate >= self.trigger_rate_threshold)
@@ -366,7 +377,7 @@ class SilentBypassDetector:
 
         return summary
 
-    def _generate_overall_recommendations(self, bypass_patterns: List[BypassPattern]) -> List[str]:
+    def _generate_overall_recommendations(self, bypass_patterns: list[BypassPattern]) -> list[str]:
         """生成整体建议"""
         recommendations = []
 
@@ -395,11 +406,11 @@ class SilentBypassDetector:
 
         return recommendations[:5]
 
-    def get_latest_report(self) -> Optional[BypassReport]:
+    def get_latest_report(self) -> BypassReport | None:
         """获取最新的报告"""
         return self.reports[-1] if self.reports else None
 
-    def get_bypassed_strategies(self) -> List[str]:
+    def get_bypassed_strategies(self) -> list[str]:
         """获取被旁路的策略列表"""
         if not self.reports:
             return []
@@ -407,11 +418,10 @@ class SilentBypassDetector:
         latest_report = self.reports[-1]
         return [p.strategy_name for p in latest_report.bypass_patterns]
 
-    def get_active_strategies(self) -> List[str]:
+    def get_active_strategies(self) -> list[str]:
         """获取活跃策略列表"""
         if not self.reports:
             return []
 
         latest_report = self.reports[-1]
-        return [s.strategy_name for s in latest_report.strategy_stats
-                if s.trigger_rate >= self.trigger_rate_threshold]
+        return [s.strategy_name for s in latest_report.strategy_stats if s.trigger_rate >= self.trigger_rate_threshold]

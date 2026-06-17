@@ -12,7 +12,7 @@
 
 使用方式：
     from trend_scanner.memory import UnifiedMemoryManager
-    
+
     config = {
         "sqlite_path": "data/memory.db",
         "duckdb_path": "data/analytics.duckdb",
@@ -21,25 +21,26 @@
     memory = UnifiedMemoryManager(config)
 """
 
-from .manager import UnifiedMemoryManager
-from .sqlite_store import SQLiteStore
 from .duckdb_store import DuckDBStore
-from .vector_store import VectorStore
-from .llm_factory import LLMProviderFactory, LLMProvider
+from .evolution import EvolutionTrigger, OverfittingAuditor, RulePromoter, StrategyReflector
+from .llm_factory import LLMProvider, LLMProviderFactory
+from .manager import UnifiedMemoryManager
 from .retriever import MultiPathRetriever, SimilarityCalculator
-from .evolution import EvolutionTrigger, RulePromoter, OverfittingAuditor, StrategyReflector
+from .sqlite_store import SQLiteStore
+from .vector_store import VectorStore
+
 
 __all__ = [
-    'UnifiedMemoryManager',
-    'SQLiteStore',
-    'DuckDBStore',
-    'VectorStore',
-    'LLMProviderFactory',
-    'LLMProvider',
-    'MultiPathRetriever',
-    'SimilarityCalculator',
-    'EvolutionTrigger',
-    'RulePromoter',
-    'OverfittingAuditor',
-    'StrategyReflector'
+    "DuckDBStore",
+    "EvolutionTrigger",
+    "LLMProvider",
+    "LLMProviderFactory",
+    "MultiPathRetriever",
+    "OverfittingAuditor",
+    "RulePromoter",
+    "SQLiteStore",
+    "SimilarityCalculator",
+    "StrategyReflector",
+    "UnifiedMemoryManager",
+    "VectorStore",
 ]

@@ -14,12 +14,13 @@
 4. 周期复盘：生成周度/月度复盘报告
 """
 
-from typing import Dict, List, Optional, Tuple, Any
-from dataclasses import dataclass, field
-from enum import Enum
-from datetime import datetime, timedelta
-from collections import defaultdict, Counter
 import json
+from collections import Counter, defaultdict
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from enum import Enum
+from typing import Any
+
 import numpy as np
 
 
@@ -27,18 +28,21 @@ import numpy as np
 # 数据结构定义
 # ===========================================================================
 
+
 class EntryCategory(Enum):
     """日志条目分类"""
-    CORRECTION = "correction"          # 纠正：系统判断错误
-    INSIGHT = "insight"                # 洞察：发现新的市场规律
-    KNOWLEDGE_GAP = "knowledge_gap"    # 知识缺口：缺少必要信息
-    BEST_PRACTICE = "best_practice"    # 最佳实践：成功的做法
-    ERROR = "error"                    # 错误：执行错误
-    PATTERN = "pattern"                # 模式：重复出现的规律
+
+    CORRECTION = "correction"  # 纠正：系统判断错误
+    INSIGHT = "insight"  # 洞察：发现新的市场规律
+    KNOWLEDGE_GAP = "knowledge_gap"  # 知识缺口：缺少必要信息
+    BEST_PRACTICE = "best_practice"  # 最佳实践：成功的做法
+    ERROR = "error"  # 错误：执行错误
+    PATTERN = "pattern"  # 模式：重复出现的规律
 
 
 class PatternSeverity(Enum):
     """模式严重程度"""
+
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
@@ -48,55 +52,59 @@ class PatternSeverity(Enum):
 @dataclass
 class TradeJournalEntry:
     """交易日志条目"""
+
     entry_id: str
     trade_id: str
     symbol: str
     category: EntryCategory
     timestamp: datetime = field(default_factory=datetime.now)
-    summary: str = ""                   # 一句话总结
-    details: str = ""                   # 详细描述
-    suggested_action: str = ""          # 建议的改进措施
-    priority: str = "medium"            # low / medium / high / critical
-    status: str = "pending"             # pending / resolved / promoted
-    related_trades: List[str] = field(default_factory=list)
-    tags: List[str] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    summary: str = ""  # 一句话总结
+    details: str = ""  # 详细描述
+    suggested_action: str = ""  # 建议的改进措施
+    priority: str = "medium"  # low / medium / high / critical
+    status: str = "pending"  # pending / resolved / promoted
+    related_trades: list[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class RecurringPattern:
     """重复模式"""
+
     pattern_id: str
-    pattern_key: str                    # 模式标识（用于去重）
+    pattern_key: str  # 模式标识（用于去重）
     description: str
     severity: PatternSeverity = PatternSeverity.MEDIUM
     occurrence_count: int = 0
     first_seen: datetime = field(default_factory=datetime.now)
     last_seen: datetime = field(default_factory=datetime.now)
-    affected_trades: List[str] = field(default_factory=list)
+    affected_trades: list[str] = field(default_factory=list)
     root_cause: str = ""
     suggested_fix: str = ""
-    promoted: bool = False              # 是否已晋升为规则
+    promoted: bool = False  # 是否已晋升为规则
 
 
 @dataclass
 class StrategyRule:
     """策略规则（从模式晋升而来）"""
+
     rule_id: str
     name: str
     description: str
-    condition: str                      # 触发条件
-    action: str                         # 执行动作
-    source_pattern: str = ""            # 来源模式ID
+    condition: str  # 触发条件
+    action: str  # 执行动作
+    source_pattern: str = ""  # 来源模式ID
     created_at: datetime = field(default_factory=datetime.now)
     enabled: bool = True
-    hit_count: int = 0                  # 触发次数
-    effectiveness: float = 0.0          # 有效性评分
+    hit_count: int = 0  # 触发次数
+    effectiveness: float = 0.0  # 有效性评分
 
 
 # ===========================================================================
 # 交易日志管理器
 # ===========================================================================
+
 
 class TradeJournal:
     """
@@ -109,12 +117,13 @@ class TradeJournal:
     """
 
     def __init__(self):
-        self.entries: List[TradeJournalEntry] = []
-        self.patterns: List[RecurringPattern] = []
-        self.rules: List[StrategyRule] = []
+        self.entries: list[TradeJournalEntry] = []
+        self.patterns: list[RecurringPattern] = []
+        self.rules: list[StrategyRule] = []
 
-    def log_trade_lesson(self, trade, fault_attribution: Dict[str, Any] = None,
-                        trajectory_analysis: Dict[str, Any] = None) -> TradeJournalEntry:
+    def log_trade_lesson(
+        self, trade, fault_attribution: dict[str, Any] = None, trajectory_analysis: dict[str, Any] = None
+    ) -> TradeJournalEntry:
         """
         记录交易教训
 
@@ -155,19 +164,19 @@ class TradeJournal:
             priority=priority,
             tags=tags,
             metadata={
-                'pnl': trade.pnl,
-                'pnl_pct': trade.pnl_pct,
-                'direction': trade.direction,
-                'exit_reason': trade.exit_reason,
-                'market_state': trade.market_state_at_entry,
-                'trend_phase': trade.trend_phase_at_entry,
-            }
+                "pnl": trade.pnl,
+                "pnl_pct": trade.pnl_pct,
+                "direction": trade.direction,
+                "exit_reason": trade.exit_reason,
+                "market_state": trade.market_state_at_entry,
+                "trend_phase": trade.trend_phase_at_entry,
+            },
         )
 
         self.entries.append(entry)
         return entry
 
-    def log_analysis(self, record: Dict[str, Any]):
+    def log_analysis(self, record: dict[str, Any]):
         """
         记录分析结果（由 EvolutionManager 调用）
 
@@ -176,35 +185,35 @@ class TradeJournal:
         """
         entry = TradeJournalEntry(
             entry_id=f"ANL-{datetime.now().strftime('%Y%m%d-%H%M%S')}",
-            trade_id=record.get('trade_id', ''),
-            symbol=record.get('symbol', 'UNKNOWN'),
-            category='analysis',
+            trade_id=record.get("trade_id", ""),
+            symbol=record.get("symbol", "UNKNOWN"),
+            category="analysis",
             summary=f"{record.get('symbol', '')} 分析记录",
             details=json.dumps(record, ensure_ascii=False, default=str),
-            suggested_action='',
-            priority='low',
-            tags=['analysis'],
-            metadata=record
+            suggested_action="",
+            priority="low",
+            tags=["analysis"],
+            metadata=record,
         )
         self.entries.append(entry)
         return entry
 
-    def _determine_category(self, trade, fault_attribution: Dict[str, Any] = None) -> EntryCategory:
+    def _determine_category(self, trade, fault_attribution: dict[str, Any] = None) -> EntryCategory:
         """确定日志分类"""
         if trade.pnl > 0:
             return EntryCategory.BEST_PRACTICE
 
-        if fault_attribution and fault_attribution.get('has_fault'):
-            faults = fault_attribution.get('faults', [])
+        if fault_attribution and fault_attribution.get("has_fault"):
+            faults = fault_attribution.get("faults", [])
             fault_types = [f.fault_type.value for f in faults]
 
-            if 'phase_mismatch' in fault_types:
+            if "phase_mismatch" in fault_types:
                 return EntryCategory.CORRECTION
-            elif 'indicator_misuse' in fault_types:
+            elif "indicator_misuse" in fault_types:
                 return EntryCategory.KNOWLEDGE_GAP
-            elif 'timing_error' in fault_types:
+            elif "timing_error" in fault_types:
                 return EntryCategory.INSIGHT
-            elif 'risk_mismanagement' in fault_types:
+            elif "risk_mismanagement" in fault_types:
                 return EntryCategory.ERROR
 
         return EntryCategory.CORRECTION
@@ -223,8 +232,9 @@ class TradeJournal:
         else:
             return f"{direction}交易亏损{pnl_str}，需要进一步分析"
 
-    def _generate_details(self, trade, fault_attribution: Dict[str, Any] = None,
-                         trajectory_analysis: Dict[str, Any] = None) -> str:
+    def _generate_details(
+        self, trade, fault_attribution: dict[str, Any] = None, trajectory_analysis: dict[str, Any] = None
+    ) -> str:
         """生成详细描述"""
         details = []
 
@@ -240,32 +250,32 @@ class TradeJournal:
             details.append(f"策略投票: {votes_str}")
 
         # 故障归因
-        if fault_attribution and fault_attribution.get('has_fault'):
+        if fault_attribution and fault_attribution.get("has_fault"):
             details.append("--- 故障归因 ---")
-            for fault in fault_attribution.get('faults', []):
+            for fault in fault_attribution.get("faults", []):
                 details.append(f"  [{fault.fault_type.value}] {fault.description}")
                 for resp in fault.responsible_strategies:
                     details.append(f"    责任策略: {resp.strategy_name} (分数: {resp.score:.2f})")
 
         # 轨迹分析
         if trajectory_analysis:
-            metrics = trajectory_analysis.get('metrics', {})
+            metrics = trajectory_analysis.get("metrics", {})
             details.append("--- 轨迹分析 ---")
             details.append(f"  轨迹质量: {metrics.get('quality_score', 0):.0f}/100")
             details.append(f"  策略一致性: {metrics.get('strategy_consistency', 0):.2f}")
 
         return "\n".join(details)
 
-    def _generate_suggested_action(self, trade, fault_attribution: Dict[str, Any] = None) -> str:
+    def _generate_suggested_action(self, trade, fault_attribution: dict[str, Any] = None) -> str:
         """生成建议的改进措施"""
         if trade.pnl > 0:
             return "保持当前策略，继续执行"
 
-        if not fault_attribution or not fault_attribution.get('has_fault'):
+        if not fault_attribution or not fault_attribution.get("has_fault"):
             return "需要更多数据进行分析"
 
         suggestions = []
-        for fault in fault_attribution.get('faults', []):
+        for fault in fault_attribution.get("faults", []):
             if fault.fault_type.value == "phase_mismatch":
                 suggestions.append("提高入场门槛，确保趋势阶段支持交易方向")
             elif fault.fault_type.value == "indicator_misuse":
@@ -279,7 +289,7 @@ class TradeJournal:
 
         return "; ".join(suggestions) if suggestions else "需要进一步分析"
 
-    def _determine_priority(self, trade, fault_attribution: Dict[str, Any] = None) -> str:
+    def _determine_priority(self, trade, fault_attribution: dict[str, Any] = None) -> str:
         """确定优先级"""
         if trade.pnl < 0 and abs(trade.pnl_pct) > 0.02:
             return "high"
@@ -289,7 +299,7 @@ class TradeJournal:
             return "low"
         return "medium"
 
-    def _generate_tags(self, trade, fault_attribution: Dict[str, Any] = None) -> List[str]:
+    def _generate_tags(self, trade, fault_attribution: dict[str, Any] = None) -> list[str]:
         """生成标签"""
         tags = []
 
@@ -309,14 +319,15 @@ class TradeJournal:
             tags.append(trade.exit_reason.lower())
 
         # 故障类型标签
-        if fault_attribution and fault_attribution.get('has_fault'):
-            for fault in fault_attribution.get('faults', []):
+        if fault_attribution and fault_attribution.get("has_fault"):
+            for fault in fault_attribution.get("faults", []):
                 tags.append(f"fault:{fault.fault_type.value}")
 
         return tags
 
-    def get_entries(self, symbol: str = None, category: EntryCategory = None,
-                   status: str = None, limit: int = 50) -> List[TradeJournalEntry]:
+    def get_entries(
+        self, symbol: str = None, category: EntryCategory = None, status: str = None, limit: int = 50
+    ) -> list[TradeJournalEntry]:
         """获取日志条目"""
         filtered = self.entries
 
@@ -329,7 +340,7 @@ class TradeJournal:
 
         return filtered[-limit:]
 
-    def generate_weekly_review(self, symbol: str = None) -> Dict[str, Any]:
+    def generate_weekly_review(self, symbol: str = None) -> dict[str, Any]:
         """生成周度复盘报告"""
         # 获取最近7天的日志
         week_ago = datetime.now() - timedelta(days=7)
@@ -364,7 +375,7 @@ class TradeJournal:
 
         return summary
 
-    def _extract_key_insights(self, entries: List[TradeJournalEntry]) -> List[str]:
+    def _extract_key_insights(self, entries: list[TradeJournalEntry]) -> list[str]:
         """提取关键洞察"""
         insights = []
 
@@ -383,7 +394,7 @@ class TradeJournal:
 
         return insights
 
-    def _extract_improvement_suggestions(self, entries: List[TradeJournalEntry]) -> List[str]:
+    def _extract_improvement_suggestions(self, entries: list[TradeJournalEntry]) -> list[str]:
         """提取改进建议"""
         suggestions = []
 
@@ -398,6 +409,7 @@ class TradeJournal:
 # 重复模式检测器
 # ===========================================================================
 
+
 class PatternDetector:
     """
     重复模式检测器
@@ -410,9 +422,9 @@ class PatternDetector:
 
     def __init__(self, min_occurrences: int = 3):
         self.min_occurrences = min_occurrences
-        self.patterns: List[RecurringPattern] = []
+        self.patterns: list[RecurringPattern] = []
 
-    def detect_patterns(self, journal: TradeJournal) -> List[RecurringPattern]:
+    def detect_patterns(self, journal: TradeJournal) -> list[RecurringPattern]:
         """
         检测重复模式
 
@@ -423,8 +435,7 @@ class PatternDetector:
             检测到的重复模式列表
         """
         # 获取所有亏损交易的日志
-        loss_entries = [e for e in journal.entries
-                       if e.category in (EntryCategory.CORRECTION, EntryCategory.ERROR)]
+        loss_entries = [e for e in journal.entries if e.category in (EntryCategory.CORRECTION, EntryCategory.ERROR)]
 
         if len(loss_entries) < self.min_occurrences:
             return []
@@ -445,22 +456,22 @@ class PatternDetector:
         self.patterns = patterns
         return patterns
 
-    def _cluster_by_tags(self, entries: List[TradeJournalEntry]) -> Dict[str, List[TradeJournalEntry]]:
+    def _cluster_by_tags(self, entries: list[TradeJournalEntry]) -> dict[str, list[TradeJournalEntry]]:
         """按标签聚类"""
         clusters = defaultdict(list)
 
         for entry in entries:
             for tag in entry.tags:
                 # 排除通用标签
-                if tag not in ('long', 'short') and not tag.startswith('fault:'):
+                if tag not in ("long", "short") and not tag.startswith("fault:"):
                     clusters[tag].append(entry)
 
         return dict(clusters)
 
-    def _create_pattern(self, tag: str, entries: List[TradeJournalEntry]) -> RecurringPattern:
+    def _create_pattern(self, tag: str, entries: list[TradeJournalEntry]) -> RecurringPattern:
         """创建重复模式"""
         # 计算严重程度
-        avg_pnl = np.mean([e.metadata.get('pnl', 0) for e in entries])
+        avg_pnl = np.mean([e.metadata.get("pnl", 0) for e in entries])
         occurrence_count = len(entries)
 
         if occurrence_count >= 5 and avg_pnl < -1000:
@@ -491,12 +502,12 @@ class PatternDetector:
             suggested_fix=suggested_fix,
         )
 
-    def _infer_root_cause(self, tag: str, entries: List[TradeJournalEntry]) -> str:
+    def _infer_root_cause(self, tag: str, entries: list[TradeJournalEntry]) -> str:
         """推断根因"""
         # 分析最常见的元数据
-        market_states = [e.metadata.get('market_state', 'UNKNOWN') for e in entries]
-        trend_phases = [e.metadata.get('trend_phase', 'UNKNOWN') for e in entries]
-        exit_reasons = [e.metadata.get('exit_reason', 'UNKNOWN') for e in entries]
+        market_states = [e.metadata.get("market_state", "UNKNOWN") for e in entries]
+        trend_phases = [e.metadata.get("trend_phase", "UNKNOWN") for e in entries]
+        exit_reasons = [e.metadata.get("exit_reason", "UNKNOWN") for e in entries]
 
         state_counter = Counter(market_states)
         phase_counter = Counter(trend_phases)
@@ -505,20 +516,20 @@ class PatternDetector:
         causes = []
 
         most_common_state = state_counter.most_common(1)[0] if state_counter else None
-        if most_common_state and most_common_state[0] != 'UNKNOWN':
+        if most_common_state and most_common_state[0] != "UNKNOWN":
             causes.append(f"主要发生在{most_common_state[0]}状态（{most_common_state[1]}次）")
 
         most_common_phase = phase_counter.most_common(1)[0] if phase_counter else None
-        if most_common_phase and most_common_phase[0] != 'UNKNOWN':
+        if most_common_phase and most_common_phase[0] != "UNKNOWN":
             causes.append(f"主要在{most_common_phase[0]}阶段（{most_common_phase[1]}次）")
 
         most_common_exit = exit_counter.most_common(1)[0] if exit_counter else None
-        if most_common_exit and most_common_exit[0] != 'UNKNOWN':
+        if most_common_exit and most_common_exit[0] != "UNKNOWN":
             causes.append(f"主要因{most_common_exit[0]}出场（{most_common_exit[1]}次）")
 
         return "; ".join(causes) if causes else "需要进一步分析"
 
-    def _generate_fix_suggestion(self, tag: str, entries: List[TradeJournalEntry]) -> str:
+    def _generate_fix_suggestion(self, tag: str, entries: list[TradeJournalEntry]) -> str:
         """生成修复建议"""
         suggestions = []
 
@@ -533,6 +544,7 @@ class PatternDetector:
 # 规则晋升器
 # ===========================================================================
 
+
 class RulePromoter:
     """
     规则晋升器
@@ -546,9 +558,9 @@ class RulePromoter:
     def __init__(self, min_occurrences: int = 3, min_severity: str = "medium"):
         self.min_occurrences = min_occurrences
         self.min_severity = min_severity
-        self.rules: List[StrategyRule] = []
+        self.rules: list[StrategyRule] = []
 
-    def promote_patterns(self, patterns: List[RecurringPattern]) -> List[StrategyRule]:
+    def promote_patterns(self, patterns: list[RecurringPattern]) -> list[StrategyRule]:
         """
         将符合条件的模式晋升为规则
 
@@ -655,7 +667,7 @@ class RulePromoter:
             source_pattern=pattern.pattern_id,
         )
 
-    def evaluate_rules(self, market_context: Dict[str, Any]) -> List[StrategyRule]:
+    def evaluate_rules(self, market_context: dict[str, Any]) -> list[StrategyRule]:
         """
         评估规则是否应该触发
 
@@ -677,16 +689,16 @@ class RulePromoter:
 
         return triggered
 
-    def _check_condition(self, condition: str, context: Dict[str, Any]) -> bool:
+    def _check_condition(self, condition: str, context: dict[str, Any]) -> bool:
         """检查规则条件（简化版）"""
         # 简化的条件检查
         if "RANGE_BOUND" in condition:
-            return context.get('market_state') == 'RANGE_BOUND'
+            return context.get("market_state") == "RANGE_BOUND"
         elif "FATIGUING" in condition or "REVERSING" in condition:
-            return context.get('trend_phase') in ('FATIGUING', 'REVERSING')
+            return context.get("trend_phase") in ("FATIGUING", "REVERSING")
         elif "adx < 20" in condition:
-            return context.get('adx', 100) < 20
+            return context.get("adx", 100) < 20
         elif "adx_pct < 0.5" in condition:
-            return context.get('adx_pct', 1.0) < 0.5
+            return context.get("adx_pct", 1.0) < 0.5
 
         return False

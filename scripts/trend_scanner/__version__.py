@@ -142,7 +142,7 @@ if __name__ == "__main__":
     print(f"Version: {format_version()}")
     print(f"Version Info: {get_version_info()}")
     print(f"Metadata: {get_version_metadata()}")
-    print(f"\nVersion History:")
+    print("\nVersion History:")
     for v in get_version_history():
         print(f"  {v['version']} ({v['date']}):")
         for change in v["changes"]:

@@ -10,13 +10,13 @@
 - DuckDB: K线数据、技术指标、信号历史（分析型数据，列式存储更快）
 """
 
-from typing import Dict, List, Optional, Any
-from datetime import datetime
-import pandas as pd
-import numpy as np
-import sqlite3
 import json
 import os
+import sqlite3
+from datetime import datetime
+from typing import Any
+
+import pandas as pd
 
 
 class DataStore:
@@ -54,7 +54,8 @@ class DataStore:
         self.duckdb_conn = None
         try:
             import duckdb
-            duckdb_path = db_path.replace('.db', '.duckdb')
+
+            duckdb_path = db_path.replace(".db", ".duckdb")
             self.duckdb_conn = duckdb.connect(duckdb_path)
         except ImportError:
             pass  # DuckDB 不可用时回退到 SQLite
@@ -225,40 +226,50 @@ class DataStore:
         if self.duckdb_conn:
             # DuckDB 存储
             df_copy = df.copy()
-            df_copy['symbol'] = symbol
-            if 'date' in df_copy.columns:
-                df_copy['timestamp'] = pd.to_datetime(df_copy['date'])
-            elif 'datetime' in df_copy.columns:
-                df_copy['timestamp'] = pd.to_datetime(df_copy['datetime'])
+            df_copy["symbol"] = symbol
+            if "date" in df_copy.columns:
+                df_copy["timestamp"] = pd.to_datetime(df_copy["date"])
+            elif "datetime" in df_copy.columns:
+                df_copy["timestamp"] = pd.to_datetime(df_copy["datetime"])
 
             # 只保留需要的列
-            cols = ['symbol', 'timestamp', 'open', 'high', 'low', 'close', 'volume']
+            cols = ["symbol", "timestamp", "open", "high", "low", "close", "volume"]
             for col in cols:
                 if col not in df_copy.columns:
                     df_copy[col] = None
 
             # 使用 INSERT OR REPLACE
             for _, row in df_copy[cols].iterrows():
-                self.duckdb_conn.execute("""
+                self.duckdb_conn.execute(
+                    """
                     INSERT OR REPLACE INTO klines (symbol, timestamp, open, high, low, close, volume)
                     VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, [row['symbol'], row['timestamp'], row['open'], row['high'],
-                      row['low'], row['close'], row['volume']])
+                """,
+                    [
+                        row["symbol"],
+                        row["timestamp"],
+                        row["open"],
+                        row["high"],
+                        row["low"],
+                        row["close"],
+                        row["volume"],
+                    ],
+                )
         else:
             # 回退到 SQLite
             df_copy = df.copy()
-            df_copy['symbol'] = symbol
-            if 'date' in df_copy.columns:
-                df_copy['timestamp'] = df_copy['date']
-            elif 'datetime' in df_copy.columns:
-                df_copy['timestamp'] = df_copy['datetime']
+            df_copy["symbol"] = symbol
+            if "date" in df_copy.columns:
+                df_copy["timestamp"] = df_copy["date"]
+            elif "datetime" in df_copy.columns:
+                df_copy["timestamp"] = df_copy["datetime"]
 
-            cols = ['symbol', 'timestamp', 'open', 'high', 'low', 'close', 'volume']
+            cols = ["symbol", "timestamp", "open", "high", "low", "close", "volume"]
             for col in cols:
                 if col not in df_copy.columns:
                     df_copy[col] = None
 
-            df_copy[cols].to_sql('klines', self.conn, if_exists='append', index=False)
+            df_copy[cols].to_sql("klines", self.conn, if_exists="append", index=False)
 
     def load_klines(self, symbol: str, start_date: str = None, end_date: str = None) -> pd.DataFrame:
         """
@@ -295,7 +306,7 @@ class DataStore:
             query += " ORDER BY timestamp"
             return pd.read_sql(query, self.conn, params=params)
 
-    def save_signal(self, symbol: str, result: Dict):
+    def save_signal(self, symbol: str, result: dict):
         """
         保存信号历史
 
@@ -304,29 +315,32 @@ class DataStore:
             result: MultiIndicatorConsensus.consensus() 的结果
         """
         cursor = self.conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO signal_history
             (symbol, timestamp, signal, strength, market_state, trend_phase,
              composite_score, filtered_composite, score_direction, vote_direction,
              dimension_scores, evidence)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            symbol,
-            datetime.now().isoformat(),
-            result.get('signal', 'HOLD'),
-            result.get('strength', 'none'),
-            result.get('state', 'UNKNOWN'),
-            result.get('phase', 'UNKNOWN'),
-            result.get('composite_score', 0),
-            result.get('filtered_composite', 0),
-            result.get('score_direction', 0),
-            result.get('direction', 0),
-            json.dumps(result.get('dimension_scores', {}), ensure_ascii=False),
-            json.dumps(result.get('evidence', []), ensure_ascii=False),
-        ))
+        """,
+            (
+                symbol,
+                datetime.now().isoformat(),
+                result.get("signal", "HOLD"),
+                result.get("strength", "none"),
+                result.get("state", "UNKNOWN"),
+                result.get("phase", "UNKNOWN"),
+                result.get("composite_score", 0),
+                result.get("filtered_composite", 0),
+                result.get("score_direction", 0),
+                result.get("direction", 0),
+                json.dumps(result.get("dimension_scores", {}), ensure_ascii=False),
+                json.dumps(result.get("evidence", []), ensure_ascii=False),
+            ),
+        )
         self.conn.commit()
 
-    def save_trade(self, trade: Dict):
+    def save_trade(self, trade: dict):
         """
         保存交易记录
 
@@ -334,34 +348,37 @@ class DataStore:
             trade: 交易记录字典
         """
         cursor = self.conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT OR REPLACE INTO trades
             (trade_id, symbol, direction, entry_time, entry_price, exit_time, exit_price,
              pnl, pnl_pct, holding_bars, market_state_at_entry, trend_phase_at_entry,
              adx_at_entry, atr_at_entry, composite_score_at_entry, exit_reason, quality_tags)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            trade.get('trade_id', ''),
-            trade.get('symbol', ''),
-            trade.get('direction', ''),
-            trade.get('entry_time', ''),
-            trade.get('entry_price', 0),
-            trade.get('exit_time', ''),
-            trade.get('exit_price', 0),
-            trade.get('pnl', 0),
-            trade.get('pnl_pct', 0),
-            trade.get('holding_bars', 0),
-            trade.get('market_state_at_entry', ''),
-            trade.get('trend_phase_at_entry', ''),
-            trade.get('adx_at_entry', 0),
-            trade.get('atr_at_entry', 0),
-            trade.get('composite_score_at_entry', 0),
-            trade.get('exit_reason', ''),
-            json.dumps(trade.get('quality_tags', []), ensure_ascii=False),
-        ))
+        """,
+            (
+                trade.get("trade_id", ""),
+                trade.get("symbol", ""),
+                trade.get("direction", ""),
+                trade.get("entry_time", ""),
+                trade.get("entry_price", 0),
+                trade.get("exit_time", ""),
+                trade.get("exit_price", 0),
+                trade.get("pnl", 0),
+                trade.get("pnl_pct", 0),
+                trade.get("holding_bars", 0),
+                trade.get("market_state_at_entry", ""),
+                trade.get("trend_phase_at_entry", ""),
+                trade.get("adx_at_entry", 0),
+                trade.get("atr_at_entry", 0),
+                trade.get("composite_score_at_entry", 0),
+                trade.get("exit_reason", ""),
+                json.dumps(trade.get("quality_tags", []), ensure_ascii=False),
+            ),
+        )
         self.conn.commit()
 
-    def get_symbol_config(self, symbol: str) -> Optional[Dict]:
+    def get_symbol_config(self, symbol: str) -> dict | None:
         """
         获取品种配置
 
@@ -376,15 +393,15 @@ class DataStore:
         row = cursor.fetchone()
         if row:
             return {
-                'symbol': row['symbol'],
-                'timeframe': row['timeframe'],
-                'ma_periods': json.loads(row['ma_periods']) if row['ma_periods'] else {},
-                'strategy_weights': json.loads(row['strategy_weights']) if row['strategy_weights'] else {},
-                'risk_params': json.loads(row['risk_params']) if row['risk_params'] else {},
+                "symbol": row["symbol"],
+                "timeframe": row["timeframe"],
+                "ma_periods": json.loads(row["ma_periods"]) if row["ma_periods"] else {},
+                "strategy_weights": json.loads(row["strategy_weights"]) if row["strategy_weights"] else {},
+                "risk_params": json.loads(row["risk_params"]) if row["risk_params"] else {},
             }
         return None
 
-    def save_symbol_config(self, symbol: str, config: Dict):
+    def save_symbol_config(self, symbol: str, config: dict):
         """
         保存品种配置
 
@@ -393,21 +410,24 @@ class DataStore:
             config: 配置字典
         """
         cursor = self.conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT OR REPLACE INTO symbol_config
             (symbol, timeframe, ma_periods, strategy_weights, risk_params, updated_at)
             VALUES (?, ?, ?, ?, ?, ?)
-        """, (
-            symbol,
-            config.get('timeframe', '1d'),
-            json.dumps(config.get('ma_periods', {})),
-            json.dumps(config.get('strategy_weights', {})),
-            json.dumps(config.get('risk_params', {})),
-            datetime.now().isoformat(),
-        ))
+        """,
+            (
+                symbol,
+                config.get("timeframe", "1d"),
+                json.dumps(config.get("ma_periods", {})),
+                json.dumps(config.get("strategy_weights", {})),
+                json.dumps(config.get("risk_params", {})),
+                datetime.now().isoformat(),
+            ),
+        )
         self.conn.commit()
 
-    def get_trades(self, symbol: str = None, limit: int = 100) -> List[Dict]:
+    def get_trades(self, symbol: str = None, limit: int = 100) -> list[dict]:
         """
         获取交易记录
 
@@ -420,13 +440,12 @@ class DataStore:
         """
         cursor = self.conn.cursor()
         if symbol:
-            cursor.execute("SELECT * FROM trades WHERE symbol = ? ORDER BY entry_time DESC LIMIT ?",
-                          (symbol, limit))
+            cursor.execute("SELECT * FROM trades WHERE symbol = ? ORDER BY entry_time DESC LIMIT ?", (symbol, limit))
         else:
             cursor.execute("SELECT * FROM trades ORDER BY entry_time DESC LIMIT ?", (limit,))
         return [dict(row) for row in cursor.fetchall()]
 
-    def get_signal_history(self, symbol: str, limit: int = 50) -> List[Dict]:
+    def get_signal_history(self, symbol: str, limit: int = 50) -> list[dict]:
         """
         获取信号历史
 
@@ -438,17 +457,27 @@ class DataStore:
             信号历史列表
         """
         cursor = self.conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT * FROM signal_history
             WHERE symbol = ?
             ORDER BY timestamp DESC
             LIMIT ?
-        """, (symbol, limit))
+        """,
+            (symbol, limit),
+        )
         return [dict(row) for row in cursor.fetchall()]
 
-    def save_evolution(self, symbol: str, evolution_type: str, old_value: Any,
-                      new_value: Any, reason: str, performance_before: float = None,
-                      performance_after: float = None):
+    def save_evolution(
+        self,
+        symbol: str,
+        evolution_type: str,
+        old_value: Any,
+        new_value: Any,
+        reason: str,
+        performance_before: float = None,
+        performance_after: float = None,
+    ):
         """
         保存进化历史
 
@@ -462,20 +491,23 @@ class DataStore:
             performance_after: 进化后性能
         """
         cursor = self.conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO evolution_history
             (symbol, evolution_type, old_value, new_value, reason,
              performance_before, performance_after)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (
-            symbol,
-            evolution_type,
-            json.dumps(old_value) if not isinstance(old_value, str) else old_value,
-            json.dumps(new_value) if not isinstance(new_value, str) else new_value,
-            reason,
-            performance_before,
-            performance_after,
-        ))
+        """,
+            (
+                symbol,
+                evolution_type,
+                json.dumps(old_value) if not isinstance(old_value, str) else old_value,
+                json.dumps(new_value) if not isinstance(new_value, str) else new_value,
+                reason,
+                performance_before,
+                performance_after,
+            ),
+        )
         self.conn.commit()
 
     # ---- 打分反馈相关方法 ----
@@ -494,48 +526,51 @@ class DataStore:
             cursor = self.conn.cursor()
 
             # 支持 ScoringFeedback 对象或字典
-            if hasattr(feedback, 'to_dict'):
+            if hasattr(feedback, "to_dict"):
                 data = feedback.to_dict()
             else:
                 data = feedback
 
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT OR REPLACE INTO scoring_feedback
                 (feedback_id, symbol, timestamp, composite_score, filtered_composite,
                  score_direction, confidence, dimension_scores, market_state,
                  trend_phase, volatility_regime, actual_direction, actual_return,
                  holding_days, outcome, direction_correct, status, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                data.get('feedback_id'),
-                data.get('symbol'),
-                data.get('timestamp'),
-                data.get('composite_score', 0),
-                data.get('filtered_composite', 0),
-                data.get('score_direction', 0),
-                data.get('confidence', 0),
-                json.dumps(data.get('dimension_scores', {})),
-                data.get('market_state', ''),
-                data.get('trend_phase', ''),
-                data.get('volatility_regime', ''),
-                data.get('actual_direction', 0),
-                data.get('actual_return', 0),
-                data.get('holding_days', 0),
-                data.get('outcome', ''),
-                1 if data.get('direction_correct') else 0,
-                data.get('status', 'pending'),
-                data.get('created_at', datetime.now().isoformat()),
-                data.get('updated_at'),
-            ))
+            """,
+                (
+                    data.get("feedback_id"),
+                    data.get("symbol"),
+                    data.get("timestamp"),
+                    data.get("composite_score", 0),
+                    data.get("filtered_composite", 0),
+                    data.get("score_direction", 0),
+                    data.get("confidence", 0),
+                    json.dumps(data.get("dimension_scores", {})),
+                    data.get("market_state", ""),
+                    data.get("trend_phase", ""),
+                    data.get("volatility_regime", ""),
+                    data.get("actual_direction", 0),
+                    data.get("actual_return", 0),
+                    data.get("holding_days", 0),
+                    data.get("outcome", ""),
+                    1 if data.get("direction_correct") else 0,
+                    data.get("status", "pending"),
+                    data.get("created_at", datetime.now().isoformat()),
+                    data.get("updated_at"),
+                ),
+            )
             self.conn.commit()
             return True
         except Exception as e:
             print(f"保存打分反馈失败: {e}")
             return False
 
-    def get_scoring_feedback(self, symbol: str = None, status: str = None,
-                            start_date: str = None, end_date: str = None,
-                            limit: int = 1000) -> List[Dict]:
+    def get_scoring_feedback(
+        self, symbol: str = None, status: str = None, start_date: str = None, end_date: str = None, limit: int = 1000
+    ) -> list[dict]:
         """
         获取打分反馈
 
@@ -577,17 +612,17 @@ class DataStore:
 
         # 解析 JSON 字段
         for row in results:
-            if row.get('dimension_scores'):
+            if row.get("dimension_scores"):
                 try:
-                    row['dimension_scores'] = json.loads(row['dimension_scores'])
+                    row["dimension_scores"] = json.loads(row["dimension_scores"])
                 except:
-                    row['dimension_scores'] = {}
+                    row["dimension_scores"] = {}
 
         return results
 
-    def update_scoring_feedback_result(self, feedback_id: str, actual_direction: int,
-                                       actual_return: float, holding_days: int,
-                                       outcome: str) -> bool:
+    def update_scoring_feedback_result(
+        self, feedback_id: str, actual_direction: int, actual_return: float, holding_days: int, outcome: str
+    ) -> bool:
         """
         更新打分反馈的实际结果
 
@@ -605,37 +640,39 @@ class DataStore:
             cursor = self.conn.cursor()
 
             # 获取原始打分方向
-            cursor.execute("SELECT score_direction FROM scoring_feedback WHERE feedback_id = ?",
-                          (feedback_id,))
+            cursor.execute("SELECT score_direction FROM scoring_feedback WHERE feedback_id = ?", (feedback_id,))
             row = cursor.fetchone()
             if not row:
                 return False
 
             score_direction = row[0]
-            direction_correct = (score_direction == actual_direction)
+            direction_correct = score_direction == actual_direction
 
-            cursor.execute("""
+            cursor.execute(
+                """
                 UPDATE scoring_feedback
                 SET actual_direction = ?, actual_return = ?, holding_days = ?,
                     outcome = ?, direction_correct = ?, status = 'completed',
                     updated_at = ?
                 WHERE feedback_id = ?
-            """, (
-                actual_direction,
-                actual_return,
-                holding_days,
-                outcome,
-                1 if direction_correct else 0,
-                datetime.now().isoformat(),
-                feedback_id,
-            ))
+            """,
+                (
+                    actual_direction,
+                    actual_return,
+                    holding_days,
+                    outcome,
+                    1 if direction_correct else 0,
+                    datetime.now().isoformat(),
+                    feedback_id,
+                ),
+            )
             self.conn.commit()
             return True
         except Exception as e:
             print(f"更新打分反馈失败: {e}")
             return False
 
-    def get_scoring_statistics(self, symbol: str = None) -> Dict:
+    def get_scoring_statistics(self, symbol: str = None) -> dict:
         """
         获取打分统计信息
 
@@ -678,12 +715,12 @@ class DataStore:
         losses = row[5] or 0
 
         return {
-            'total_feedbacks': total,
-            'completed_feedbacks': completed,
-            'direction_accuracy': correct / completed if completed > 0 else 0,
-            'average_return': avg_return,
-            'win_rate': wins / completed if completed > 0 else 0,
-            'loss_rate': losses / completed if completed > 0 else 0,
+            "total_feedbacks": total,
+            "completed_feedbacks": completed,
+            "direction_accuracy": correct / completed if completed > 0 else 0,
+            "average_return": avg_return,
+            "win_rate": wins / completed if completed > 0 else 0,
+            "loss_rate": losses / completed if completed > 0 else 0,
         }
 
     def close(self):
@@ -712,7 +749,7 @@ class ConfigManager:
         """
         self.store = data_store
 
-    def get_config(self, symbol: str) -> Dict:
+    def get_config(self, symbol: str) -> dict:
         """
         获取品种配置（合并默认配置和品种特定配置）
 
@@ -724,13 +761,13 @@ class ConfigManager:
         """
         # 默认配置
         default_config = {
-            'timeframe': '1d',
-            'ma_periods': {'short': 20, 'medium': 60, 'long': 120},
-            'strategy_weights': {},
-            'risk_params': {
-                'risk_per_trade': 0.01,
-                'point_value': 10.0,
-                'margin_per_lot': 5000.0,
+            "timeframe": "1d",
+            "ma_periods": {"short": 20, "medium": 60, "long": 120},
+            "strategy_weights": {},
+            "risk_params": {
+                "risk_per_trade": 0.01,
+                "point_value": 10.0,
+                "margin_per_lot": 5000.0,
             },
         }
 
@@ -738,15 +775,15 @@ class ConfigManager:
         symbol_config = self.store.get_symbol_config(symbol)
         if symbol_config:
             # 合并配置
-            for key in ['ma_periods', 'strategy_weights', 'risk_params']:
+            for key in ["ma_periods", "strategy_weights", "risk_params"]:
                 if symbol_config.get(key):
                     default_config[key].update(symbol_config[key])
-            if symbol_config.get('timeframe'):
-                default_config['timeframe'] = symbol_config['timeframe']
+            if symbol_config.get("timeframe"):
+                default_config["timeframe"] = symbol_config["timeframe"]
 
         return default_config
 
-    def set_config(self, symbol: str, config: Dict):
+    def set_config(self, symbol: str, config: dict):
         """
         设置品种配置
 
@@ -756,7 +793,7 @@ class ConfigManager:
         """
         self.store.save_symbol_config(symbol, config)
 
-    def list_symbols(self) -> List[str]:
+    def list_symbols(self) -> list[str]:
         """
         列出所有已配置的品种
 
@@ -765,7 +802,7 @@ class ConfigManager:
         """
         cursor = self.store.conn.cursor()
         cursor.execute("SELECT symbol FROM symbol_config ORDER BY symbol")
-        return [row['symbol'] for row in cursor.fetchall()]
+        return [row["symbol"] for row in cursor.fetchall()]
 
     def delete_config(self, symbol: str):
         """

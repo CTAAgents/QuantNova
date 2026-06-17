@@ -8,14 +8,13 @@ ValidationMatrix 单元测试
 - list_all_types 完整性
 """
 
-import sys
 import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import sys
 
-import pytest
-from scripts.trend_scanner.validation_matrix import (
-    ValidationMatrix, ValidationRequirement, VALIDATION_MATRIX
-)
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from scripts.trend_scanner.validation_matrix import ValidationMatrix, ValidationRequirement
 
 
 class TestValidationRequirement:
@@ -52,8 +51,13 @@ class TestValidationMatrix:
     def test_all_seven_types_exist(self):
         """验证矩阵包含全部 7 种改动类型"""
         expected = {
-            "adjust_position", "add_indicator", "modify_threshold",
-            "new_entry", "exit", "strategy_logic", "risk_parameter"
+            "adjust_position",
+            "add_indicator",
+            "modify_threshold",
+            "new_entry",
+            "exit",
+            "strategy_logic",
+            "risk_parameter",
         }
         assert set(self.vm.list_all_types()) == expected
 
@@ -121,23 +125,29 @@ class TestValidateRoute:
 
     def test_pass_no_red_flags(self):
         """无红线触发时通过"""
-        result = self.vm.validate_route("adjust_position", {
-            "walk_forward_validator": {
-                "warnings": [],
-                "known_issues": [],
-            }
-        })
+        result = self.vm.validate_route(
+            "adjust_position",
+            {
+                "walk_forward_validator": {
+                    "warnings": [],
+                    "known_issues": [],
+                }
+            },
+        )
         assert result["passed"] is True
         assert result["red_flags_triggered"] == []
 
     def test_fail_red_flag_triggered(self):
         """红线触发时失败"""
-        result = self.vm.validate_route("adjust_position", {
-            "walk_forward_validator": {
-                "warnings": [],
-                "known_issues": ["PnL 改善伴随换手率同步恶化且未解释"],
-            }
-        })
+        result = self.vm.validate_route(
+            "adjust_position",
+            {
+                "walk_forward_validator": {
+                    "warnings": [],
+                    "known_issues": ["PnL 改善伴随换手率同步恶化且未解释"],
+                }
+            },
+        )
         assert result["passed"] is False
         assert len(result["red_flags_triggered"]) >= 1
 
@@ -148,20 +158,26 @@ class TestValidateRoute:
 
     def test_add_indicator_lookahead_bias(self):
         """add_indicator 前视偏差红线"""
-        result = self.vm.validate_route("add_indicator", {
-            "factor_evaluator": {
-                "known_issues": ["存在前视偏差（使用了未来数据）"],
-            }
-        })
+        result = self.vm.validate_route(
+            "add_indicator",
+            {
+                "factor_evaluator": {
+                    "known_issues": ["存在前视偏差（使用了未来数据）"],
+                }
+            },
+        )
         assert result["passed"] is False
 
     def test_strategy_logic_narrow_parameter(self):
         """strategy_logic 参数稳定域过窄红线"""
-        result = self.vm.validate_route("strategy_logic", {
-            "overfitting_auditor": {
-                "known_issues": ["参数稳定域过窄（10% 微调即失效）"],
-            }
-        })
+        result = self.vm.validate_route(
+            "strategy_logic",
+            {
+                "overfitting_auditor": {
+                    "known_issues": ["参数稳定域过窄（10% 微调即失效）"],
+                }
+            },
+        )
         assert result["passed"] is False
 
 

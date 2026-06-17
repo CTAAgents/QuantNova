@@ -24,23 +24,22 @@ import sys
 import time
 import tracemalloc
 from pathlib import Path
-from dataclasses import asdict
-from typing import Dict, List
 
 import numpy as np
 import pandas as pd
 import pytest
 
+
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from scripts.trend_scanner.conceptual_feedback import ConceptualFeedbackGenerator, TradeResult
+from scripts.trend_scanner.factor_generator import FactorGenerator
 from scripts.trend_scanner.indicators import IndicatorEngine
 from scripts.trend_scanner.market_analysis import MultiIndicatorConsensus, TrendPhaseDetector
-from scripts.trend_scanner.factor_generator import FactorGenerator
-from scripts.trend_scanner.trajectory_analyzer import TrajectoryAnalyzer, TradeRecord
 from scripts.trend_scanner.report_parser import ReportParser
-from scripts.trend_scanner.conceptual_feedback import ConceptualFeedbackGenerator, TradeResult
 from scripts.trend_scanner.rl_interface_designer import RLInterfaceDesigner
+from scripts.trend_scanner.trajectory_analyzer import TrajectoryAnalyzer
 
 
 # ============================================================
@@ -53,33 +52,36 @@ pytestmark = pytest.mark.benchmark
 # 辅助函数
 # ============================================================
 
+
 def generate_trade_records(n: int):
     """生成 n 笔交易记录（原有逻辑，保留向后兼容）"""
     records = []
     for i in range(n):
         pnl = 100.0 if i % 3 != 0 else -80.0
-        records.append({
-            "trade_id": f"T{i:04d}",
-            "symbol": "DCE.jm2609",
-            "direction": "LONG" if i % 2 == 0 else "SHORT",
-            "entry_price": 1500.0 + i * 10,
-            "exit_price": 1500.0 + i * 10 + (60.0 if pnl > 0 else -80.0),
-            "entry_time": f"2026-06-{(i % 28) + 1:02d}T09:00:00",
-            "exit_time": f"2026-06-{(i % 28) + 1:02d}T15:00:00",
-            "pnl": pnl,
-            "pnl_percent": pnl / 1500.0 * 100,
-            "holding_period": (i % 5) + 1,
-            "market_state": ["trending", "ranging", "volatile"][i % 3],
-            "trend_phase": ["DEVELOPING", "MATURE", "EXHAUSTING"][i % 3],
-            "volatility": ["low", "medium", "high"][i % 3],
-            "er": 0.3 + (i % 5) * 0.1,
-            "tsi": -0.3 + (i % 7) * 0.1,
-            "rsi": 30.0 + (i % 40),
-            "adx": 15.0 + (i % 30),
-            "max_drawdown": 0.01 + (i % 5) * 0.01,
-            "sharpe_ratio": -0.5 + (i % 4) * 0.5,
-            "failure_reason": "止损过紧" if pnl < 0 else None
-        })
+        records.append(
+            {
+                "trade_id": f"T{i:04d}",
+                "symbol": "DCE.jm2609",
+                "direction": "LONG" if i % 2 == 0 else "SHORT",
+                "entry_price": 1500.0 + i * 10,
+                "exit_price": 1500.0 + i * 10 + (60.0 if pnl > 0 else -80.0),
+                "entry_time": f"2026-06-{(i % 28) + 1:02d}T09:00:00",
+                "exit_time": f"2026-06-{(i % 28) + 1:02d}T15:00:00",
+                "pnl": pnl,
+                "pnl_percent": pnl / 1500.0 * 100,
+                "holding_period": (i % 5) + 1,
+                "market_state": ["trending", "ranging", "volatile"][i % 3],
+                "trend_phase": ["DEVELOPING", "MATURE", "EXHAUSTING"][i % 3],
+                "volatility": ["low", "medium", "high"][i % 3],
+                "er": 0.3 + (i % 5) * 0.1,
+                "tsi": -0.3 + (i % 7) * 0.1,
+                "rsi": 30.0 + (i % 40),
+                "adx": 15.0 + (i % 30),
+                "max_drawdown": 0.01 + (i % 5) * 0.01,
+                "sharpe_ratio": -0.5 + (i % 4) * 0.5,
+                "failure_reason": "止损过紧" if pnl < 0 else None,
+            }
+        )
     return records
 
 
@@ -107,9 +109,7 @@ class TestIndicatorEnginePerformance:
         elapsed = time.perf_counter() - start
 
         # 阈值: 2 秒（120 行是标准测试规模）
-        assert elapsed < 2.0, (
-            f"IndicatorEngine.compute_all() 120行耗时 {elapsed:.3f}s，超过 2s 阈值"
-        )
+        assert elapsed < 2.0, f"IndicatorEngine.compute_all() 120行耗时 {elapsed:.3f}s，超过 2s 阈值"
         # 验证结果完整性
         assert len(result) == 120
         assert "adx" in result.columns
@@ -126,9 +126,7 @@ class TestIndicatorEnginePerformance:
         result = engine.compute_all()
         elapsed = time.perf_counter() - start
 
-        assert elapsed < 3.0, (
-            f"IndicatorEngine.compute_all() 200行耗时 {elapsed:.3f}s，超过 3s 阈值"
-        )
+        assert elapsed < 3.0, f"IndicatorEngine.compute_all() 200行耗时 {elapsed:.3f}s，超过 3s 阈值"
         assert len(result) == 200
         print(f"\n  IndicatorEngine.compute_all(200行): {elapsed:.3f}s")
 
@@ -140,9 +138,7 @@ class TestIndicatorEnginePerformance:
         result = engine.compute_all()
         elapsed = time.perf_counter() - start
 
-        assert elapsed < 8.0, (
-            f"IndicatorEngine.compute_all() 500行耗时 {elapsed:.3f}s，超过 8s 阈值"
-        )
+        assert elapsed < 8.0, f"IndicatorEngine.compute_all() 500行耗时 {elapsed:.3f}s，超过 8s 阈值"
         assert len(result) == 500
         print(f"\n  IndicatorEngine.compute_all(500行): {elapsed:.3f}s")
 
@@ -183,14 +179,12 @@ class TestTrendPhaseDetectorPerformance:
         发展期、萌芽期、假突破回退检测，最后计算可靠性评分。
         """
         start = time.perf_counter()
-        phase, confidence, reliability, breakdown, alerts, evidence = (
-            TrendPhaseDetector.detect(indicator_df_200, "trending")
+        phase, confidence, reliability, breakdown, alerts, evidence = TrendPhaseDetector.detect(
+            indicator_df_200, "trending"
         )
         elapsed = time.perf_counter() - start
 
-        assert elapsed < 0.5, (
-            f"TrendPhaseDetector.detect() 耗时 {elapsed:.3f}s，超过 0.5s 阈值"
-        )
+        assert elapsed < 0.5, f"TrendPhaseDetector.detect() 耗时 {elapsed:.3f}s，超过 0.5s 阈值"
         assert phase in TrendPhaseDetector.PHASES
         assert 0 <= confidence <= 1.0
         assert 0 <= reliability <= 100
@@ -203,11 +197,9 @@ class TestTrendPhaseDetectorPerformance:
             TrendPhaseDetector.detect(indicator_df_200, "trending")
         elapsed = time.perf_counter() - start
 
-        assert elapsed < 3.0, (
-            f"100 次 TrendPhaseDetector.detect() 耗时 {elapsed:.2f}s，超过 3s 阈值"
-        )
+        assert elapsed < 3.0, f"100 次 TrendPhaseDetector.detect() 耗时 {elapsed:.2f}s，超过 3s 阈值"
         per_call = elapsed / 100
-        print(f"\n  TrendPhaseDetector.detect() × 100: {elapsed:.3f}s, 每次 {per_call*1000:.2f}ms")
+        print(f"\n  TrendPhaseDetector.detect() × 100: {elapsed:.3f}s, 每次 {per_call * 1000:.2f}ms")
 
     def test_consensus_speed(self, indicator_df_200: pd.DataFrame):
         """MultiIndicatorConsensus.consensus() 单次调用 < 1s"""
@@ -215,9 +207,7 @@ class TestTrendPhaseDetectorPerformance:
         result = MultiIndicatorConsensus.consensus(indicator_df_200)
         elapsed = time.perf_counter() - start
 
-        assert elapsed < 1.0, (
-            f"MultiIndicatorConsensus.consensus() 耗时 {elapsed:.3f}s，超过 1s 阈值"
-        )
+        assert elapsed < 1.0, f"MultiIndicatorConsensus.consensus() 耗时 {elapsed:.3f}s，超过 1s 阈值"
         assert "state" in result
         assert "confidence" in result
         print(f"\n  MultiIndicatorConsensus.consensus(): {elapsed:.4f}s, state={result['state']}")
@@ -233,16 +223,14 @@ class TestFactorCodeExecutionPerformance:
         模拟 FactorGenerator 产出的因子代码被执行的场景：
         加载代码 → exec → 调用 factor() → 获取结果。
         """
-        namespace: Dict = {"pd": pd, "np": np}
+        namespace: dict = {"pd": pd, "np": np}
         start = time.perf_counter()
         exec(factor_code, namespace)
         factor_func = namespace["factor"]
         result = factor_func(ohlcv_120.copy())
         elapsed = time.perf_counter() - start
 
-        assert elapsed < 1.0, (
-            f"因子代码 exec 执行耗时 {elapsed:.3f}s，超过 1s 阈值"
-        )
+        assert elapsed < 1.0, f"因子代码 exec 执行耗时 {elapsed:.3f}s，超过 1s 阈值"
         assert isinstance(result, pd.Series)
         assert len(result) == len(ohlcv_120)
         print(f"\n  因子代码 exec: {elapsed:.4f}s, 输出长度={len(result)}")
@@ -257,7 +245,7 @@ class TestFactorCodeExecutionPerformance:
         if not knowledge_path.exists():
             pytest.skip("factor_knowledge.json 不存在")
 
-        with open(knowledge_path, "r", encoding="utf-8") as f:
+        with open(knowledge_path, encoding="utf-8") as f:
             knowledge = json.load(f)
 
         factors = knowledge.get("factors", [])
@@ -274,30 +262,26 @@ class TestFactorCodeExecutionPerformance:
         if factor_code is None:
             pytest.skip("未找到可执行的因子代码")
 
-        namespace: Dict = {"pd": pd, "np": np}
+        namespace: dict = {"pd": pd, "np": np}
         start = time.perf_counter()
         exec(factor_code, namespace)
         factor_func = namespace["factor"]
         result = factor_func(ohlcv_120.copy())
         elapsed = time.perf_counter() - start
 
-        assert elapsed < 1.5, (
-            f"因子(知识库) exec 耗时 {elapsed:.3f}s，超过 1.5s 阈值"
-        )
+        assert elapsed < 1.5, f"因子(知识库) exec 耗时 {elapsed:.3f}s，超过 1.5s 阈值"
         assert isinstance(result, pd.Series)
         print(f"\n  因子知识库 exec: {elapsed:.4f}s")
 
     def test_factor_exec_200_rows(self, ohlcv_200: pd.DataFrame, factor_code: str):
         """因子 exec 200 行数据 < 1s"""
-        namespace: Dict = {"pd": pd, "np": np}
+        namespace: dict = {"pd": pd, "np": np}
         start = time.perf_counter()
         exec(factor_code, namespace)
         result = namespace["factor"](ohlcv_200.copy())
         elapsed = time.perf_counter() - start
 
-        assert elapsed < 1.0, (
-            f"因子 exec 200行耗时 {elapsed:.3f}s，超过 1s 阈值"
-        )
+        assert elapsed < 1.0, f"因子 exec 200行耗时 {elapsed:.3f}s，超过 1s 阈值"
         print(f"\n  因子 exec (200行): {elapsed:.4f}s")
 
 
@@ -317,9 +301,7 @@ class TestTrajectoryAnalyzer50Performance:
         report = analyzer.analyze()
         elapsed = time.perf_counter() - start
 
-        assert elapsed < 5.0, (
-            f"轨迹分析(50笔)耗时 {elapsed:.2f}s，超过 5s 阈值"
-        )
+        assert elapsed < 5.0, f"轨迹分析(50笔)耗时 {elapsed:.2f}s，超过 5s 阈值"
         assert report["summary"]["total_trades"] == 50
         assert "patterns" in report
         assert "optimization_rules" in report
@@ -334,9 +316,7 @@ class TestTrajectoryAnalyzer50Performance:
         report = analyzer.analyze()
         elapsed = time.perf_counter() - start
 
-        assert elapsed < 6.0, (
-            f"完整轨迹分析流程耗时 {elapsed:.2f}s，超过 6s 阈值"
-        )
+        assert elapsed < 6.0, f"完整轨迹分析流程耗时 {elapsed:.2f}s，超过 6s 阈值"
         print(f"\n  TrajectoryAnalyzer 完整流程(50笔): {elapsed:.3f}s")
 
 
@@ -360,9 +340,7 @@ class TestMemoryUsage:
         tracemalloc.stop()
 
         delta_mb = (peak - baseline) / (1024 * 1024)
-        assert delta_mb < 50.0, (
-            f"IndicatorEngine 内存增量 {delta_mb:.1f} MB，超过 50 MB 阈值"
-        )
+        assert delta_mb < 50.0, f"IndicatorEngine 内存增量 {delta_mb:.1f} MB，超过 50 MB 阈值"
         print(f"\n  IndicatorEngine 内存增量(120行): {delta_mb:.2f} MB")
 
     def test_indicator_engine_memory_500_rows(self, ohlcv_500: pd.DataFrame):
@@ -376,9 +354,7 @@ class TestMemoryUsage:
         tracemalloc.stop()
 
         delta_mb = (peak - baseline) / (1024 * 1024)
-        assert delta_mb < 100.0, (
-            f"IndicatorEngine 内存增量(500行) {delta_mb:.1f} MB，超过 100 MB 阈值"
-        )
+        assert delta_mb < 100.0, f"IndicatorEngine 内存增量(500行) {delta_mb:.1f} MB，超过 100 MB 阈值"
         print(f"\n  IndicatorEngine 内存增量(500行): {delta_mb:.2f} MB")
 
 
@@ -397,9 +373,7 @@ class TestEndToEndIndicatorPipeline:
         result = MultiIndicatorConsensus.consensus(df)
         elapsed = time.perf_counter() - start
 
-        assert elapsed < 3.0, (
-            f"指标+共识管线耗时 {elapsed:.2f}s，超过 3s 阈值"
-        )
+        assert elapsed < 3.0, f"指标+共识管线耗时 {elapsed:.2f}s，超过 3s 阈值"
         assert "state" in result
         print(f"\n  指标+共识管线(200行): {elapsed:.3f}s, state={result['state']}")
 
@@ -411,9 +385,7 @@ class TestEndToEndIndicatorPipeline:
         phase, conf, rel, bd, alerts, ev = TrendPhaseDetector.detect(df, "trending")
         elapsed = time.perf_counter() - start
 
-        assert elapsed < 3.0, (
-            f"指标+阶段检测管线耗时 {elapsed:.2f}s，超过 3s 阈值"
-        )
+        assert elapsed < 3.0, f"指标+阶段检测管线耗时 {elapsed:.2f}s，超过 3s 阈值"
         assert phase in TrendPhaseDetector.PHASES
         print(f"\n  指标+阶段检测管线(200行): {elapsed:.3f}s, phase={phase}")
 
@@ -426,9 +398,7 @@ class TestEndToEndIndicatorPipeline:
         phase, conf, rel, bd, alerts, ev = TrendPhaseDetector.detect(df, "trending")
         elapsed = time.perf_counter() - start
 
-        assert elapsed < 10.0, (
-            f"完整管线(500行)耗时 {elapsed:.2f}s，超过 10s 阈值"
-        )
+        assert elapsed < 10.0, f"完整管线(500行)耗时 {elapsed:.2f}s，超过 10s 阈值"
         print(f"\n  完整管线(500行): {elapsed:.3f}s")
 
 
@@ -449,15 +419,16 @@ class TestFactorGeneratorPerformance:
         try:
             # 尝试从环境变量创建 LLM 客户端
             import os
+
             from scripts.trend_scanner.llm_factor_client import create_llm_client
-            
+
             llm_client = None
             if os.getenv("LLM_API_KEY"):
                 try:
                     llm_client = create_llm_client("workbuddy")
                 except Exception:
                     pass
-            
+
             gen = FactorGenerator(llm_client=llm_client)
             result = gen.generate_factor("焦煤市场处于上升趋势，安全检查限产")
             elapsed = time.time() - start
@@ -538,14 +509,20 @@ class TestConceptualFeedbackPerformance:
         """概念反馈生成 < 2s"""
         gen = ConceptualFeedbackGenerator()
         trade = TradeResult(
-            trade_id="T001", symbol="DCE.jm2609", direction="LONG",
-            entry_price=1500.0, exit_price=1560.0,
-            pnl=60.0, pnl_percent=4.0, holding_period=2,
-            market_state="trending", trend_phase="DEVELOPING",
+            trade_id="T001",
+            symbol="DCE.jm2609",
+            direction="LONG",
+            entry_price=1500.0,
+            exit_price=1560.0,
+            pnl=60.0,
+            pnl_percent=4.0,
+            holding_period=2,
+            market_state="trending",
+            trend_phase="DEVELOPING",
             entry_reason="动量突破信号",
             exit_reason="达到目标止盈位",
             success_factors=["趋势确立", "成交量配合"],
-            failure_factors=[]
+            failure_factors=[],
         )
 
         start = time.time()
@@ -568,7 +545,7 @@ class TestRLInterfaceDesignerPerformance:
             market_context="焦煤市场处于上升趋势",
             trading_objective="捕捉趋势机会，控制回撤在 10% 以内",
             available_data=["close", "volume", "high", "low", "open"],
-            risk_rules={"max_drawdown": 0.10, "position_limit": 0.3}
+            risk_rules={"max_drawdown": 0.10, "position_limit": 0.3},
         )
         elapsed = time.time() - start
 
@@ -583,14 +560,14 @@ class TestRLInterfaceDesignerPerformance:
             market_context="测试市场",
             trading_objective="测试目标",
             available_data=["close", "volume"],
-            risk_rules={"max_drawdown": 0.10}
+            risk_rules={"max_drawdown": 0.10},
         )
 
         start = time.time()
         refinement = designer.refine_interface(
             current_design=design,
             training_metrics={"sharpe": 0.5, "max_drawdown": 0.15, "win_rate": 0.45},
-            expected_metrics={"sharpe": 1.0, "max_drawdown": 0.10, "win_rate": 0.55}
+            expected_metrics={"sharpe": 1.0, "max_drawdown": 0.10, "win_rate": 0.55},
         )
         elapsed = time.time() - start
 
@@ -609,8 +586,7 @@ class TestFullPipelinePerformance:
         parser = ReportParser()
         t0 = time.time()
         analysis = parser.parse_report(
-            "核心观点：安全检查限产导致供应收紧，焦煤价格有支撑。数据逻辑：焦煤矿开工率为65%。",
-            {"source": "benchmark"}
+            "核心观点：安全检查限产导致供应收紧，焦煤价格有支撑。数据逻辑：焦煤矿开工率为65%。", {"source": "benchmark"}
         )
         t_report = time.time() - t0
 
@@ -624,12 +600,20 @@ class TestFullPipelinePerformance:
         # Phase 4: 概念反馈
         gen = ConceptualFeedbackGenerator()
         trade = TradeResult(
-            trade_id="T001", symbol="DCE.jm2609", direction="LONG",
-            entry_price=1500.0, exit_price=1560.0,
-            pnl=60.0, pnl_percent=4.0, holding_period=2,
-            market_state="trending", trend_phase="DEVELOPING",
-            entry_reason="动量突破", exit_reason="止盈",
-            success_factors=["趋势确立"], failure_factors=[]
+            trade_id="T001",
+            symbol="DCE.jm2609",
+            direction="LONG",
+            entry_price=1500.0,
+            exit_price=1560.0,
+            pnl=60.0,
+            pnl_percent=4.0,
+            holding_period=2,
+            market_state="trending",
+            trend_phase="DEVELOPING",
+            entry_reason="动量突破",
+            exit_reason="止盈",
+            success_factors=["趋势确立"],
+            failure_factors=[],
         )
         t0 = time.time()
         feedback = gen.generate_feedback(trade)
@@ -642,14 +626,14 @@ class TestFullPipelinePerformance:
             market_context="测试市场",
             trading_objective="捕捉趋势",
             available_data=["close", "volume"],
-            risk_rules={"max_drawdown": 0.10}
+            risk_rules={"max_drawdown": 0.10},
         )
         t_rl = time.time() - t0
 
         elapsed_total = time.time() - start_total
 
         assert elapsed_total < 30.0, f"完整流程耗时 {elapsed_total:.2f}s，超过 30s 阈值"
-        print(f"\n=== 完整流程性能 ===")
+        print("\n=== 完整流程性能 ===")
         print(f"  研报解析: {t_report:.3f}s")
         print(f"  轨迹分析(100笔): {t_trajectory:.3f}s")
         print(f"  概念反馈: {t_feedback:.3f}s")

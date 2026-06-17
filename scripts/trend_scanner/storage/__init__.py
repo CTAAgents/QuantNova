@@ -6,8 +6,9 @@
 - DuckDB: K线数据、行情、技术指标
 """
 
-from .sqlite_store import SQLiteStore
-from .duckdb_store import DuckDBStore
 from .data_sync import DataSyncManager
+from .duckdb_store import DuckDBStore
+from .sqlite_store import SQLiteStore
 
-__all__ = ['SQLiteStore', 'DuckDBStore', 'DataSyncManager']
+
+__all__ = ["DataSyncManager", "DuckDBStore", "SQLiteStore"]

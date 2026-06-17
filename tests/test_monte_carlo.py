@@ -11,16 +11,14 @@ MonteCarloSimulator 单元测试
 - 便捷函数
 """
 
-import sys
 import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import sys
 
-import pytest
-import numpy as np
 
-from scripts.trend_scanner.monte_carlo import (
-    MonteCarloSimulator, MonteCarloResult, run_monte_carlo
-)
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+
+from scripts.trend_scanner.monte_carlo import MonteCarloResult, MonteCarloSimulator, run_monte_carlo
 
 
 class TestMonteCarloResult:

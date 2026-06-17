@@ -10,18 +10,18 @@ StrategyIncubator 单元测试
 - 边界条件
 """
 
-import sys
 import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import sys
 
-import pytest
-import json
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 import tempfile
 from datetime import datetime, timedelta
 
-from scripts.trend_scanner.strategy_incubator import (
-    StrategyIncubator, IncubationSession, IncubationResult
-)
+import pytest
+
+from scripts.trend_scanner.strategy_incubator import IncubationResult, IncubationSession, StrategyIncubator
 
 
 class TestIncubationSession:
@@ -65,11 +65,14 @@ class TestStrategyIncubator:
 
     def test_start_incubation(self):
         """创建孵化会话"""
-        session = self.incubator.start_incubation("strategy_001", {
-            "expected_sharpe": 1.5,
-            "expected_win_rate": 0.55,
-            "expected_max_drawdown": 0.15,
-        })
+        session = self.incubator.start_incubation(
+            "strategy_001",
+            {
+                "expected_sharpe": 1.5,
+                "expected_win_rate": 0.55,
+                "expected_max_drawdown": 0.15,
+            },
+        )
 
         assert session.strategy_id == "strategy_001"
         assert session.status == "active"
@@ -119,10 +122,13 @@ class TestStrategyIncubator:
 
     def test_evaluate_insufficient_period(self):
         """孵化期不足时建议延长"""
-        self.incubator.start_incubation("strategy_001", {
-            "expected_sharpe": 1.5,
-            "incubation_days": 90,
-        })
+        self.incubator.start_incubation(
+            "strategy_001",
+            {
+                "expected_sharpe": 1.5,
+                "incubation_days": 90,
+            },
+        )
 
         # 刚开始，不足一半
         result = self.incubator.evaluate("strategy_001")
@@ -132,10 +138,13 @@ class TestStrategyIncubator:
 
     def test_evaluate_no_signals(self):
         """无信号时拒绝"""
-        session = self.incubator.start_incubation("strategy_001", {
-            "expected_sharpe": 1.5,
-            "incubation_days": 10,  # 短孵化期
-        })
+        session = self.incubator.start_incubation(
+            "strategy_001",
+            {
+                "expected_sharpe": 1.5,
+                "incubation_days": 10,  # 短孵化期
+            },
+        )
         # 手动设置开始时间为很久以前
         session.start_time = datetime.now() - timedelta(days=20)
 
@@ -147,11 +156,14 @@ class TestStrategyIncubator:
 
     def test_evaluate_with_signals(self):
         """有信号时评估一致性"""
-        session = self.incubator.start_incubation("strategy_001", {
-            "expected_sharpe": 1.5,
-            "expected_win_rate": 0.55,
-            "incubation_days": 10,
-        })
+        session = self.incubator.start_incubation(
+            "strategy_001",
+            {
+                "expected_sharpe": 1.5,
+                "expected_win_rate": 0.55,
+                "incubation_days": 10,
+            },
+        )
         # 手动设置开始时间为很久以前
         session.start_time = datetime.now() - timedelta(days=20)
 

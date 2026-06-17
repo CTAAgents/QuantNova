@@ -12,32 +12,48 @@
 """
 
 import logging
-import traceback
-from typing import Dict, List, Optional, Callable, Any
+from collections.abc import Callable
+from typing import Any
 
-import pandas as pd
 import numpy as np
+import pandas as pd
+
 
 logger = logging.getLogger(__name__)
 
 # 禁止在因子代码中使用的模块/函数
 BLOCKED_MODULES = [
-    'os', 'sys', 'subprocess', 'shutil', 'socket', 'http',
-    'requests', 'urllib', 'pathlib', 'open', 'exec', 'eval',
-    '__import__', 'compile', 'globals', 'locals', 'vars',
+    "os",
+    "sys",
+    "subprocess",
+    "shutil",
+    "socket",
+    "http",
+    "requests",
+    "urllib",
+    "pathlib",
+    "open",
+    "exec",
+    "eval",
+    "__import__",
+    "compile",
+    "globals",
+    "locals",
+    "vars",
 ]
 
 # 允许因子代码使用的模块
 ALLOWED_MODULES = {
-    'pd': pd,
-    'np': np,
-    'pandas': pd,
-    'numpy': np,
+    "pd": pd,
+    "np": np,
+    "pandas": pd,
+    "numpy": np,
 }
 
 
 class FactorExecutionError(Exception):
     """因子执行异常"""
+
     pass
 
 
@@ -62,8 +78,7 @@ class FactorExecutor:
         """
         self.safety_check = safety_check
 
-    def execute(self, factor_code: str,
-                kline_data: Dict[str, pd.DataFrame]) -> Optional[pd.DataFrame]:
+    def execute(self, factor_code: str, kline_data: dict[str, pd.DataFrame]) -> pd.DataFrame | None:
         """
         执行因子代码，计算所有品种的截面因子值
 
@@ -90,8 +105,9 @@ class FactorExecutor:
         # 3. 对所有品种执行因子
         return self._execute_cross_section(factor_fn, kline_data)
 
-    def execute_function(self, factor_fn: Callable[[pd.DataFrame], pd.Series],
-                         kline_data: Dict[str, pd.DataFrame]) -> Optional[pd.DataFrame]:
+    def execute_function(
+        self, factor_fn: Callable[[pd.DataFrame], pd.Series], kline_data: dict[str, pd.DataFrame]
+    ) -> pd.DataFrame | None:
         """
         直接执行因子函数（不需要编译）
 
@@ -104,7 +120,7 @@ class FactorExecutor:
         """
         return self._execute_cross_section(factor_fn, kline_data)
 
-    def _safety_check(self, code: str) -> List[str]:
+    def _safety_check(self, code: str) -> list[str]:
         """
         安全检查：禁止危险操作
 
@@ -115,23 +131,24 @@ class FactorExecutor:
             问题列表（空 = 通过）
         """
         import re
+
         issues = []
 
         # 检查是否使用了禁止的模块/函数（使用单词边界匹配，避免误报如 fillna 中的 os）
         for blocked in BLOCKED_MODULES:
-            pattern = r'\b' + re.escape(blocked) + r'\b'
+            pattern = r"\b" + re.escape(blocked) + r"\b"
             if re.search(pattern, code):
                 issues.append(f"使用了禁止的操作: {blocked}")
 
         # 检查是否有未来数据使用
-        future_patterns = [r'shift\(-', r'iloc\[1:\]', r'lead\(']
+        future_patterns = [r"shift\(-", r"iloc\[1:\]", r"lead\("]
         for pattern in future_patterns:
             if re.search(pattern, code):
                 issues.append(f"可能使用了未来数据: {pattern}")
 
         return issues
 
-    def _compile_factor(self, factor_code: str) -> Optional[Callable]:
+    def _compile_factor(self, factor_code: str) -> Callable | None:
         """
         编译因子代码为可执行函数
 
@@ -150,7 +167,7 @@ class FactorExecutor:
             exec(factor_code, exec_globals, exec_locals)
 
             # 查找 factor 函数
-            factor_fn = exec_locals.get('factor') or exec_globals.get('factor')
+            factor_fn = exec_locals.get("factor") or exec_globals.get("factor")
 
             if factor_fn is None:
                 logger.error("因子代码中未找到 'factor' 函数")
@@ -169,8 +186,7 @@ class FactorExecutor:
             logger.error(f"编译因子代码失败: {e}")
             return None
 
-    def _execute_cross_section(self, factor_fn: Callable,
-                                kline_data: Dict[str, pd.DataFrame]) -> Optional[pd.DataFrame]:
+    def _execute_cross_section(self, factor_fn: Callable, kline_data: dict[str, pd.DataFrame]) -> pd.DataFrame | None:
         """
         对所有品种执行因子，生成截面因子值矩阵
 
@@ -186,8 +202,8 @@ class FactorExecutor:
         for symbol, df in kline_data.items():
             try:
                 # 使用原始数据的索引（不归一化，保持与 evaluator 一致）
-                if 'date' in df.columns:
-                    df = df.set_index('date')
+                if "date" in df.columns:
+                    df = df.set_index("date")
                 df = df.copy()
 
                 # 执行因子
@@ -215,8 +231,7 @@ class FactorExecutor:
         logger.debug(f"因子执行完成: {factor_df.shape[1]} 品种, {factor_df.shape[0]} 天")
         return factor_df
 
-    def validate_and_execute(self, factor_code: str,
-                              kline_data: Dict[str, pd.DataFrame]) -> Dict[str, Any]:
+    def validate_and_execute(self, factor_code: str, kline_data: dict[str, pd.DataFrame]) -> dict[str, Any]:
         """
         验证并执行因子，返回详细结果
 
@@ -235,41 +250,41 @@ class FactorExecutor:
             }
         """
         result = {
-            'success': False,
-            'factor_values': None,
-            'errors': [],
-            'warnings': [],
-            'symbol_count': 0,
-            'day_count': 0,
+            "success": False,
+            "factor_values": None,
+            "errors": [],
+            "warnings": [],
+            "symbol_count": 0,
+            "day_count": 0,
         }
 
         # 安全检查
         if self.safety_check:
             issues = self._safety_check(factor_code)
             if issues:
-                result['errors'] = issues
+                result["errors"] = issues
                 return result
 
         # 编译
         factor_fn = self._compile_factor(factor_code)
         if factor_fn is None:
-            result['errors'].append('因子代码编译失败')
+            result["errors"].append("因子代码编译失败")
             return result
 
         # 执行
         factor_values = self._execute_cross_section(factor_fn, kline_data)
         if factor_values is None:
-            result['errors'].append('因子执行失败（所有品种均返回空值）')
+            result["errors"].append("因子执行失败（所有品种均返回空值）")
             return result
 
-        result['success'] = True
-        result['factor_values'] = factor_values
-        result['symbol_count'] = factor_values.shape[1]
-        result['day_count'] = factor_values.shape[0]
+        result["success"] = True
+        result["factor_values"] = factor_values
+        result["symbol_count"] = factor_values.shape[1]
+        result["day_count"] = factor_values.shape[0]
 
         # 检查数据质量
         null_pct = factor_values.isnull().mean().mean()
         if null_pct > 0.5:
-            result['warnings'].append(f'因子值空值比例过高: {null_pct:.1%}')
+            result["warnings"].append(f"因子值空值比例过高: {null_pct:.1%}")
 
         return result

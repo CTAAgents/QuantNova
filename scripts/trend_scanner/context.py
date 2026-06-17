@@ -9,12 +9,15 @@
 
 import numpy as np
 import pandas as pd
-from typing import Optional, List
 
 from .indicators import IndicatorEngine
 from .models import (
-    MarketContext, IndicatorSnapshot, MarketStructure,
-    MomentumState, VolatilityState, TrendPhase,
+    IndicatorSnapshot,
+    MarketContext,
+    MarketStructure,
+    MomentumState,
+    TrendPhase,
+    VolatilityState,
 )
 
 
@@ -59,15 +62,15 @@ class ContextAssembler:
         trend_phase = self._detect_trend_phase(df, latest, structure, momentum, volatility)
 
         # 5. 计算价格行为统计
-        bars_since_high = self._bars_since_extreme(df['high'], 'high')
-        bars_since_low = self._bars_since_extreme(df['low'], 'low')
-        consec_up = self._consecutive_direction(df['close'], 'up')
-        consec_down = self._consecutive_direction(df['close'], 'down')
+        bars_since_high = self._bars_since_extreme(df["high"], "high")
+        bars_since_low = self._bars_since_extreme(df["low"], "low")
+        consec_up = self._consecutive_direction(df["close"], "up")
+        consec_down = self._consecutive_direction(df["close"], "down")
 
         # 6. 计算日涨跌幅
         price_change_pct = 0.0
-        if prev['close'] > 0:
-            price_change_pct = (latest['close'] - prev['close']) / prev['close'] * 100
+        if prev["close"] > 0:
+            price_change_pct = (latest["close"] - prev["close"]) / prev["close"] * 100
 
         # 7. 计算特征向量（用于经验检索）
         feature_vector = self._compute_feature_vector(df, latest)
@@ -75,9 +78,9 @@ class ContextAssembler:
         # 8. 组装上下文
         context = MarketContext(
             symbol=self.symbol,
-            timestamp=str(latest.get('date', latest.name)),
+            timestamp=str(latest.get("date", latest.name)),
             timeframe=self.timeframe,
-            current_price=latest['close'],
+            current_price=latest["close"],
             price_change_pct=price_change_pct,
             structure=structure,
             momentum=momentum,
@@ -99,65 +102,66 @@ class ContextAssembler:
 
     def _build_snapshot(self, row) -> IndicatorSnapshot:
         """构建指标快照"""
+
         def safe(val, default=0.0):
             if pd.isna(val):
                 return default
             return float(val)
 
         return IndicatorSnapshot(
-            timestamp=str(row.get('date', '')),
-            close=safe(row.get('close')),
-            high=safe(row.get('high')),
-            low=safe(row.get('low')),
-            open=safe(row.get('open')),
-            volume=safe(row.get('volume')),
-            open_interest=safe(row.get('open_interest')),
-            ema20=safe(row.get('ema20')),
-            ema60=safe(row.get('ema60')),
-            sma20=safe(row.get('sma20')),
-            sma60=safe(row.get('sma60')),
-            rsi=safe(row.get('rsi'), 50.0),
-            macd=safe(row.get('macd')),
-            macd_signal=safe(row.get('macd_signal')),
-            macd_hist=safe(row.get('macd_hist')),
-            stoch_k=safe(row.get('stoch_k'), 50.0),
-            stoch_d=safe(row.get('stoch_d'), 50.0),
-            cci=safe(row.get('cci')),
-            atr=safe(row.get('atr')),
-            bb_upper=safe(row.get('bb_upper')),
-            bb_lower=safe(row.get('bb_lower')),
-            bb_mid=safe(row.get('bb_mid')),
-            adx=safe(row.get('adx')),
-            plus_di=safe(row.get('plus_di')),
-            minus_di=safe(row.get('minus_di')),
+            timestamp=str(row.get("date", "")),
+            close=safe(row.get("close")),
+            high=safe(row.get("high")),
+            low=safe(row.get("low")),
+            open=safe(row.get("open")),
+            volume=safe(row.get("volume")),
+            open_interest=safe(row.get("open_interest")),
+            ema20=safe(row.get("ema20")),
+            ema60=safe(row.get("ema60")),
+            sma20=safe(row.get("sma20")),
+            sma60=safe(row.get("sma60")),
+            rsi=safe(row.get("rsi"), 50.0),
+            macd=safe(row.get("macd")),
+            macd_signal=safe(row.get("macd_signal")),
+            macd_hist=safe(row.get("macd_hist")),
+            stoch_k=safe(row.get("stoch_k"), 50.0),
+            stoch_d=safe(row.get("stoch_d"), 50.0),
+            cci=safe(row.get("cci")),
+            atr=safe(row.get("atr")),
+            bb_upper=safe(row.get("bb_upper")),
+            bb_lower=safe(row.get("bb_lower")),
+            bb_mid=safe(row.get("bb_mid")),
+            adx=safe(row.get("adx")),
+            plus_di=safe(row.get("plus_di")),
+            minus_di=safe(row.get("minus_di")),
             # 七维趋势强度
-            trend_strength_er=safe(row.get('er')),
-            trend_strength_r2=safe(row.get('r_squared')),
-            trend_strength_hurst=safe(row.get('hurst'), 0.5),
-            trend_strength_adx_roc=safe(row.get('adx_roc')),
-            trend_strength_ema_slope=safe(row.get('ema_slope_strength')),
-            trend_strength_tsi=safe(row.get('tsi')),
-            trend_strength_atr_ratio=safe(row.get('atr_ratio'), 1.0),
-            trend_strength_composite=safe(row.get('trend_strength_composite')),
-            dc_upper=safe(row.get('dc_upper')),
-            dc_lower=safe(row.get('dc_lower')),
+            trend_strength_er=safe(row.get("er")),
+            trend_strength_r2=safe(row.get("r_squared")),
+            trend_strength_hurst=safe(row.get("hurst"), 0.5),
+            trend_strength_adx_roc=safe(row.get("adx_roc")),
+            trend_strength_ema_slope=safe(row.get("ema_slope_strength")),
+            trend_strength_tsi=safe(row.get("tsi")),
+            trend_strength_atr_ratio=safe(row.get("atr_ratio"), 1.0),
+            trend_strength_composite=safe(row.get("trend_strength_composite")),
+            dc_upper=safe(row.get("dc_upper")),
+            dc_lower=safe(row.get("dc_lower")),
         )
 
     def _build_structure(self, df: pd.DataFrame, latest) -> MarketStructure:
         """构建市场结构（只描述，不判断）"""
         structure = MarketStructure()
 
-        ema20 = latest.get('ema20', 0)
-        ema60 = latest.get('ema60', 0)
-        close = latest['close']
+        ema20 = latest.get("ema20", 0)
+        ema60 = latest.get("ema60", 0)
+        close = latest["close"]
 
         # 均线排列
         if ema20 > 0 and ema60 > 0:
             gap_pct = (ema20 - ema60) / ema60 * 100
 
             # 检查斜率
-            slope_20 = self._calc_slope(df['ema20'], 5)
-            slope_60 = self._calc_slope(df['ema60'], 5)
+            slope_20 = self._calc_slope(df["ema20"], 5)
+            slope_60 = self._calc_slope(df["ema60"], 5)
             structure.ma_slope_20 = slope_20
             structure.ma_slope_60 = slope_60
 
@@ -189,13 +193,13 @@ class ContextAssembler:
 
         # 高低点结构
         structure.swing_structure = self._analyze_swing_structure(df)
-        structure.recent_high = df['high'].iloc[-20:].max() if len(df) >= 20 else df['high'].max()
-        structure.recent_low = df['low'].iloc[-20:].min() if len(df) >= 20 else df['low'].min()
+        structure.recent_high = df["high"].iloc[-20:].max() if len(df) >= 20 else df["high"].max()
+        structure.recent_low = df["low"].iloc[-20:].min() if len(df) >= 20 else df["low"].min()
 
         # 成交量
-        if 'volume' in df.columns and len(df) >= 20:
-            vol_ma = df['volume'].iloc[-20:].mean()
-            current_vol = latest['volume']
+        if "volume" in df.columns and len(df) >= 20:
+            vol_ma = df["volume"].iloc[-20:].mean()
+            current_vol = latest["volume"]
             if vol_ma > 0:
                 structure.volume_ratio = current_vol / vol_ma
                 if structure.volume_ratio > 1.5:
@@ -204,9 +208,9 @@ class ContextAssembler:
                     structure.volume_trend = "DECREASING"
 
         # 持仓量
-        if 'open_interest' in df.columns and len(df) >= 5:
-            oi_now = latest['open_interest']
-            oi_5d = df['open_interest'].iloc[-5]
+        if "open_interest" in df.columns and len(df) >= 5:
+            oi_now = latest["open_interest"]
+            oi_5d = df["open_interest"].iloc[-5]
             if oi_5d > 0:
                 structure.oi_change_pct = (oi_now - oi_5d) / oi_5d * 100
                 if structure.oi_change_pct > 5:
@@ -220,7 +224,7 @@ class ContextAssembler:
         """构建动量状态（只描述，不判断）"""
         momentum = MomentumState()
 
-        rsi = latest.get('rsi', 50)
+        rsi = latest.get("rsi", 50)
         if not pd.isna(rsi):
             momentum.rsi_value = float(rsi)
             if rsi > 80:
@@ -235,9 +239,9 @@ class ContextAssembler:
                 momentum.rsi_state = "NEUTRAL"
 
         # MACD
-        macd = latest.get('macd', 0)
-        macd_signal = latest.get('macd_signal', 0)
-        macd_hist = latest.get('macd_hist', 0)
+        macd = latest.get("macd", 0)
+        macd_signal = latest.get("macd_signal", 0)
+        macd_hist = latest.get("macd_hist", 0)
         if not pd.isna(macd) and not pd.isna(macd_signal):
             if macd > macd_signal:
                 momentum.macd_state = "BULLISH"
@@ -246,7 +250,7 @@ class ContextAssembler:
 
             # 柱状线趋势
             if len(df) >= 3:
-                hist_prev = df['macd_hist'].iloc[-3]
+                hist_prev = df["macd_hist"].iloc[-3]
                 if not pd.isna(hist_prev) and not pd.isna(macd_hist):
                     if abs(macd_hist) > abs(hist_prev):
                         momentum.macd_histogram_trend = "EXPANDING"
@@ -254,7 +258,7 @@ class ContextAssembler:
                         momentum.macd_histogram_trend = "CONTRACTING"
 
         # STOCH
-        stoch_k = latest.get('stoch_k', 50)
+        stoch_k = latest.get("stoch_k", 50)
         if not pd.isna(stoch_k):
             if stoch_k > 80:
                 momentum.stoch_state = "OVERBOUGHT"
@@ -266,7 +270,7 @@ class ContextAssembler:
                 momentum.stoch_state = "WEAK"
 
         # CCI
-        cci = latest.get('cci', 0)
+        cci = latest.get("cci", 0)
         if not pd.isna(cci):
             if cci > 200:
                 momentum.cci_state = "EXTREME_HIGH"
@@ -307,26 +311,26 @@ class ContextAssembler:
         """构建波动率状态"""
         vol = VolatilityState()
 
-        close = latest['close']
-        atr = latest.get('atr', 0)
+        close = latest["close"]
+        atr = latest.get("atr", 0)
 
         if close > 0 and not pd.isna(atr) and atr > 0:
             vol.atr_pct = atr / close * 100
 
             # ATR 分位数
             if len(df) >= lookback:
-                atr_series = df['atr'].iloc[-lookback:].dropna()
+                atr_series = df["atr"].iloc[-lookback:].dropna()
                 if len(atr_series) > 0:
                     vol.atr_percentile = (atr_series < atr).sum() / len(atr_series) * 100
 
         # 布林带宽度
-        bb_upper = latest.get('bb_upper', 0)
-        bb_lower = latest.get('bb_lower', 0)
-        bb_mid = latest.get('bb_mid', 0)
+        bb_upper = latest.get("bb_upper", 0)
+        bb_lower = latest.get("bb_lower", 0)
+        bb_mid = latest.get("bb_mid", 0)
         if bb_mid > 0 and not pd.isna(bb_upper) and not pd.isna(bb_lower):
             vol.bb_width = (bb_upper - bb_lower) / bb_mid
             if len(df) >= lookback:
-                bb_width_series = ((df['bb_upper'] - df['bb_lower']) / df['bb_mid']).iloc[-lookback:].dropna()
+                bb_width_series = ((df["bb_upper"] - df["bb_lower"]) / df["bb_mid"]).iloc[-lookback:].dropna()
                 if len(bb_width_series) > 0:
                     vol.bb_width_percentile = (bb_width_series < vol.bb_width).sum() / len(bb_width_series) * 100
 
@@ -365,8 +369,8 @@ class ContextAssembler:
         if len(df) < 20:
             return "NEUTRAL"
 
-        highs = df['high'].iloc[-20:]
-        lows = df['low'].iloc[-20:]
+        highs = df["high"].iloc[-20:]
+        lows = df["low"].iloc[-20:]
 
         # 简化判断：比较前半段和后半段的高低点
         mid = len(highs) // 2
@@ -397,7 +401,7 @@ class ContextAssembler:
             return 0
 
         current = series.iloc[-1]
-        if extreme_type == 'high':
+        if extreme_type == "high":
             idx = series.idxmax()
         else:
             idx = series.idxmin()
@@ -415,16 +419,16 @@ class ContextAssembler:
 
         count = 0
         for i in range(len(series) - 1, 0, -1):
-            if direction == 'up' and series.iloc[i] > series.iloc[i - 1]:
-                count += 1
-            elif direction == 'down' and series.iloc[i] < series.iloc[i - 1]:
+            if (direction == "up" and series.iloc[i] > series.iloc[i - 1]) or (
+                direction == "down" and series.iloc[i] < series.iloc[i - 1]
+            ):
                 count += 1
             else:
                 break
 
         return count
 
-    def _compute_feature_vector(self, df: pd.DataFrame, latest) -> List[float]:
+    def _compute_feature_vector(self, df: pd.DataFrame, latest) -> list[float]:
         """
         计算特征向量（用于经验检索的相似度计算）
 
@@ -433,8 +437,8 @@ class ContextAssembler:
         features = []
 
         # 1. 均线排列强度 (-1 to 1)
-        ema20 = latest.get('ema20', 0)
-        ema60 = latest.get('ema60', 0)
+        ema20 = latest.get("ema20", 0)
+        ema60 = latest.get("ema60", 0)
         if ema60 > 0:
             ma_gap = (ema20 - ema60) / ema60 * 100
             features.append(np.clip(ma_gap / 5, -1, 1))  # 归一化
@@ -442,7 +446,7 @@ class ContextAssembler:
             features.append(0.0)
 
         # 2. 价格位置 (-1 to 1)
-        close = latest['close']
+        close = latest["close"]
         if ema60 > 0:
             price_pos = (close - ema60) / ema60 * 100
             features.append(np.clip(price_pos / 5, -1, 1))
@@ -450,37 +454,37 @@ class ContextAssembler:
             features.append(0.0)
 
         # 3. RSI 归一化 (-1 to 1)
-        rsi = latest.get('rsi', 50)
+        rsi = latest.get("rsi", 50)
         if not pd.isna(rsi):
             features.append((rsi - 50) / 50)
         else:
             features.append(0.0)
 
         # 4. ADX 归一化 (0 to 1)
-        adx = latest.get('adx', 0)
+        adx = latest.get("adx", 0)
         if not pd.isna(adx):
             features.append(min(adx / 50, 1.0))
         else:
             features.append(0.0)
 
         # 5. ATR 百分比归一化 (0 to 1)
-        atr = latest.get('atr', 0)
+        atr = latest.get("atr", 0)
         if close > 0 and not pd.isna(atr):
             features.append(min(atr / close * 100 / 5, 1.0))
         else:
             features.append(0.0)
 
         # 6. MACD 柱状线归一化 (-1 to 1)
-        macd_hist = latest.get('macd_hist', 0)
+        macd_hist = latest.get("macd_hist", 0)
         if not pd.isna(macd_hist) and atr > 0:
             features.append(np.clip(macd_hist / atr / 2, -1, 1))
         else:
             features.append(0.0)
 
         # 7. 成交量比率 (0 to 1)
-        if 'volume' in df.columns and len(df) >= 20:
-            vol_ma = df['volume'].iloc[-20:].mean()
-            vol_now = latest['volume']
+        if "volume" in df.columns and len(df) >= 20:
+            vol_ma = df["volume"].iloc[-20:].mean()
+            vol_now = latest["volume"]
             if vol_ma > 0:
                 features.append(min(vol_now / vol_ma / 3, 1.0))
             else:
@@ -489,8 +493,8 @@ class ContextAssembler:
             features.append(0.5)
 
         # 8. 连续方向 (-1 to 1)
-        consec_up = self._consecutive_direction(df['close'], 'up')
-        consec_down = self._consecutive_direction(df['close'], 'down')
+        consec_up = self._consecutive_direction(df["close"], "up")
+        consec_down = self._consecutive_direction(df["close"], "down")
         features.append(np.clip((consec_up - consec_down) / 10, -1, 1))
 
         return features
@@ -514,7 +518,7 @@ class ContextAssembler:
         - FATIGUING：趋势衰竭，动能减弱
         - REVERSING：趋势反转，方向改变
         """
-        adx = latest.get('adx', 0)
+        adx = latest.get("adx", 0)
         if pd.isna(adx):
             adx = 0
 

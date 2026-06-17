@@ -12,11 +12,12 @@ Benchmark 共享 fixtures
 
 import sys
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import Any
 
 import numpy as np
 import pandas as pd
 import pytest
+
 
 # ── 项目根目录 ──────────────────────────────────────────────
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -26,6 +27,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 # ============================================================
 # OHLCV 数据生成
 # ============================================================
+
 
 def _generate_ohlcv_gbm(
     n_rows: int,
@@ -51,8 +53,7 @@ def _generate_ohlcv_gbm(
     dt = 1 / 252  # 每根 K 线 = 1 个交易日
 
     # GBM 收益率
-    returns = (annual_drift - 0.5 * annual_vol**2) * dt \
-              + annual_vol * np.sqrt(dt) * rng.randn(n_rows)
+    returns = (annual_drift - 0.5 * annual_vol**2) * dt + annual_vol * np.sqrt(dt) * rng.randn(n_rows)
 
     close = initial_price * np.exp(np.cumsum(returns))
 
@@ -70,20 +71,23 @@ def _generate_ohlcv_gbm(
     # 日期序列
     dates = pd.bdate_range(start="2024-01-02", periods=n_rows, freq="B")
 
-    df = pd.DataFrame({
-        "date": dates,
-        "open": np.round(open_prices, 1),
-        "high": np.round(high, 1),
-        "low": np.round(low, 1),
-        "close": np.round(close, 1),
-        "volume": volume,
-    })
+    df = pd.DataFrame(
+        {
+            "date": dates,
+            "open": np.round(open_prices, 1),
+            "high": np.round(high, 1),
+            "low": np.round(low, 1),
+            "close": np.round(close, 1),
+            "volume": volume,
+        }
+    )
     return df
 
 
 # ============================================================
 # Fixtures
 # ============================================================
+
 
 @pytest.fixture
 def ohlcv_120() -> pd.DataFrame:
@@ -107,6 +111,7 @@ def ohlcv_500() -> pd.DataFrame:
 def indicator_df_120() -> pd.DataFrame:
     """120 根 K 线 + 全部技术指标的 DataFrame（用于 TrendPhaseDetector 等）"""
     from scripts.trend_scanner.indicators import IndicatorEngine
+
     df = _generate_ohlcv_gbm(n_rows=120)
     engine = IndicatorEngine(df)
     return engine.compute_all()
@@ -116,16 +121,17 @@ def indicator_df_120() -> pd.DataFrame:
 def indicator_df_200() -> pd.DataFrame:
     """200 根 K 线 + 全部技术指标"""
     from scripts.trend_scanner.indicators import IndicatorEngine
+
     df = _generate_ohlcv_gbm(n_rows=200)
     engine = IndicatorEngine(df)
     return engine.compute_all()
 
 
 @pytest.fixture
-def trade_history_50() -> List[Dict[str, Any]]:
+def trade_history_50() -> list[dict[str, Any]]:
     """50 笔模拟交易历史（用于 TrajectoryAnalyzer）"""
     rng = np.random.RandomState(123)
-    records: List[Dict[str, Any]] = []
+    records: list[dict[str, Any]] = []
     market_states = ["trending", "ranging", "volatile"]
     trend_phases = ["DEVELOPING", "MATURE", "EXHAUSTING"]
     vol_levels = ["low", "medium", "high"]
@@ -145,28 +151,30 @@ def trade_history_50() -> List[Dict[str, Any]]:
             pnl = exit_price - entry_price
             failure_reason = failure_reasons[rng.randint(0, len(failure_reasons) - 1)]
 
-        records.append({
-            "trade_id": f"B{i:04d}",
-            "symbol": "CZCE.SR509",
-            "direction": "LONG" if i % 2 == 0 else "SHORT",
-            "entry_price": round(entry_price, 1),
-            "exit_price": round(exit_price, 1),
-            "entry_time": f"2025-{(i % 12) + 1:02d}-{(i % 28) + 1:02d}T09:00:00",
-            "exit_time": f"2025-{(i % 12) + 1:02d}-{(i % 28) + 1:02d}T15:00:00",
-            "pnl": round(pnl, 2),
-            "pnl_percent": round(pnl_pct, 2),
-            "holding_period": rng.randint(1, 10),
-            "market_state": market_states[i % 3],
-            "trend_phase": trend_phases[i % 3],
-            "volatility": vol_levels[i % 3],
-            "er": round(rng.uniform(0.2, 0.9), 2),
-            "tsi": round(rng.uniform(-40, 40), 2),
-            "rsi": round(rng.uniform(25, 75), 1),
-            "adx": round(rng.uniform(12, 45), 1),
-            "max_drawdown": round(rng.uniform(0.5, 5.0), 2),
-            "sharpe_ratio": round(rng.uniform(-1.0, 2.5), 2),
-            "failure_reason": failure_reason,
-        })
+        records.append(
+            {
+                "trade_id": f"B{i:04d}",
+                "symbol": "CZCE.SR509",
+                "direction": "LONG" if i % 2 == 0 else "SHORT",
+                "entry_price": round(entry_price, 1),
+                "exit_price": round(exit_price, 1),
+                "entry_time": f"2025-{(i % 12) + 1:02d}-{(i % 28) + 1:02d}T09:00:00",
+                "exit_time": f"2025-{(i % 12) + 1:02d}-{(i % 28) + 1:02d}T15:00:00",
+                "pnl": round(pnl, 2),
+                "pnl_percent": round(pnl_pct, 2),
+                "holding_period": rng.randint(1, 10),
+                "market_state": market_states[i % 3],
+                "trend_phase": trend_phases[i % 3],
+                "volatility": vol_levels[i % 3],
+                "er": round(rng.uniform(0.2, 0.9), 2),
+                "tsi": round(rng.uniform(-40, 40), 2),
+                "rsi": round(rng.uniform(25, 75), 1),
+                "adx": round(rng.uniform(12, 45), 1),
+                "max_drawdown": round(rng.uniform(0.5, 5.0), 2),
+                "sharpe_ratio": round(rng.uniform(-1.0, 2.5), 2),
+                "failure_reason": failure_reason,
+            }
+        )
     return records
 
 
@@ -179,14 +187,14 @@ def factor_code() -> str:
     保证 benchmark 不依赖文件 I/O。
     """
     return (
-        'def factor(df: pd.DataFrame) -> pd.Series:\n'
+        "def factor(df: pd.DataFrame) -> pd.Series:\n"
         '    """动量突破因子"""\n'
-        '    import pandas as pd\n'
+        "    import pandas as pd\n"
         '    returns = df["close"].pct_change(5)\n'
         '    volume_ratio = df["volume"] / df["volume"].rolling(20).mean()\n'
-        '    factor_value = returns * volume_ratio\n'
-        '    max_abs = factor_value.abs().max()\n'
-        '    if max_abs > 0:\n'
-        '        factor_value = factor_value / max_abs\n'
-        '    return factor_value\n'
+        "    factor_value = returns * volume_ratio\n"
+        "    max_abs = factor_value.abs().max()\n"
+        "    if max_abs > 0:\n"
+        "        factor_value = factor_value / max_abs\n"
+        "    return factor_value\n"
     )

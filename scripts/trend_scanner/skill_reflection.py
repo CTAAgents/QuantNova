@@ -14,54 +14,58 @@
 这个模块能够智能区分这两种情况，并采取不同的进化策略。
 """
 
-from typing import Dict, List, Optional, Tuple, Any
-from dataclasses import dataclass, field
-from enum import Enum
-from datetime import datetime
 from collections import defaultdict
-import numpy as np
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from typing import Any
 
 
 # ===========================================================================
 # 数据结构定义
 # ===========================================================================
 
+
 class EvidenceType(Enum):
     """证据类型"""
-    SKILL_CONTENT_ERROR = "skill_content_error"    # 技能内容错误
-    EXECUTION_ERROR = "execution_error"            # 执行失误
-    MIXED = "mixed"                                # 混合型
-    NO_EVIDENCE = "no_evidence"                    # 无明确证据
+
+    SKILL_CONTENT_ERROR = "skill_content_error"  # 技能内容错误
+    EXECUTION_ERROR = "execution_error"  # 执行失误
+    MIXED = "mixed"  # 混合型
+    NO_EVIDENCE = "no_evidence"  # 无明确证据
 
 
 class RevisionAction(Enum):
     """修订动作"""
-    UPDATE_RULE = "update_rule"                    # 更新策略规则
-    REINFORCE_GUIDANCE = "reinforce_guidance"      # 强化执行指导
-    MAINTAIN = "maintain"                          # 保持现状
-    INVESTIGATE = "investigate"                    # 需要进一步调查
+
+    UPDATE_RULE = "update_rule"  # 更新策略规则
+    REINFORCE_GUIDANCE = "reinforce_guidance"  # 强化执行指导
+    MAINTAIN = "maintain"  # 保持现状
+    INVESTIGATE = "investigate"  # 需要进一步调查
 
 
 @dataclass
 class ReflectionEvidence:
     """反思证据"""
+
     evidence_id: str
     evidence_type: EvidenceType
-    confidence: float                  # 0-1，证据置信度
+    confidence: float  # 0-1，证据置信度
     description: str
-    supporting_data: Dict[str, Any] = field(default_factory=dict)
-    trade_ids: List[str] = field(default_factory=list)
+    supporting_data: dict[str, Any] = field(default_factory=dict)
+    trade_ids: list[str] = field(default_factory=list)
 
 
 @dataclass
 class SkillReflection:
     """技能反思结果"""
+
     reflection_id: str
     strategy_name: str
     evidence_type: EvidenceType
-    confidence: float                  # 0-1，整体置信度
+    confidence: float  # 0-1，整体置信度
     description: str
-    evidences: List[ReflectionEvidence] = field(default_factory=list)
+    evidences: list[ReflectionEvidence] = field(default_factory=list)
     recommended_action: RevisionAction = RevisionAction.MAINTAIN
     reasoning: str = ""
     created_at: datetime = field(default_factory=datetime.now)
@@ -70,6 +74,7 @@ class SkillReflection:
 @dataclass
 class GuidanceReinforcement:
     """指导强化记录"""
+
     guidance_id: str
     strategy_name: str
     original_guidance: str
@@ -83,6 +88,7 @@ class GuidanceReinforcement:
 # 技能感知反思器
 # ===========================================================================
 
+
 class SkillAwareReflector:
     """
     技能感知反思器
@@ -94,11 +100,12 @@ class SkillAwareReflector:
     """
 
     def __init__(self):
-        self.reflections: List[SkillReflection] = []
-        self.guidance_reinforcements: List[GuidanceReinforcement] = []
+        self.reflections: list[SkillReflection] = []
+        self.guidance_reinforcements: list[GuidanceReinforcement] = []
 
-    def reflect_on_trade(self, trade, trajectory_analysis: Dict[str, Any] = None,
-                        fault_attribution: Dict[str, Any] = None) -> SkillReflection:
+    def reflect_on_trade(
+        self, trade, trajectory_analysis: dict[str, Any] = None, fault_attribution: dict[str, Any] = None
+    ) -> SkillReflection:
         """
         对单笔交易进行技能感知反思
 
@@ -132,14 +139,10 @@ class SkillAwareReflector:
         evidence_type, confidence = self._aggregate_evidence(evidences)
 
         # 5. 生成推荐动作
-        recommended_action, reasoning = self._determine_action(
-            evidence_type, confidence, trade, evidences
-        )
+        recommended_action, reasoning = self._determine_action(evidence_type, confidence, trade, evidences)
 
         # 6. 生成描述
-        description = self._generate_description(
-            trade, evidence_type, recommended_action, evidences
-        )
+        description = self._generate_description(trade, evidence_type, recommended_action, evidences)
 
         reflection = SkillReflection(
             reflection_id=f"REF-{datetime.now().strftime('%Y%m%d')}-{trade.trade_id}",
@@ -160,12 +163,12 @@ class SkillAwareReflector:
 
         return reflection
 
-    def _analyze_entry_decision(self, trade, fault_attribution: Dict[str, Any] = None) -> Optional[ReflectionEvidence]:
+    def _analyze_entry_decision(self, trade, fault_attribution: dict[str, Any] = None) -> ReflectionEvidence | None:
         """分析入场决策"""
-        if not fault_attribution or not fault_attribution.get('has_fault'):
+        if not fault_attribution or not fault_attribution.get("has_fault"):
             return None
 
-        faults = fault_attribution.get('faults', [])
+        faults = fault_attribution.get("faults", [])
         entry_faults = [f for f in faults if f.step_id == 0]
 
         if not entry_faults:
@@ -189,7 +192,7 @@ class SkillAwareReflector:
                 evidence_type=EvidenceType.SKILL_CONTENT_ERROR,
                 confidence=0.8,
                 description=f"入场时存在{len(skill_content_errors)}个技能内容错误",
-                supporting_data={'faults': [f.description for f in skill_content_errors]},
+                supporting_data={"faults": [f.description for f in skill_content_errors]},
                 trade_ids=[trade.trade_id],
             )
         elif execution_errors:
@@ -198,21 +201,21 @@ class SkillAwareReflector:
                 evidence_type=EvidenceType.EXECUTION_ERROR,
                 confidence=0.7,
                 description=f"入场时存在{len(execution_errors)}个执行失误",
-                supporting_data={'faults': [f.description for f in execution_errors]},
+                supporting_data={"faults": [f.description for f in execution_errors]},
                 trade_ids=[trade.trade_id],
             )
 
         return None
 
-    def _analyze_holding_behavior(self, trade, trajectory_analysis: Dict[str, Any] = None) -> List[ReflectionEvidence]:
+    def _analyze_holding_behavior(self, trade, trajectory_analysis: dict[str, Any] = None) -> list[ReflectionEvidence]:
         """分析持仓期间行为"""
         evidences = []
 
         if not trajectory_analysis:
             return evidences
 
-        metrics = trajectory_analysis.get('metrics', {})
-        trajectory = trajectory_analysis.get('trajectory')
+        metrics = trajectory_analysis.get("metrics", {})
+        trajectory = trajectory_analysis.get("trajectory")
 
         if not trajectory:
             return evidences
@@ -226,55 +229,61 @@ class SkillAwareReflector:
         # 检查1: 持仓期间是否有明确的出场信号被忽略
         direction = trade.direction
         for step in holding_steps:
-            rsi = step.indicators.get('rsi', 50)
+            rsi = step.indicators.get("rsi", 50)
 
             # 多头持仓时RSI超买但未出场
             if direction == "LONG" and rsi > 80:
-                evidences.append(ReflectionEvidence(
-                    evidence_id=f"EVE-{datetime.now().strftime('%Y%m%d')}-HOLD-RSI",
-                    evidence_type=EvidenceType.EXECUTION_ERROR,
-                    confidence=0.6,
-                    description=f"持仓期间RSI={rsi:.1f}超买但未及时出场",
-                    supporting_data={'rsi': rsi, 'step_id': step.step_id},
-                    trade_ids=[trade.trade_id],
-                ))
+                evidences.append(
+                    ReflectionEvidence(
+                        evidence_id=f"EVE-{datetime.now().strftime('%Y%m%d')}-HOLD-RSI",
+                        evidence_type=EvidenceType.EXECUTION_ERROR,
+                        confidence=0.6,
+                        description=f"持仓期间RSI={rsi:.1f}超买但未及时出场",
+                        supporting_data={"rsi": rsi, "step_id": step.step_id},
+                        trade_ids=[trade.trade_id],
+                    )
+                )
                 break
 
             # 空头持仓时RSI超卖但未出场
             if direction == "SHORT" and rsi < 20:
-                evidences.append(ReflectionEvidence(
-                    evidence_id=f"EVE-{datetime.now().strftime('%Y%m%d')}-HOLD-RSI",
-                    evidence_type=EvidenceType.EXECUTION_ERROR,
-                    confidence=0.6,
-                    description=f"持仓期间RSI={rsi:.1f}超卖但未及时出场",
-                    supporting_data={'rsi': rsi, 'step_id': step.step_id},
-                    trade_ids=[trade.trade_id],
-                ))
+                evidences.append(
+                    ReflectionEvidence(
+                        evidence_id=f"EVE-{datetime.now().strftime('%Y%m%d')}-HOLD-RSI",
+                        evidence_type=EvidenceType.EXECUTION_ERROR,
+                        confidence=0.6,
+                        description=f"持仓期间RSI={rsi:.1f}超卖但未及时出场",
+                        supporting_data={"rsi": rsi, "step_id": step.step_id},
+                        trade_ids=[trade.trade_id],
+                    )
+                )
                 break
 
         # 检查2: 持仓期间ADX持续下降（趋势衰减）
-        adx_values = [s.indicators.get('adx', 0) for s in holding_steps if s.indicators.get('adx', 0) > 0]
+        adx_values = [s.indicators.get("adx", 0) for s in holding_steps if s.indicators.get("adx", 0) > 0]
         if len(adx_values) >= 3:
             adx_decline = adx_values[0] - adx_values[-1]
             if adx_decline > 15 and adx_values[0] > 25:
                 # 这可能是技能内容错误（策略规则应该包含ADX衰减出场条件）
-                evidences.append(ReflectionEvidence(
-                    evidence_id=f"EVE-{datetime.now().strftime('%Y%m%d')}-HOLD-ADX",
-                    evidence_type=EvidenceType.SKILL_CONTENT_ERROR,
-                    confidence=0.7,
-                    description=f"持仓期间ADX从{adx_values[0]:.1f}下降到{adx_values[-1]:.1f}，策略缺少趋势衰减出场规则",
-                    supporting_data={'adx_start': adx_values[0], 'adx_end': adx_values[-1]},
-                    trade_ids=[trade.trade_id],
-                ))
+                evidences.append(
+                    ReflectionEvidence(
+                        evidence_id=f"EVE-{datetime.now().strftime('%Y%m%d')}-HOLD-ADX",
+                        evidence_type=EvidenceType.SKILL_CONTENT_ERROR,
+                        confidence=0.7,
+                        description=f"持仓期间ADX从{adx_values[0]:.1f}下降到{adx_values[-1]:.1f}，策略缺少趋势衰减出场规则",
+                        supporting_data={"adx_start": adx_values[0], "adx_end": adx_values[-1]},
+                        trade_ids=[trade.trade_id],
+                    )
+                )
 
         return evidences
 
-    def _analyze_exit_decision(self, trade, fault_attribution: Dict[str, Any] = None) -> Optional[ReflectionEvidence]:
+    def _analyze_exit_decision(self, trade, fault_attribution: dict[str, Any] = None) -> ReflectionEvidence | None:
         """分析出场决策"""
-        if not fault_attribution or not fault_attribution.get('has_fault'):
+        if not fault_attribution or not fault_attribution.get("has_fault"):
             return None
 
-        faults = fault_attribution.get('faults', [])
+        faults = fault_attribution.get("faults", [])
         exit_faults = [f for f in faults if f.step_id > 0]
 
         if not exit_faults:
@@ -289,7 +298,7 @@ class SkillAwareReflector:
                     evidence_type=EvidenceType.SKILL_CONTENT_ERROR,
                     confidence=0.7,
                     description=f"出场时止损设置不合理: {fault.description}",
-                    supporting_data={'fault': fault.description},
+                    supporting_data={"fault": fault.description},
                     trade_ids=[trade.trade_id],
                 )
 
@@ -323,7 +332,7 @@ class SkillAwareReflector:
 
         return False
 
-    def _aggregate_evidence(self, evidences: List[ReflectionEvidence]) -> Tuple[EvidenceType, float]:
+    def _aggregate_evidence(self, evidences: list[ReflectionEvidence]) -> tuple[EvidenceType, float]:
         """综合判断证据类型"""
         if not evidences:
             return EvidenceType.NO_EVIDENCE, 0.0
@@ -360,8 +369,9 @@ class SkillAwareReflector:
         else:
             return EvidenceType.NO_EVIDENCE, 0.0
 
-    def _determine_action(self, evidence_type: EvidenceType, confidence: float,
-                         trade, evidences: List[ReflectionEvidence]) -> Tuple[RevisionAction, str]:
+    def _determine_action(
+        self, evidence_type: EvidenceType, confidence: float, trade, evidences: list[ReflectionEvidence]
+    ) -> tuple[RevisionAction, str]:
         """确定推荐动作"""
         if evidence_type == EvidenceType.NO_EVIDENCE:
             return RevisionAction.MAINTAIN, "无明确证据，保持现状"
@@ -383,8 +393,9 @@ class SkillAwareReflector:
 
         return RevisionAction.MAINTAIN, "保持现状"
 
-    def _generate_description(self, trade, evidence_type: EvidenceType,
-                            action: RevisionAction, evidences: List[ReflectionEvidence]) -> str:
+    def _generate_description(
+        self, trade, evidence_type: EvidenceType, action: RevisionAction, evidences: list[ReflectionEvidence]
+    ) -> str:
         """生成描述"""
         direction = "多头" if trade.direction == "LONG" else "空头"
         pnl_str = f"+{trade.pnl:.0f}" if trade.pnl > 0 else f"{trade.pnl:.0f}"
@@ -404,9 +415,7 @@ class SkillAwareReflector:
             # 找到与交易方向一致的策略
             direction = trade.direction
             for strategy, vote in trade.strategy_votes_at_entry.items():
-                if direction == "LONG" and "多" in vote:
-                    return strategy
-                elif direction == "SHORT" and "空" in vote:
+                if (direction == "LONG" and "多" in vote) or (direction == "SHORT" and "空" in vote):
                     return strategy
         return "UNKNOWN"
 
@@ -446,19 +455,19 @@ class SkillAwareReflector:
 
         return f"强化：严格执行{direction}交易的入场和出场规则"
 
-    def get_skill_content_errors(self) -> List[SkillReflection]:
+    def get_skill_content_errors(self) -> list[SkillReflection]:
         """获取所有技能内容错误的反思"""
         return [r for r in self.reflections if r.evidence_type == EvidenceType.SKILL_CONTENT_ERROR]
 
-    def get_execution_errors(self) -> List[SkillReflection]:
+    def get_execution_errors(self) -> list[SkillReflection]:
         """获取所有执行失误的反思"""
         return [r for r in self.reflections if r.evidence_type == EvidenceType.EXECUTION_ERROR]
 
-    def get_reinforcement_guidance(self) -> List[GuidanceReinforcement]:
+    def get_reinforcement_guidance(self) -> list[GuidanceReinforcement]:
         """获取所有指导强化记录"""
         return self.guidance_reinforcements
 
-    def generate_summary_report(self) -> Dict[str, Any]:
+    def generate_summary_report(self) -> dict[str, Any]:
         """生成反思汇总报告"""
         total = len(self.reflections)
         if total == 0:
@@ -487,7 +496,7 @@ class SkillAwareReflector:
             "key_insights": self._extract_key_insights(),
         }
 
-    def _extract_key_insights(self) -> List[str]:
+    def _extract_key_insights(self) -> list[str]:
         """提取关键洞察"""
         insights = []
 

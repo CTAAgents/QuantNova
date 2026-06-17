@@ -22,30 +22,32 @@ CircuitBreaker — 策略级熔断机制 v1.0
 """
 
 import json
-import os
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any
 import logging
+import os
+from dataclasses import dataclass
+from datetime import datetime
 
-import pandas as pd
 import numpy as np
+import pandas as pd
+
 
 logger = logging.getLogger(__name__)
 
 
 # ===================== 数据模型 =====================
 
+
 @dataclass
 class CircuitBreakerConfig:
     """熔断配置"""
-    max_loss_per_strategy: float = 5000.0    # 每策略最大亏损（美元）
-    max_drawdown_pct: float = 0.20           # 最大回撤百分比
-    max_consecutive_losses: int = 10          # 最大连续亏损次数
-    cooldown_days: int = 30                   # 冷却期天数
-    max_loss_per_contract: float = 5000.0    # 每合约最大亏损
 
-    def to_dict(self) -> Dict:
+    max_loss_per_strategy: float = 5000.0  # 每策略最大亏损（美元）
+    max_drawdown_pct: float = 0.20  # 最大回撤百分比
+    max_consecutive_losses: int = 10  # 最大连续亏损次数
+    cooldown_days: int = 30  # 冷却期天数
+    max_loss_per_contract: float = 5000.0  # 每合约最大亏损
+
+    def to_dict(self) -> dict:
         return {
             "max_loss_per_strategy": self.max_loss_per_strategy,
             "max_drawdown_pct": self.max_drawdown_pct,
@@ -58,14 +60,15 @@ class CircuitBreakerConfig:
 @dataclass
 class CircuitBreakerResult:
     """熔断检查结果"""
+
     strategy_id: str
     triggered: bool
     trigger_reason: str
-    metrics: Dict  # 当前指标值
+    metrics: dict  # 当前指标值
     cooldown_remaining: int = 0  # 冷却剩余天数
     recommendation: str = "continue"  # "continue" | "pause" | "terminate"
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         return {
             "strategy_id": self.strategy_id,
             "triggered": self.triggered,
@@ -79,17 +82,18 @@ class CircuitBreakerResult:
 @dataclass
 class StrategyState:
     """策略状态"""
+
     strategy_id: str
     is_paused: bool = False
     pause_reason: str = ""
-    pause_time: Optional[datetime] = None
+    pause_time: datetime | None = None
     total_loss: float = 0.0
     max_drawdown: float = 0.0
     consecutive_losses: int = 0
-    last_check_time: Optional[datetime] = None
+    last_check_time: datetime | None = None
     check_count: int = 0
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         return {
             "strategy_id": self.strategy_id,
             "is_paused": self.is_paused,
@@ -105,6 +109,7 @@ class StrategyState:
 
 # ===================== 熔断器 =====================
 
+
 class CircuitBreaker:
     """
     策略级熔断机制
@@ -112,7 +117,7 @@ class CircuitBreaker:
     为每个策略预设停止交易的阈值，防止失效策略造成灾难性亏损。
     """
 
-    def __init__(self, config: Dict = None, storage_path: str = None):
+    def __init__(self, config: dict = None, storage_path: str = None):
         """
         参数:
             config: 熔断配置字典
@@ -128,20 +133,22 @@ class CircuitBreaker:
         )
 
         self.storage_path = storage_path or os.path.join(
-            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-            "data", "circuit_breaker_state.json"
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "circuit_breaker_state.json"
         )
 
         # 策略状态 {strategy_id: StrategyState}
-        self._states: Dict[str, StrategyState] = {}
+        self._states: dict[str, StrategyState] = {}
 
         # 加载已有状态
         self._load_states()
 
-    def check(self, strategy_id: str,
-              equity_curve: pd.Series = None,
-              trades: List[Dict] = None,
-              initial_capital: float = 100000) -> CircuitBreakerResult:
+    def check(
+        self,
+        strategy_id: str,
+        equity_curve: pd.Series = None,
+        trades: list[dict] = None,
+        initial_capital: float = 100000,
+    ) -> CircuitBreakerResult:
         """
         检查策略是否触发熔断
 
@@ -264,7 +271,7 @@ class CircuitBreaker:
             self._save_states()
             logger.info(f"策略 {strategy_id} 熔断状态已重置")
 
-    def get_status(self, strategy_id: str) -> Dict:
+    def get_status(self, strategy_id: str) -> dict:
         """获取策略的熔断状态"""
         if strategy_id not in self._states:
             return {"strategy_id": strategy_id, "is_paused": False, "check_count": 0}
@@ -281,11 +288,11 @@ class CircuitBreaker:
             "check_count": state.check_count,
         }
 
-    def get_all_status(self) -> Dict[str, Dict]:
+    def get_all_status(self) -> dict[str, dict]:
         """获取所有策略的熔断状态"""
         return {sid: self.get_status(sid) for sid in self._states}
 
-    def get_paused_strategies(self) -> List[str]:
+    def get_paused_strategies(self) -> list[str]:
         """获取所有已暂停的策略ID"""
         return [sid for sid, state in self._states.items() if state.is_paused]
 
@@ -295,7 +302,7 @@ class CircuitBreaker:
         """从文件加载状态"""
         if os.path.exists(self.storage_path):
             try:
-                with open(self.storage_path, 'r', encoding='utf-8') as f:
+                with open(self.storage_path, encoding="utf-8") as f:
                     data = json.load(f)
                 for sid, sdata in data.items():
                     state = StrategyState(
@@ -306,7 +313,9 @@ class CircuitBreaker:
                         total_loss=sdata.get("total_loss", 0),
                         max_drawdown=sdata.get("max_drawdown", 0),
                         consecutive_losses=sdata.get("consecutive_losses", 0),
-                        last_check_time=datetime.fromisoformat(sdata["last_check_time"]) if sdata.get("last_check_time") else None,
+                        last_check_time=datetime.fromisoformat(sdata["last_check_time"])
+                        if sdata.get("last_check_time")
+                        else None,
                         check_count=sdata.get("check_count", 0),
                     )
                     self._states[sid] = state
@@ -318,7 +327,7 @@ class CircuitBreaker:
         try:
             os.makedirs(os.path.dirname(self.storage_path), exist_ok=True)
             data = {sid: state.to_dict() for sid, state in self._states.items()}
-            with open(self.storage_path, 'w', encoding='utf-8') as f:
+            with open(self.storage_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
         except Exception as e:
             logger.warning(f"保存熔断状态失败: {e}")

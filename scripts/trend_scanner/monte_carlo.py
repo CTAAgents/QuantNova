@@ -23,20 +23,22 @@ MonteCarloSimulator — 蒙特卡洛模拟模块 v1.0
 创建日期：2026-06-17
 """
 
-import numpy as np
-import pandas as pd
-from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Tuple
 import logging
+from dataclasses import dataclass, field
+
+import numpy as np
+
 
 logger = logging.getLogger(__name__)
 
 
 # ===================== 数据模型 =====================
 
+
 @dataclass
 class MonteCarloResult:
     """蒙特卡洛模拟结果"""
+
     n_simulations: int
     initial_capital: float
     trades_count: int
@@ -49,21 +51,21 @@ class MonteCarloResult:
     # 回撤统计
     max_drawdown_median: float = 0.0
     max_drawdown_mean: float = 0.0
-    max_drawdown_95: float = 0.0    # 95%置信水平
-    max_drawdown_99: float = 0.0    # 99%置信水平
+    max_drawdown_95: float = 0.0  # 95%置信水平
+    max_drawdown_99: float = 0.0  # 99%置信水平
 
     # 风险指标
-    ruin_probability: float = 0.0   # 破产概率
+    ruin_probability: float = 0.0  # 破产概率
     sharpe_ratio_median: float = 0.0
     win_rate_median: float = 0.0
 
     # 最差情景
-    worst_case: Dict = field(default_factory=dict)
+    worst_case: dict = field(default_factory=dict)
 
     # 可选：模拟权益曲线（仅在 save_curves=True 时保存）
-    equity_curves: Optional[np.ndarray] = None
+    equity_curves: np.ndarray | None = None
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         """转为字典（便于JSON序列化）"""
         return {
             "n_simulations": self.n_simulations,
@@ -91,6 +93,7 @@ class MonteCarloResult:
 
 # ===================== 模拟器 =====================
 
+
 class MonteCarloSimulator:
     """
     蒙特卡洛模拟器
@@ -99,9 +102,9 @@ class MonteCarloSimulator:
     评估策略在各种极端情况下的表现。
     """
 
-    def __init__(self, n_simulations: int = 10000,
-                 confidence_levels: List[float] = None,
-                 random_seed: Optional[int] = None):
+    def __init__(
+        self, n_simulations: int = 10000, confidence_levels: list[float] = None, random_seed: int | None = None
+    ):
         """
         参数:
             n_simulations: 模拟次数（默认10000）
@@ -112,10 +115,13 @@ class MonteCarloSimulator:
         self.confidence_levels = confidence_levels or [0.95, 0.99]
         self.rng = np.random.RandomState(random_seed)
 
-    def simulate(self, trades: List[float],
-                 initial_capital: float = 100000,
-                 ruin_threshold: float = 0.5,
-                 save_curves: bool = False) -> MonteCarloResult:
+    def simulate(
+        self,
+        trades: list[float],
+        initial_capital: float = 100000,
+        ruin_threshold: float = 0.5,
+        save_curves: bool = False,
+    ) -> MonteCarloResult:
         """
         对交易结果进行随机重排模拟
 
@@ -179,10 +185,14 @@ class MonteCarloSimulator:
         # 基于每条曲线的交易收益率
         trade_returns = trades_arr / initial_capital
         if len(trade_returns) > 1 and np.std(trade_returns) > 0:
-            sharpe_ratio_median = float(np.median(
-                [self._sharpe_ratio(self.rng.choice(trade_returns, size=n_trades, replace=True))
-                 for _ in range(min(1000, self.n_simulations))]
-            ))
+            sharpe_ratio_median = float(
+                np.median(
+                    [
+                        self._sharpe_ratio(self.rng.choice(trade_returns, size=n_trades, replace=True))
+                        for _ in range(min(1000, self.n_simulations))
+                    ]
+                )
+            )
         else:
             sharpe_ratio_median = 0.0
 
@@ -225,10 +235,13 @@ class MonteCarloSimulator:
 
         return result
 
-    def calculate_ruin_probability(self, trades: List[float],
-                                    initial_capital: float = 100000,
-                                    ruin_threshold: float = 0.5,
-                                    n_simulations: int = None) -> float:
+    def calculate_ruin_probability(
+        self,
+        trades: list[float],
+        initial_capital: float = 100000,
+        ruin_threshold: float = 0.5,
+        n_simulations: int = None,
+    ) -> float:
         """
         快速计算破产概率
 
@@ -258,9 +271,9 @@ class MonteCarloSimulator:
 
         return ruin_count / n_sims
 
-    def calculate_expected_drawdown(self, trades: List[float],
-                                     initial_capital: float = 100000,
-                                     n_simulations: int = None) -> Dict:
+    def calculate_expected_drawdown(
+        self, trades: list[float], initial_capital: float = 100000, n_simulations: int = None
+    ) -> dict:
         """
         计算预期最大回撤分布
 
@@ -315,10 +328,10 @@ class MonteCarloSimulator:
 
 # ===================== 便捷函数 =====================
 
-def run_monte_carlo(trades: List[float],
-                    initial_capital: float = 100000,
-                    n_simulations: int = 10000,
-                    ruin_threshold: float = 0.5) -> MonteCarloResult:
+
+def run_monte_carlo(
+    trades: list[float], initial_capital: float = 100000, n_simulations: int = 10000, ruin_threshold: float = 0.5
+) -> MonteCarloResult:
     """
     便捷函数：运行蒙特卡洛模拟
 

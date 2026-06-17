@@ -6,9 +6,8 @@
 - PositionSizer: 仓位计算器
 """
 
-from typing import Dict, List, Optional, Tuple
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 
 class PortfolioManager:
@@ -21,9 +20,7 @@ class PortfolioManager:
     - 波动率调整
     """
 
-    def __init__(self, max_gross: float = 2.0,
-                 max_single: float = 0.3,
-                 target_vol: float = 0.20):
+    def __init__(self, max_gross: float = 2.0, max_single: float = 0.3, target_vol: float = 0.20):
         """
         参数:
             max_gross: 最大总敞口（sum(|pos_i|)）
@@ -34,9 +31,9 @@ class PortfolioManager:
         self.max_single = max_single
         self.target_vol = target_vol
 
-    def calc_position_sizes(self, signals: Dict[str, float],
-                            volatilities: Dict[str, float],
-                            correlations: pd.DataFrame = None) -> Dict[str, float]:
+    def calc_position_sizes(
+        self, signals: dict[str, float], volatilities: dict[str, float], correlations: pd.DataFrame = None
+    ) -> dict[str, float]:
         """
         计算各品种仓位大小
 
@@ -77,8 +74,7 @@ class PortfolioManager:
 
         return {k: round(v, 4) for k, v in positions.items()}
 
-    def _adjust_for_correlation(self, positions: Dict[str, float],
-                                correlations: pd.DataFrame) -> Dict[str, float]:
+    def _adjust_for_correlation(self, positions: dict[str, float], correlations: pd.DataFrame) -> dict[str, float]:
         """
         相关性调整
 
@@ -116,8 +112,7 @@ class PortfolioManager:
 
         return adjusted
 
-    def get_portfolio_stats(self, positions: Dict[str, float],
-                            returns: pd.DataFrame) -> Dict:
+    def get_portfolio_stats(self, positions: dict[str, float], returns: pd.DataFrame) -> dict:
         """
         计算组合统计
 
@@ -144,12 +139,12 @@ class PortfolioManager:
         max_drawdown = self._calc_max_drawdown(portfolio_returns.values)
 
         return {
-            'total_return': round(float(total_return), 4),
-            'volatility': round(float(volatility), 4),
-            'sharpe_ratio': round(float(sharpe), 3),
-            'max_drawdown': round(float(max_drawdown), 4),
-            'n_positions': len(positions),
-            'gross_exposure': round(sum(abs(p) for p in positions.values()), 4),
+            "total_return": round(float(total_return), 4),
+            "volatility": round(float(volatility), 4),
+            "sharpe_ratio": round(float(sharpe), 3),
+            "max_drawdown": round(float(max_drawdown), 4),
+            "n_positions": len(positions),
+            "gross_exposure": round(sum(abs(p) for p in positions.values()), 4),
         }
 
     def _calc_max_drawdown(self, returns: np.ndarray) -> float:
@@ -167,8 +162,7 @@ class PositionSizer:
     基于凯利公式和风险预算计算最优仓位
     """
 
-    def __init__(self, risk_free_rate: float = 0.02,
-                 max_leverage: float = 2.0):
+    def __init__(self, risk_free_rate: float = 0.02, max_leverage: float = 2.0):
         """
         参数:
             risk_free_rate: 无风险利率
@@ -177,8 +171,7 @@ class PositionSizer:
         self.risk_free_rate = risk_free_rate
         self.max_leverage = max_leverage
 
-    def kelly_criterion(self, win_rate: float, avg_win: float,
-                        avg_loss: float) -> float:
+    def kelly_criterion(self, win_rate: float, avg_win: float, avg_loss: float) -> float:
         """
         凯利公式计算最优仓位
 
@@ -202,9 +195,9 @@ class PositionSizer:
         # 限制在合理范围内
         return max(0, min(kelly, self.max_leverage))
 
-    def risk_budget_position(self, equity: float, risk_per_trade: float,
-                             entry_price: float, stop_loss: float,
-                             point_value: float = 10.0) -> Tuple[int, float, float]:
+    def risk_budget_position(
+        self, equity: float, risk_per_trade: float, entry_price: float, stop_loss: float, point_value: float = 10.0
+    ) -> tuple[int, float, float]:
         """
         风险预算法计算仓位
 
@@ -241,13 +234,18 @@ class PositionSizer:
 
         return lots, actual_risk, margin_used
 
-    def progressive_position(self, entry_price: float, atr: float,
-                             direction: int, phase: str,
-                             confirmation_level: int = 0,
-                             point_value: float = 10.0,
-                             margin_per_lot: float = 5000.0,
-                             equity: float = 1_000_000,
-                             risk_pct: float = 0.01) -> Tuple[int, float, float]:
+    def progressive_position(
+        self,
+        entry_price: float,
+        atr: float,
+        direction: int,
+        phase: str,
+        confirmation_level: int = 0,
+        point_value: float = 10.0,
+        margin_per_lot: float = 5000.0,
+        equity: float = 1_000_000,
+        risk_pct: float = 0.01,
+    ) -> tuple[int, float, float]:
         """
         渐进式仓位管理（1/3法则）
 
@@ -291,9 +289,9 @@ class PositionSizer:
             lots = base_lots
 
         # 根据阶段调整
-        if phase in ('FATIGUING', 'REVERSING'):
+        if phase in ("FATIGUING", "REVERSING"):
             lots = max(1, lots // 2)  # 衰竭/反转阶段减半
-        elif phase == 'CONSOLIDATING':
+        elif phase == "CONSOLIDATING":
             lots = max(1, lots // 3)  # 震荡阶段1/3
 
         actual_risk = lots * risk_per_lot

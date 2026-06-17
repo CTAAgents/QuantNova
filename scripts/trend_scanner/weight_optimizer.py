@@ -7,9 +7,9 @@
 - 基于市场状态的权重调整
 """
 
-from typing import Dict, List, Optional, Tuple
-import numpy as np
 from itertools import product
+
+import numpy as np
 
 
 class WeightOptimizer:
@@ -21,49 +21,49 @@ class WeightOptimizer:
 
     # 维度权重搜索空间
     WEIGHT_SPACE = {
-        'leading_signals': [0.05, 0.08, 0.10],           # ≤10%约束
-        'trend_confirmation': [0.35, 0.40, 0.45, 0.50, 0.55],  # 核心维度
-        'momentum_health': [0.20, 0.25, 0.30, 0.35, 0.40],     # 核心维度
-        'volatility': [0.05, 0.08, 0.10, 0.12, 0.15],   # ≤15%约束
-        'trend_strength': [0.03, 0.05, 0.08, 0.10],     # ≤10%约束
+        "leading_signals": [0.05, 0.08, 0.10],  # ≤10%约束
+        "trend_confirmation": [0.35, 0.40, 0.45, 0.50, 0.55],  # 核心维度
+        "momentum_health": [0.20, 0.25, 0.30, 0.35, 0.40],  # 核心维度
+        "volatility": [0.05, 0.08, 0.10, 0.12, 0.15],  # ≤15%约束
+        "trend_strength": [0.03, 0.05, 0.08, 0.10],  # ≤10%约束
     }
 
     # 市场状态权重调整系数
     STATE_ADJUSTMENTS = {
-        'STRONG_UPTREND': {
-            'leading_signals': 0.8,      # 降低
-            'trend_confirmation': 1.3,   # 提升
-            'momentum_health': 1.0,
-            'volatility': 1.0,
-            'trend_strength': 1.0,
+        "STRONG_UPTREND": {
+            "leading_signals": 0.8,  # 降低
+            "trend_confirmation": 1.3,  # 提升
+            "momentum_health": 1.0,
+            "volatility": 1.0,
+            "trend_strength": 1.0,
         },
-        'WEAK_UPTREND': {
-            'leading_signals': 1.0,
-            'trend_confirmation': 1.1,
-            'momentum_health': 1.0,
-            'volatility': 1.0,
-            'trend_strength': 1.0,
+        "WEAK_UPTREND": {
+            "leading_signals": 1.0,
+            "trend_confirmation": 1.1,
+            "momentum_health": 1.0,
+            "volatility": 1.0,
+            "trend_strength": 1.0,
         },
-        'RANGE_BOUND': {
-            'leading_signals': 1.2,      # 提升
-            'trend_confirmation': 0.7,   # 降低
-            'momentum_health': 1.3,      # 提升
-            'volatility': 1.3,           # 提升
-            'trend_strength': 0.8,       # 降低
+        "RANGE_BOUND": {
+            "leading_signals": 1.2,  # 提升
+            "trend_confirmation": 0.7,  # 降低
+            "momentum_health": 1.3,  # 提升
+            "volatility": 1.3,  # 提升
+            "trend_strength": 0.8,  # 降低
         },
-        'WEAK_DOWNTREND': {
-            'leading_signals': 1.0,
-            'trend_confirmation': 1.1,
-            'momentum_health': 1.0,
-            'volatility': 1.0,
-            'trend_strength': 1.0,
+        "WEAK_DOWNTREND": {
+            "leading_signals": 1.0,
+            "trend_confirmation": 1.1,
+            "momentum_health": 1.0,
+            "volatility": 1.0,
+            "trend_strength": 1.0,
         },
-        'STRONG_DOWNTREND': {
-            'leading_signals': 0.8,
-            'trend_confirmation': 1.3,
-            'momentum_health': 1.0,
-            'volatility': 1.0,
-            'trend_strength': 1.0,
+        "STRONG_DOWNTREND": {
+            "leading_signals": 0.8,
+            "trend_confirmation": 1.3,
+            "momentum_health": 1.0,
+            "volatility": 1.0,
+            "trend_strength": 1.0,
         },
     }
 
@@ -76,9 +76,9 @@ class WeightOptimizer:
         """
         self.data_store = data_store
 
-    def get_dynamic_weights(self, base_weights: Dict[str, float],
-                           market_state: str,
-                           volatility_regime: str = 'normal') -> Dict[str, float]:
+    def get_dynamic_weights(
+        self, base_weights: dict[str, float], market_state: str, volatility_regime: str = "normal"
+    ) -> dict[str, float]:
         """
         根据市场状态和波动率动态调整权重
 
@@ -101,12 +101,12 @@ class WeightOptimizer:
                     weights[dim_name] *= factor
 
         # 应用波动率调整
-        if volatility_regime == 'high':
-            weights['leading_signals'] *= 1.2
-            weights['trend_confirmation'] *= 0.8
-        elif volatility_regime == 'low':
-            weights['leading_signals'] *= 0.8
-            weights['trend_confirmation'] *= 1.2
+        if volatility_regime == "high":
+            weights["leading_signals"] *= 1.2
+            weights["trend_confirmation"] *= 0.8
+        elif volatility_regime == "low":
+            weights["leading_signals"] *= 0.8
+            weights["trend_confirmation"] *= 1.2
 
         # 归一化
         total = sum(weights.values())
@@ -115,8 +115,7 @@ class WeightOptimizer:
 
         return weights
 
-    def grid_search_weights(self, symbol: str = None,
-                           market_state: str = None) -> Dict:
+    def grid_search_weights(self, symbol: str = None, market_state: str = None) -> dict:
         """
         网格搜索最优权重
 
@@ -130,18 +129,18 @@ class WeightOptimizer:
         # 获取历史反馈
         feedbacks = self.data_store.get_scoring_feedback(
             symbol=symbol,
-            status='completed',
+            status="completed",
         )
 
         if market_state:
-            feedbacks = [f for f in feedbacks if f.get('market_state') == market_state]
+            feedbacks = [f for f in feedbacks if f.get("market_state") == market_state]
 
         if len(feedbacks) < 20:
             return {
-                'optimal_weights': None,
-                'improvement': 0,
-                'sample_size': len(feedbacks),
-                'insufficient_data': True,
+                "optimal_weights": None,
+                "improvement": 0,
+                "sample_size": len(feedbacks),
+                "insufficient_data": True,
             }
 
         # 生成权重组合
@@ -162,15 +161,15 @@ class WeightOptimizer:
         improvement = (best_score - baseline_score) / abs(baseline_score) if baseline_score != 0 else 0
 
         return {
-            'optimal_weights': best_weights,
-            'optimal_score': best_score,
-            'baseline_score': baseline_score,
-            'improvement': improvement,
-            'sample_size': len(feedbacks),
-            'insufficient_data': False,
+            "optimal_weights": best_weights,
+            "optimal_score": best_score,
+            "baseline_score": baseline_score,
+            "improvement": improvement,
+            "sample_size": len(feedbacks),
+            "insufficient_data": False,
         }
 
-    def _generate_weight_combinations(self) -> List[Dict[str, float]]:
+    def _generate_weight_combinations(self) -> list[dict[str, float]]:
         """生成权重组合"""
         combinations = []
 
@@ -197,8 +196,7 @@ class WeightOptimizer:
 
         return combinations
 
-    def _evaluate_weights(self, weights: Optional[Dict[str, float]],
-                         feedbacks: List[Dict]) -> float:
+    def _evaluate_weights(self, weights: dict[str, float] | None, feedbacks: list[dict]) -> float:
         """
         评估权重效果
 
@@ -216,22 +214,19 @@ class WeightOptimizer:
         weighted_returns = []
 
         for feedback in feedbacks:
-            dimension_scores = feedback.get('dimension_scores', {})
-            actual_return = feedback.get('actual_return', 0)
+            dimension_scores = feedback.get("dimension_scores", {})
+            actual_return = feedback.get("actual_return", 0)
 
             if weights:
                 # 使用新权重计算加权打分
-                weighted_score = sum(
-                    dimension_scores.get(dim, 0) * weights.get(dim, 0)
-                    for dim in dimension_scores
-                )
+                weighted_score = sum(dimension_scores.get(dim, 0) * weights.get(dim, 0) for dim in dimension_scores)
             else:
                 # 使用原始打分
-                weighted_score = feedback.get('filtered_composite', 0)
+                weighted_score = feedback.get("filtered_composite", 0)
 
             # 如果打分方向正确，记录收益
             score_direction = 1 if weighted_score > 0.15 else (-1 if weighted_score < -0.15 else 0)
-            actual_direction = feedback.get('actual_direction', 0)
+            actual_direction = feedback.get("actual_direction", 0)
 
             if score_direction != 0 and score_direction == actual_direction:
                 weighted_returns.append(actual_return)
@@ -252,7 +247,7 @@ class WeightOptimizer:
 
         return sharpe
 
-    def optimize_for_state(self, symbol: str = None) -> Dict[str, Dict]:
+    def optimize_for_state(self, symbol: str = None) -> dict[str, dict]:
         """
         为每种市场状态优化权重
 
@@ -293,16 +288,16 @@ class WeightOptimizer:
 
         # 整体优化结果
         report.append("\n## 1. 整体优化")
-        if overall.get('insufficient_data'):
+        if overall.get("insufficient_data"):
             report.append(f"- 样本量不足（{overall['sample_size']}），无法优化")
         else:
             report.append(f"- 样本量：{overall['sample_size']}")
             report.append(f"- 基准分数：{overall['baseline_score']:.4f}")
             report.append(f"- 最优分数：{overall['optimal_score']:.4f}")
             report.append(f"- 改进幅度：{overall['improvement']:.2%}")
-            if overall['optimal_weights']:
+            if overall["optimal_weights"]:
                 report.append("\n**最优权重**:")
-                for dim, weight in overall['optimal_weights'].items():
+                for dim, weight in overall["optimal_weights"].items():
                     report.append(f"  - {dim}: {weight:.4f}")
 
         # 按市场状态优化结果
@@ -310,20 +305,22 @@ class WeightOptimizer:
         report.append("| 市场状态 | 样本量 | 基准分数 | 最优分数 | 改进幅度 |")
         report.append("|----------|--------|----------|----------|----------|")
         for state, result in by_state.items():
-            if result.get('insufficient_data'):
+            if result.get("insufficient_data"):
                 report.append(f"| {state} | {result['sample_size']} | - | - | - |")
             else:
-                report.append(f"| {state} | {result['sample_size']} | "
-                            f"{result['baseline_score']:.4f} | "
-                            f"{result['optimal_score']:.4f} | "
-                            f"{result['improvement']:.2%} |")
+                report.append(
+                    f"| {state} | {result['sample_size']} | "
+                    f"{result['baseline_score']:.4f} | "
+                    f"{result['optimal_score']:.4f} | "
+                    f"{result['improvement']:.2%} |"
+                )
 
         # 建议
         report.append("\n## 3. 建议")
-        if overall.get('insufficient_data'):
+        if overall.get("insufficient_data"):
             report.append("- 继续积累数据，至少需要 100 条已完成的反馈记录")
         else:
-            if overall['improvement'] > 0.1:
+            if overall["improvement"] > 0.1:
                 report.append("- 建议采用优化后的权重")
             else:
                 report.append("- 当前权重效果良好，无需调整")

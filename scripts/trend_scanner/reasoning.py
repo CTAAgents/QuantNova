@@ -14,18 +14,20 @@ v3.1 增强：机制门思想
 
 import json
 import time
-from typing import Optional, List, Dict, Any
 from abc import ABC, abstractmethod
+from typing import Any
 
 from .models import (
-    MarketContext, Experience, ExperienceMatch,
-    Route, Constraint, MarketAssessment, Uncertainty,
+    Constraint,
+    ExperienceMatch,
+    MarketContext,
 )
 
 
 # ──────────────────────────────────────────────
 # LLM Provider 抽象
 # ──────────────────────────────────────────────
+
 
 class LLMProvider(ABC):
     """LLM 提供者抽象基类"""
@@ -62,7 +64,7 @@ class WorkBuddyAgentProvider(LLMProvider):
     def __init__(self, model: str = "default"):
         self.model = model
         self._llm_provider = None
-        
+
         # 尝试从配置加载LLM提供者
         try:
             self._init_llm_provider()
@@ -71,21 +73,21 @@ class WorkBuddyAgentProvider(LLMProvider):
 
     def _init_llm_provider(self):
         """初始化LLM提供者"""
-        import os
         import json
         from pathlib import Path
-        
+
         # 尝试加载配置文件
         config_path = Path(__file__).parent.parent.parent / "config" / "config.json"
         if config_path.exists():
-            with open(config_path, 'r', encoding='utf-8') as f:
+            with open(config_path, encoding="utf-8") as f:
                 config = json.load(f)
-            
-            llm_config = config.get('llm', {})
+
+            llm_config = config.get("llm", {})
             if llm_config:
                 # 尝试创建LLM提供者
                 try:
                     from .memory.llm_factory import LLMProviderFactory
+
                     self._llm_provider = LLMProviderFactory.create(llm_config)
                     print(f"[LLM] 使用 {self._llm_provider.name} 提供者", flush=True)
                 except Exception as e:
@@ -114,7 +116,7 @@ class WorkBuddyAgentProvider(LLMProvider):
             except Exception as e:
                 print(f"[LLM] 调用失败: {e}", flush=True)
                 return self._fallback_response(system_prompt, user_prompt)
-        
+
         # 否则使用fallback
         return self._fallback_response(system_prompt, user_prompt)
 
@@ -135,7 +137,7 @@ class WorkBuddyAgentProvider(LLMProvider):
         使用规则退化，生成基本的路线建议。
         """
         # 解析用户提示中的关键信息
-        lines = user_prompt.split('\n')
+        lines = user_prompt.split("\n")
 
         # 提取趋势阶段信息
         trend_phase = "CONSOLIDATING"  # 默认
@@ -152,21 +154,24 @@ class WorkBuddyAgentProvider(LLMProvider):
                 trend_phase = "CONSOLIDATING"
 
         # 生成基本响应
-        return json.dumps({
-            "routes": [
-                {
-                    "route_id": "A",
-                    "name": "观望等待",
-                    "action": "暂不操作，等待更明确的信号",
-                    "confidence": 0.5,
-                    "reasoning": "LLM 不可用，使用规则退化建议",
-                    "constraints": [],
-                    "risks": ["无法进行深度推理，建议仅供参考"],
-                }
-            ],
-            "recommended_route": "A",
-            "warnings": ["当前使用规则退化模式，建议质量有限"],
-        }, ensure_ascii=False)
+        return json.dumps(
+            {
+                "routes": [
+                    {
+                        "route_id": "A",
+                        "name": "观望等待",
+                        "action": "暂不操作，等待更明确的信号",
+                        "confidence": 0.5,
+                        "reasoning": "LLM 不可用，使用规则退化建议",
+                        "constraints": [],
+                        "risks": ["无法进行深度推理，建议仅供参考"],
+                    }
+                ],
+                "recommended_route": "A",
+                "warnings": ["当前使用规则退化模式，建议质量有限"],
+            },
+            ensure_ascii=False,
+        )
 
 
 class CustomLLMProvider(LLMProvider):
@@ -210,15 +215,19 @@ class CustomLLMProvider(LLMProvider):
             result = response.json()
             return result.get("choices", [{}])[0].get("message", {}).get("content", "")
         except Exception as e:
-            return json.dumps({
-                "routes": [{"route_id": "A", "name": "错误", "action": f"LLM 调用失败: {e}", "confidence": 0}],
-                "warnings": [f"LLM 调用失败: {e}"],
-            }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "routes": [{"route_id": "A", "name": "错误", "action": f"LLM 调用失败: {e}", "confidence": 0}],
+                    "warnings": [f"LLM 调用失败: {e}"],
+                },
+                ensure_ascii=False,
+            )
 
 
 # ──────────────────────────────────────────────
 # 推理引擎
 # ──────────────────────────────────────────────
+
 
 class ReasoningEngine:
     """
@@ -232,21 +241,22 @@ class ReasoningEngine:
     5. 生成动态约束
     """
 
-    def __init__(self, llm_provider: Optional[LLMProvider] = None):
+    def __init__(self, llm_provider: LLMProvider | None = None):
         self.llm_provider = llm_provider or WorkBuddyAgentProvider()
-        
+
         # 波动幅度止损锚点（v6.0 新增）
         from .volatility_anchor import VolatilityAnchor
+
         self.volatility_anchor = VolatilityAnchor(window=20, multiplier=2.0)
 
     def reason(
         self,
         context: MarketContext,
-        similar_experiences: List[ExperienceMatch],
+        similar_experiences: list[ExperienceMatch],
         experience_aggregation: dict,
-        multi_dimension_result: Optional[dict] = None,
-        trade_history: Optional[List[float]] = None,
-        circuit_breaker_status: Optional[dict] = None,
+        multi_dimension_result: dict | None = None,
+        trade_history: list[float] | None = None,
+        circuit_breaker_status: dict | None = None,
     ) -> dict:
         """
         执行推理
@@ -272,7 +282,9 @@ class ReasoningEngine:
 
         # 3. 构建用户提示词
         user_prompt = self._build_user_prompt(
-            context, similar_experiences, experience_aggregation,
+            context,
+            similar_experiences,
+            experience_aggregation,
             multi_dimension_result=multi_dimension_result,
             trade_history=trade_history,
             circuit_breaker_status=circuit_breaker_status,
@@ -281,30 +293,28 @@ class ReasoningEngine:
         # 4. 调用 LLM
         try:
             llm_response = self.llm_provider.generate(system_prompt, user_prompt)
-        except Exception as e:
+        except Exception:
             llm_response = self._emergency_fallback(context)
 
         # 5. 解析响应
         try:
             parsed = self._parse_response(llm_response)
-        except Exception as e:
+        except Exception:
             parsed = self._emergency_fallback(context)
 
         # 6. 添加元信息
-        parsed['generation_time_ms'] = int((time.time() - start_time) * 1000)
-        parsed['reasoning_model'] = self.llm_provider.name
-        parsed['experience_count'] = len(similar_experiences)
+        parsed["generation_time_ms"] = int((time.time() - start_time) * 1000)
+        parsed["reasoning_model"] = self.llm_provider.name
+        parsed["experience_count"] = len(similar_experiences)
 
         # 7. 记录修正轨迹（路径②：最后一公里）
-        parsed['base_prediction'] = base_prediction
-        parsed['llm_revision'] = self._extract_llm_revision(parsed)
-        parsed['revision_trace'] = self._build_revision_trace(
-            base_prediction, parsed
-        )
+        parsed["base_prediction"] = base_prediction
+        parsed["llm_revision"] = self._extract_llm_revision(parsed)
+        parsed["revision_trace"] = self._build_revision_trace(base_prediction, parsed)
 
         # 8. 记录分歧度和条件层级（可审计性）
-        parsed['divergence'] = self._calculate_divergence(parsed)
-        parsed['condition_levels'] = self._extract_condition_levels(parsed)
+        parsed["divergence"] = self._calculate_divergence(parsed)
+        parsed["condition_levels"] = self._extract_condition_levels(parsed)
 
         return parsed
 
@@ -320,19 +330,19 @@ class ReasoningEngine:
         Returns:
             分歧度字典
         """
-        routes = parsed.get('routes', [])
-        recommended = parsed.get('recommended_route', '')
-        warnings = parsed.get('warnings', [])
+        routes = parsed.get("routes", [])
+        recommended = parsed.get("recommended_route", "")
+        warnings = parsed.get("warnings", [])
 
         # 1. 路线分歧
         if len(routes) > 1:
             # 提取所有路线的方向
             directions = []
             for route in routes:
-                action = route.get('action', '')
-                if '多' in action or 'LONG' in action.upper():
+                action = route.get("action", "")
+                if "多" in action or "LONG" in action.upper():
                     directions.append(1)
-                elif '空' in action or 'SHORT' in action.upper():
+                elif "空" in action or "SHORT" in action.upper():
                     directions.append(-1)
                 else:
                     directions.append(0)
@@ -340,6 +350,7 @@ class ReasoningEngine:
             # 计算方向分歧（标准差）
             if directions:
                 import numpy as np
+
                 direction_std = float(np.std(directions))
             else:
                 direction_std = 0.0
@@ -349,8 +360,8 @@ class ReasoningEngine:
         # 2. 置信度分歧
         recommended_confidence = 0.5
         for route in routes:
-            if route.get('route_id') == recommended:
-                recommended_confidence = route.get('confidence', 0.5)
+            if route.get("route_id") == recommended:
+                recommended_confidence = route.get("confidence", 0.5)
                 break
 
         # 3. 警告分歧
@@ -358,18 +369,18 @@ class ReasoningEngine:
 
         # 综合分歧度
         divergence_score = (
-            direction_std * 0.5 +  # 方向分歧权重50%
-            (1 - recommended_confidence) * 0.3 +  # 置信度分歧权重30%
-            min(warning_count / 5, 1.0) * 0.2  # 警告分歧权重20%
+            direction_std * 0.5  # 方向分歧权重50%
+            + (1 - recommended_confidence) * 0.3  # 置信度分歧权重30%
+            + min(warning_count / 5, 1.0) * 0.2  # 警告分歧权重20%
         )
 
         return {
-            'score': round(divergence_score, 3),
-            'direction_std': round(direction_std, 3),
-            'recommended_confidence': round(recommended_confidence, 3),
-            'warning_count': warning_count,
-            'routes_count': len(routes),
-            'level': 'LOW' if divergence_score < 0.3 else 'MEDIUM' if divergence_score < 0.6 else 'HIGH',
+            "score": round(divergence_score, 3),
+            "direction_std": round(direction_std, 3),
+            "recommended_confidence": round(recommended_confidence, 3),
+            "warning_count": warning_count,
+            "routes_count": len(routes),
+            "level": "LOW" if divergence_score < 0.3 else "MEDIUM" if divergence_score < 0.6 else "HIGH",
         }
 
     def _extract_condition_levels(self, parsed: dict) -> dict:
@@ -387,72 +398,72 @@ class ReasoningEngine:
         """
         # 从LLM输出中提取反身性分析
         # 由于LLM输出是JSON，我们需要从文本中提取
-        llm_response = parsed.get('llm_response', '')
+        llm_response = parsed.get("llm_response", "")
 
         # 默认条件层级
         condition_levels = {
-            'self_reinforcing': 'UNKNOWN',  # 自我强化程度
-            'expectation_reflection': 'UNKNOWN',  # 预期反映度
-            'reflexivity_cycle': 'UNKNOWN',  # 反身性周期阶段
-            'reversal_risk': 'UNKNOWN',  # 反转风险
-            'overall': 'UNKNOWN',  # 整体条件层级
+            "self_reinforcing": "UNKNOWN",  # 自我强化程度
+            "expectation_reflection": "UNKNOWN",  # 预期反映度
+            "reflexivity_cycle": "UNKNOWN",  # 反身性周期阶段
+            "reversal_risk": "UNKNOWN",  # 反转风险
+            "overall": "UNKNOWN",  # 整体条件层级
         }
 
         # 从路线推理中提取条件信息
-        routes = parsed.get('routes', [])
-        recommended = parsed.get('recommended_route', '')
+        routes = parsed.get("routes", [])
+        recommended = parsed.get("recommended_route", "")
 
         for route in routes:
-            if route.get('route_id') == recommended:
-                reasoning = route.get('reasoning', '')
+            if route.get("route_id") == recommended:
+                reasoning = route.get("reasoning", "")
 
                 # 分析推理文本中的反身性关键词
                 reasoning_lower = reasoning.lower()
 
                 # 自我强化程度
-                if any(k in reasoning_lower for k in ['自我强化', 'self-reinforc', '加速', 'amplif']):
-                    condition_levels['self_reinforcing'] = 'HIGH'
-                elif any(k in reasoning_lower for k in ['减弱', '衰减', 'fade', 'weaken']):
-                    condition_levels['self_reinforcing'] = 'LOW'
+                if any(k in reasoning_lower for k in ["自我强化", "self-reinforc", "加速", "amplif"]):
+                    condition_levels["self_reinforcing"] = "HIGH"
+                elif any(k in reasoning_lower for k in ["减弱", "衰减", "fade", "weaken"]):
+                    condition_levels["self_reinforcing"] = "LOW"
                 else:
-                    condition_levels['self_reinforcing'] = 'MEDIUM'
+                    condition_levels["self_reinforcing"] = "MEDIUM"
 
                 # 预期反映度
-                if any(k in reasoning_lower for k in ['过度', 'overextend', '过热', 'overheat']):
-                    condition_levels['expectation_reflection'] = 'HIGH'
-                elif any(k in reasoning_lower for k in ['不足', 'insufficient', '低估', 'underestimate']):
-                    condition_levels['expectation_reflection'] = 'LOW'
+                if any(k in reasoning_lower for k in ["过度", "overextend", "过热", "overheat"]):
+                    condition_levels["expectation_reflection"] = "HIGH"
+                elif any(k in reasoning_lower for k in ["不足", "insufficient", "低估", "underestimate"]):
+                    condition_levels["expectation_reflection"] = "LOW"
                 else:
-                    condition_levels['expectation_reflection'] = 'MEDIUM'
+                    condition_levels["expectation_reflection"] = "MEDIUM"
 
                 # 反身性周期阶段
-                if any(k in reasoning_lower for k in ['早期', 'early', '初期', 'begin']):
-                    condition_levels['reflexivity_cycle'] = 'EARLY'
-                elif any(k in reasoning_lower for k in ['中期', 'middle', '加速', 'accelerat']):
-                    condition_levels['reflexivity_cycle'] = 'MIDDLE'
-                elif any(k in reasoning_lower for k in ['晚期', 'late', '末期', 'end']):
-                    condition_levels['reflexivity_cycle'] = 'LATE'
+                if any(k in reasoning_lower for k in ["早期", "early", "初期", "begin"]):
+                    condition_levels["reflexivity_cycle"] = "EARLY"
+                elif any(k in reasoning_lower for k in ["中期", "middle", "加速", "accelerat"]):
+                    condition_levels["reflexivity_cycle"] = "MIDDLE"
+                elif any(k in reasoning_lower for k in ["晚期", "late", "末期", "end"]):
+                    condition_levels["reflexivity_cycle"] = "LATE"
                 else:
-                    condition_levels['reflexivity_cycle'] = 'UNKNOWN'
+                    condition_levels["reflexivity_cycle"] = "UNKNOWN"
 
                 # 反转风险
-                if any(k in reasoning_lower for k in ['反转', 'reversal', '崩盘', 'crash']):
-                    condition_levels['reversal_risk'] = 'HIGH'
-                elif any(k in reasoning_lower for k in ['稳定', 'stable', '持续', 'continu']):
-                    condition_levels['reversal_risk'] = 'LOW'
+                if any(k in reasoning_lower for k in ["反转", "reversal", "崩盘", "crash"]):
+                    condition_levels["reversal_risk"] = "HIGH"
+                elif any(k in reasoning_lower for k in ["稳定", "stable", "持续", "continu"]):
+                    condition_levels["reversal_risk"] = "LOW"
                 else:
-                    condition_levels['reversal_risk'] = 'MEDIUM'
+                    condition_levels["reversal_risk"] = "MEDIUM"
 
                 break
 
         # 整体条件层级
-        risk_levels = ['LOW', 'MEDIUM', 'HIGH', 'UNKNOWN']
+        risk_levels = ["LOW", "MEDIUM", "HIGH", "UNKNOWN"]
         risk_scores = {level: i for i, level in enumerate(risk_levels)}
 
         # 计算整体风险分数
         total_score = 0
         count = 0
-        for key in ['self_reinforcing', 'expectation_reflection', 'reversal_risk']:
+        for key in ["self_reinforcing", "expectation_reflection", "reversal_risk"]:
             level = condition_levels[key]
             if level in risk_scores:
                 total_score += risk_scores[level]
@@ -461,11 +472,11 @@ class ReasoningEngine:
         if count > 0:
             avg_score = total_score / count
             if avg_score < 1.0:
-                condition_levels['overall'] = 'LOW'
+                condition_levels["overall"] = "LOW"
             elif avg_score < 2.0:
-                condition_levels['overall'] = 'MEDIUM'
+                condition_levels["overall"] = "MEDIUM"
             else:
-                condition_levels['overall'] = 'HIGH'
+                condition_levels["overall"] = "HIGH"
 
         return condition_levels
 
@@ -479,29 +490,31 @@ class ReasoningEngine:
         这是路径②中的"基础模型预测"，LLM在此之上做"最后一公里修正"。
         """
         # 从趋势阶段推导基础方向
-        phase = context.trend_phase.phase if hasattr(context, 'trend_phase') else 'UNKNOWN'
-        confidence = context.trend_phase.confidence if hasattr(context, 'trend_phase') else 0.5
+        phase = context.trend_phase.phase if hasattr(context, "trend_phase") else "UNKNOWN"
+        confidence = context.trend_phase.confidence if hasattr(context, "trend_phase") else 0.5
 
         # 基于阶段的基础信号
         phase_signal_map = {
-            'CONSOLIDATING': {'direction': 0, 'signal': 'HOLD', 'strength': 'NEUTRAL'},
-            'EMERGING': {'direction': 0, 'signal': 'WATCH', 'strength': 'WEAK'},
-            'DEVELOPING': {'direction': 1, 'signal': 'BUY', 'strength': 'MEDIUM'},
-            'MATURE': {'direction': 1, 'signal': 'HOLD_LONG', 'strength': 'STRONG'},
-            'FATIGUING': {'direction': 0, 'signal': 'REDUCE', 'strength': 'WEAK'},
-            'REVERSING': {'direction': -1, 'signal': 'SELL', 'strength': 'MEDIUM'},
+            "CONSOLIDATING": {"direction": 0, "signal": "HOLD", "strength": "NEUTRAL"},
+            "EMERGING": {"direction": 0, "signal": "WATCH", "strength": "WEAK"},
+            "DEVELOPING": {"direction": 1, "signal": "BUY", "strength": "MEDIUM"},
+            "MATURE": {"direction": 1, "signal": "HOLD_LONG", "strength": "STRONG"},
+            "FATIGUING": {"direction": 0, "signal": "REDUCE", "strength": "WEAK"},
+            "REVERSING": {"direction": -1, "signal": "SELL", "strength": "MEDIUM"},
         }
 
-        base = phase_signal_map.get(phase, {'direction': 0, 'signal': 'UNKNOWN', 'strength': 'NEUTRAL'})
+        base = phase_signal_map.get(phase, {"direction": 0, "signal": "UNKNOWN", "strength": "NEUTRAL"})
 
         # 添加上下文信息
-        base['trend_phase'] = phase
-        base['phase_confidence'] = confidence
-        base['current_price'] = context.current_price if hasattr(context, 'current_price') else 0
+        base["trend_phase"] = phase
+        base["phase_confidence"] = confidence
+        base["current_price"] = context.current_price if hasattr(context, "current_price") else 0
 
         # 添加市场结构信息（如果有）
-        if hasattr(context, 'snapshot') and context.snapshot:
-            base['volatility'] = 'HIGH' if context.snapshot.high - context.snapshot.low > context.current_price * 0.02 else 'NORMAL'
+        if hasattr(context, "snapshot") and context.snapshot:
+            base["volatility"] = (
+                "HIGH" if context.snapshot.high - context.snapshot.low > context.current_price * 0.02 else "NORMAL"
+            )
 
         return base
 
@@ -512,31 +525,31 @@ class ReasoningEngine:
         提取LLM对基础预测的修正内容。
         """
         revision = {
-            'routes_count': len(parsed.get('routes', [])),
-            'recommended_route': parsed.get('recommended_route', ''),
-            'warnings': parsed.get('warnings', []),
-            'has_recommendation': bool(parsed.get('recommended_route')),
+            "routes_count": len(parsed.get("routes", [])),
+            "recommended_route": parsed.get("recommended_route", ""),
+            "warnings": parsed.get("warnings", []),
+            "has_recommendation": bool(parsed.get("recommended_route")),
         }
 
         # 提取推荐路线的详细信息
-        routes = parsed.get('routes', [])
-        if routes and parsed.get('recommended_route'):
+        routes = parsed.get("routes", [])
+        if routes and parsed.get("recommended_route"):
             for route in routes:
-                if route.get('route_id') == parsed['recommended_route']:
-                    revision['recommended_action'] = route.get('action', '')
-                    revision['recommended_confidence'] = route.get('confidence', 0)
-                    revision['recommended_reasoning'] = route.get('reasoning', '')
+                if route.get("route_id") == parsed["recommended_route"]:
+                    revision["recommended_action"] = route.get("action", "")
+                    revision["recommended_confidence"] = route.get("confidence", 0)
+                    revision["recommended_reasoning"] = route.get("reasoning", "")
                     break
 
         return revision
 
-    def _calculate_volatility_anchor(self, context: MarketContext) -> Optional[Dict[str, Any]]:
+    def _calculate_volatility_anchor(self, context: MarketContext) -> dict[str, Any] | None:
         """
         计算波动幅度止损锚点
-        
+
         Args:
             context: 市场上下文
-            
+
         Returns:
             锚点信息字典，如果计算失败返回 None
         """
@@ -544,33 +557,33 @@ class ReasoningEngine:
             # 从上下文中获取价格数据
             # 注意：这里使用上下文中的指标数据来估算
             snapshot = context.snapshot
-            
+
             # 获取当前价格
-            current_price = snapshot.close if hasattr(snapshot, 'close') else None
+            current_price = snapshot.close if hasattr(snapshot, "close") else None
             if current_price is None:
                 return None
-            
+
             # 使用 ATR 作为波动幅度的近似值
             # ATR 是 Average True Range，与 K 线高度类似
-            atr = snapshot.atr if hasattr(snapshot, 'atr') else None
+            atr = snapshot.atr if hasattr(snapshot, "atr") else None
             if atr is None:
                 return None
-            
+
             # 计算锚点距离（ATR * 2.0）
             anchor_distance = atr * 2.0
             anchor_distance_pct = anchor_distance / current_price * 100
-            
+
             # 计算多头和空头止损
             long_stop_loss = current_price - anchor_distance
             short_stop_loss = current_price + anchor_distance
-            
+
             return {
-                'current_price': current_price,
-                'median_height': atr,  # 使用 ATR 近似
-                'anchor_distance': anchor_distance,
-                'anchor_distance_pct': anchor_distance_pct,
-                'long_stop_loss': long_stop_loss,
-                'short_stop_loss': short_stop_loss
+                "current_price": current_price,
+                "median_height": atr,  # 使用 ATR 近似
+                "anchor_distance": anchor_distance,
+                "anchor_distance_pct": anchor_distance_pct,
+                "long_stop_loss": long_stop_loss,
+                "short_stop_loss": short_stop_loss,
             }
         except Exception as e:
             logger.warning(f"计算波动幅度锚点失败: {e}")
@@ -582,18 +595,18 @@ class ReasoningEngine:
 
         记录基础预测和LLM修正之间的差异，用于可审计性。
         """
-        llm_revision = parsed.get('llm_revision', {})
-        recommended_action = llm_revision.get('recommended_action', '')
+        llm_revision = parsed.get("llm_revision", {})
+        recommended_action = llm_revision.get("recommended_action", "")
 
         # 判断LLM是否修正了基础预测
-        base_signal = base_prediction.get('signal', 'UNKNOWN')
-        base_direction = base_prediction.get('direction', 0)
+        base_signal = base_prediction.get("signal", "UNKNOWN")
+        base_direction = base_prediction.get("direction", 0)
 
         # 从LLM推荐动作推断方向
         llm_direction = 0
-        if '多' in recommended_action or 'LONG' in recommended_action.upper():
+        if "多" in recommended_action or "LONG" in recommended_action.upper():
             llm_direction = 1
-        elif '空' in recommended_action or 'SHORT' in recommended_action.upper():
+        elif "空" in recommended_action or "SHORT" in recommended_action.upper():
             llm_direction = -1
 
         # 计算修正幅度
@@ -601,22 +614,23 @@ class ReasoningEngine:
 
         # 判断修正类型
         if revision_magnitude == 0:
-            revision_type = 'CONFIRM'  # LLM确认基础预测
+            revision_type = "CONFIRM"  # LLM确认基础预测
         elif llm_direction == 0:
-            revision_type = 'SOFTEN'  # LLM降低信号强度
+            revision_type = "SOFTEN"  # LLM降低信号强度
         else:
-            revision_type = 'REVERSE'  # LLM反转信号
+            revision_type = "REVERSE"  # LLM反转信号
 
         trace = {
-            'base_signal': base_signal,
-            'base_direction': base_direction,
-            'llm_direction': llm_direction,
-            'revision_type': revision_type,
-            'revision_magnitude': revision_magnitude,
-            'base_confidence': base_prediction.get('phase_confidence', 0.5),
-            'llm_confidence': llm_revision.get('recommended_confidence', 0),
-            'confidence_change': llm_revision.get('recommended_confidence', 0) - base_prediction.get('phase_confidence', 0.5),
-            'warnings_count': len(llm_revision.get('warnings', [])),
+            "base_signal": base_signal,
+            "base_direction": base_direction,
+            "llm_direction": llm_direction,
+            "revision_type": revision_type,
+            "revision_magnitude": revision_magnitude,
+            "base_confidence": base_prediction.get("phase_confidence", 0.5),
+            "llm_confidence": llm_revision.get("recommended_confidence", 0),
+            "confidence_change": llm_revision.get("recommended_confidence", 0)
+            - base_prediction.get("phase_confidence", 0.5),
+            "warnings_count": len(llm_revision.get("warnings", [])),
         }
 
         return trace
@@ -683,11 +697,11 @@ class ReasoningEngine:
     def _build_user_prompt(
         self,
         context: MarketContext,
-        similar_experiences: List[ExperienceMatch],
+        similar_experiences: list[ExperienceMatch],
         experience_aggregation: dict,
-        multi_dimension_result: Optional[dict] = None,
-        trade_history: Optional[List[float]] = None,
-        circuit_breaker_status: Optional[dict] = None,
+        multi_dimension_result: dict | None = None,
+        trade_history: list[float] | None = None,
+        circuit_breaker_status: dict | None = None,
     ) -> str:
         """
         构建用户提示词
@@ -702,8 +716,8 @@ class ReasoningEngine:
         parts.append("")
 
         # 2. 机制权重分析（v3.1 新增）
-        current_phase = context.trend_phase.phase if hasattr(context, 'trend_phase') else 'UNKNOWN'
-        phase_confidence = context.trend_phase.confidence if hasattr(context, 'trend_phase') else 0.5
+        current_phase = context.trend_phase.phase if hasattr(context, "trend_phase") else "UNKNOWN"
+        phase_confidence = context.trend_phase.confidence if hasattr(context, "trend_phase") else 0.5
 
         parts.append("# 机制权重分析")
         parts.append(f"当前市场机制：**{current_phase}**（置信度 {phase_confidence:.0%}）")
@@ -711,12 +725,10 @@ class ReasoningEngine:
 
         # 统计同机制和异机制经验
         if similar_experiences:
-            same_regime = [m for m in similar_experiences 
-                          if m.experience.trend_phase == current_phase]
-            cross_regime = [m for m in similar_experiences 
-                           if m.experience.trend_phase != current_phase]
+            same_regime = [m for m in similar_experiences if m.experience.trend_phase == current_phase]
+            cross_regime = [m for m in similar_experiences if m.experience.trend_phase != current_phase]
 
-            parts.append(f"## 经验分布")
+            parts.append("## 经验分布")
             parts.append(f"- 同机制经验（{current_phase}）：{len(same_regime)} 条")
             parts.append(f"- 异机制经验：{len(cross_regime)} 条")
             parts.append("")
@@ -755,10 +767,12 @@ class ReasoningEngine:
         if experience_aggregation:
             parts.append("# 经验聚合统计")
             for action, stats in experience_aggregation.items():
-                parts.append(f"- {action}：{stats['count']}次，"
-                           f"平均收益{stats['avg_return']:+.2f}%，"
-                           f"胜率{int(stats['win_rate'] * 100)}%，"
-                           f"风险调整收益{stats['risk_adjusted_return']:+.2f}")
+                parts.append(
+                    f"- {action}：{stats['count']}次，"
+                    f"平均收益{stats['avg_return']:+.2f}%，"
+                    f"胜率{int(stats['win_rate'] * 100)}%，"
+                    f"风险调整收益{stats['risk_adjusted_return']:+.2f}"
+                )
             parts.append("")
 
         # 5. 反身性分析框架（v3.2 新增）
@@ -796,7 +810,9 @@ class ReasoningEngine:
                 parts.append("")
                 parts.append(f"- **当前价格**: {anchor_info['current_price']:.2f}")
                 parts.append(f"- **波动幅度中位数**: {anchor_info['median_height']:.2f}")
-                parts.append(f"- **止损锚点距离**: {anchor_info['anchor_distance']:.2f}（{anchor_info['anchor_distance_pct']:.2f}%）")
+                parts.append(
+                    f"- **止损锚点距离**: {anchor_info['anchor_distance']:.2f}（{anchor_info['anchor_distance_pct']:.2f}%）"
+                )
                 parts.append(f"- **多头止损参考**: {anchor_info['long_stop_loss']:.2f}")
                 parts.append(f"- **空头止损参考**: {anchor_info['short_stop_loss']:.2f}")
                 parts.append("")
@@ -807,12 +823,15 @@ class ReasoningEngine:
 
         # 7. 基差与季节性分析（统一路由层新增）
         try:
-            symbol_variety = getattr(context, 'symbol', '') or ''
+            symbol_variety = getattr(context, "symbol", "") or ""
             # 提取品种代码
-            variety = ''.join([c for c in symbol_variety.split('.')[-1] if not c.isdigit()]).upper() if symbol_variety else ''
+            variety = (
+                "".join([c for c in symbol_variety.split(".")[-1] if not c.isdigit()]).upper() if symbol_variety else ""
+            )
 
             if variety:
                 from trend_scanner.unified_data_router import get_router
+
                 router = get_router()
 
                 # 基差数据
@@ -824,9 +843,9 @@ class ReasoningEngine:
                     parts.append(f"- **现货价格**: {bd.get('spot_price', 'N/A')}")
                     parts.append(f"- **期货价格**: {bd.get('futures_price', 'N/A')}")
                     parts.append(f"- **基差**: {bd.get('basis', 'N/A')}（基差率 {bd.get('basis_rate', 'N/A')}%）")
-                    if bd.get('basis', 0) > 0:
+                    if bd.get("basis", 0) > 0:
                         parts.append("**解读**：正基差（现货升水），反映现货偏紧或市场看涨预期。")
-                    elif bd.get('basis', 0) < 0:
+                    elif bd.get("basis", 0) < 0:
                         parts.append("**解读**：负基差（期货升水），反映库存充足或市场看跌预期。")
 
                 # 季节性数据
@@ -836,12 +855,14 @@ class ReasoningEngine:
                     parts.append("")
                     parts.append("# 季节性规律")
                     current_month = datetime.now().month
-                    current_signal = sd.get('current_month_signal', 0)
-                    current_pos_rate = sd.get('current_month_pos_rate', 0)
-                    parts.append(f"- **当前月份({current_month}月)**: 历史平均变化 {current_signal:+.2f}%, 上涨概率 {current_pos_rate:.0f}%")
-                    if sd.get('strong_months'):
+                    current_signal = sd.get("current_month_signal", 0)
+                    current_pos_rate = sd.get("current_month_pos_rate", 0)
+                    parts.append(
+                        f"- **当前月份({current_month}月)**: 历史平均变化 {current_signal:+.2f}%, 上涨概率 {current_pos_rate:.0f}%"
+                    )
+                    if sd.get("strong_months"):
                         parts.append(f"- **强势月份**: {sd['strong_months']}月（历史上涨概率>60%）")
-                    if sd.get('weak_months'):
+                    if sd.get("weak_months"):
                         parts.append(f"- **弱势月份**: {sd['weak_months']}月（历史下跌概率>60%）")
                     parts.append(f"- **数据覆盖**: 近{sd.get('years_covered', 5)}年")
                     parts.append("**说明**：季节性规律是统计参考，不构成确定性预测。需结合当前供需格局判断。")
@@ -850,21 +871,24 @@ class ReasoningEngine:
 
         # 7.5 知识锚点注入（v6.1 新增）
         try:
-            from trend_scanner.knowledge_anchors import KnowledgeAnchorManager
             import os
-            db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'data', 'meta.db')
+
+            from trend_scanner.knowledge_anchors import KnowledgeAnchorManager
+
+            db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "meta.db")
             if os.path.exists(db_path):
                 anchor_mgr = KnowledgeAnchorManager(db_path)
                 # 自动导入默认锚点（如果表为空）
                 stats = anchor_mgr.get_statistics()
-                if stats.get('total_anchors', 0) == 0:
+                if stats.get("total_anchors", 0) == 0:
                     anchor_mgr.seed_default_anchors()
 
                 # 获取与当前趋势阶段相关的锚点
-                phase = current_phase if current_phase != 'UNKNOWN' else None
+                phase = current_phase if current_phase != "UNKNOWN" else None
                 dimension_map = {
-                    'TREND_UP': 'trend', 'TREND_DOWN': 'trend',
-                    'RANGE': 'volatility',
+                    "TREND_UP": "trend",
+                    "TREND_DOWN": "trend",
+                    "RANGE": "volatility",
                 }
                 target_dim = dimension_map.get(current_phase)
 
@@ -878,9 +902,11 @@ class ReasoningEngine:
                     for s in seeds[:5]:  # 最多5个
                         parts.append(f"### {s['title']}（{s['dimension']}）")
                         parts.append(f"- **核心逻辑**: {s['core_logic']}")
-                        if s.get('factor_seeds'):
+                        if s.get("factor_seeds"):
                             parts.append(f"- **因子种子**: {', '.join(fs['name'] for fs in s['factor_seeds'][:3])}")
-                        parts.append(f"- **验证规则**: IC≥{s['validation_rules'].get('min_ic', 0)}, 胜率≥{s['validation_rules'].get('min_win_rate', 0):.0%}")
+                        parts.append(
+                            f"- **验证规则**: IC≥{s['validation_rules'].get('min_ic', 0)}, 胜率≥{s['validation_rules'].get('min_win_rate', 0):.0%}"
+                        )
                         parts.append("")
                     parts.append("**说明**: 知识锚点是经过验证的分析方法论，可作为推理的参考框架。")
         except Exception as e:
@@ -896,79 +922,81 @@ class ReasoningEngine:
                 parts.append("")
 
                 # 整体概览
-                overall = md.get('overall_score', 0)
-                confidence = md.get('confidence', 0)
-                signal = md.get('signal', 'NEUTRAL')
+                overall = md.get("overall_score", 0)
+                confidence = md.get("confidence", 0)
+                signal = md.get("signal", "NEUTRAL")
                 parts.append(f"- **综合得分**: {overall:+.3f} (范围: -1.0 ~ +1.0)")
                 parts.append(f"- **信号方向**: {signal}")
                 parts.append(f"- **置信度**: {confidence:.0%}")
                 parts.append("")
 
                 # 各维度明细
-                dims = md.get('dimensions', [])
+                dims = md.get("dimensions", [])
                 if dims:
                     parts.append("## 维度明细")
                     for d in dims:
-                        name = d.get('name', '?')
-                        composite = d.get('composite', 0)
-                        direction = d.get('direction', 'NEUTRAL')
-                        weight = d.get('weight', 0)
-                        dim_conf = d.get('confidence', 0)
+                        name = d.get("name", "?")
+                        composite = d.get("composite", 0)
+                        direction = d.get("direction", "NEUTRAL")
+                        weight = d.get("weight", 0)
+                        dim_conf = d.get("confidence", 0)
 
                         # 方向标记
-                        if direction == 'BULLISH':
-                            arrow = '↑'
-                        elif direction == 'BEARISH':
-                            arrow = '↓'
+                        if direction == "BULLISH":
+                            arrow = "↑"
+                        elif direction == "BEARISH":
+                            arrow = "↓"
                         else:
-                            arrow = '→'
+                            arrow = "→"
 
-                        parts.append(f"- **{name}** (权重{weight:.0%}): "
-                                    f"{composite:+.3f} {arrow} {direction} "
-                                    f"[置信度{dim_conf:.0%}]")
+                        parts.append(
+                            f"- **{name}** (权重{weight:.0%}): "
+                            f"{composite:+.3f} {arrow} {direction} "
+                            f"[置信度{dim_conf:.0%}]"
+                        )
 
                         # 各维度关键指标得分
-                        ind_scores = d.get('indicator_scores', {})
+                        ind_scores = d.get("indicator_scores", {})
                         if ind_scores:
-                            top3 = sorted(ind_scores.items(),
-                                         key=lambda x: abs(x[1]), reverse=True)[:3]
-                            parts.append(f"  关键指标: "
-                                        + ", ".join(f"{k}={v:+.2f}" for k, v in top3))
+                            top3 = sorted(ind_scores.items(), key=lambda x: abs(x[1]), reverse=True)[:3]
+                            parts.append("  关键指标: " + ", ".join(f"{k}={v:+.2f}" for k, v in top3))
                     parts.append("")
 
                 # 维度间一致性
                 if len(dims) >= 2:
-                    directions = [d.get('direction', 'NEUTRAL') for d in dims]
-                    bullish_count = sum(1 for d in directions if d == 'BULLISH')
-                    bearish_count = sum(1 for d in directions if d == 'BEARISH')
+                    directions = [d.get("direction", "NEUTRAL") for d in dims]
+                    bullish_count = sum(1 for d in directions if d == "BULLISH")
+                    bearish_count = sum(1 for d in directions if d == "BEARISH")
                     total = len(directions)
 
                     if bullish_count >= total * 0.6:
-                        parts.append("**维度一致性**: 偏多共识 "
-                                    f"({bullish_count}/{total} 维度看多)")
+                        parts.append(f"**维度一致性**: 偏多共识 ({bullish_count}/{total} 维度看多)")
                     elif bearish_count >= total * 0.6:
-                        parts.append("**维度一致性**: 偏空共识 "
-                                    f"({bearish_count}/{total} 维度看空)")
+                        parts.append(f"**维度一致性**: 偏空共识 ({bearish_count}/{total} 维度看空)")
                     else:
-                        parts.append("**维度一致性**: 分歧较大 "
-                                    f"(多{bullish_count}/空{bearish_count}/中{total - bullish_count - bearish_count})")
+                        parts.append(
+                            "**维度一致性**: 分歧较大 "
+                            f"(多{bullish_count}/空{bearish_count}/中{total - bullish_count - bearish_count})"
+                        )
                     parts.append("")
 
                 # 量能特别提示
                 vol_dim = None
                 for d in dims:
-                    if d.get('name') == 'volume':
+                    if d.get("name") == "volume":
                         vol_dim = d
                         break
                 if vol_dim:
-                    vol_composite = vol_dim.get('composite', 0)
-                    vol_direction = vol_dim.get('direction', 'NEUTRAL')
+                    vol_composite = vol_dim.get("composite", 0)
+                    vol_direction = vol_dim.get("direction", "NEUTRAL")
                     if vol_composite > 0.4:
-                        parts.append("**量能提示**: 成交量结构明显偏多，"
-                                    f"建议确认是否为趋势突破放量 (score={vol_composite:+.3f})")
+                        parts.append(
+                            f"**量能提示**: 成交量结构明显偏多，建议确认是否为趋势突破放量 (score={vol_composite:+.3f})"
+                        )
                     elif vol_composite < -0.4:
-                        parts.append("**量能提示**: 成交量结构明显偏空，"
-                                    f"注意是否为趋势衰竭缩量 (score={vol_composite:+.3f})")
+                        parts.append(
+                            f"**量能提示**: 成交量结构明显偏空，注意是否为趋势衰竭缩量 (score={vol_composite:+.3f})"
+                        )
                     parts.append("")
 
             except Exception as e:
@@ -978,6 +1006,7 @@ class ReasoningEngine:
         if trade_history and len(trade_history) >= 3:
             try:
                 from trend_scanner.monte_carlo import MonteCarloSimulator
+
                 sim = MonteCarloSimulator(n_simulations=1000, random_seed=42)
                 mc_result = sim.simulate(trade_history, initial_capital=100000)
 
@@ -1037,9 +1066,11 @@ class ReasoningEngine:
         # 9. 请求推理
         parts.append("")
         parts.append("# 请求")
-        parts.append("基于以上市场状态、历史经验、反身性分析、波动幅度锚点、基差和季节性数据"
-                    + ("、多维度筛选评分" if multi_dimension_result else "")
-                    + "，请给出2-3条操作方案。")
+        parts.append(
+            "基于以上市场状态、历史经验、反身性分析、波动幅度锚点、基差和季节性数据"
+            + ("、多维度筛选评分" if multi_dimension_result else "")
+            + "，请给出2-3条操作方案。"
+        )
         parts.append("每条方案都要有具体的约束建议（仓位、止损、入场条件），并附带推理依据。")
         parts.append("如果有明确推荐，请说明理由。")
         parts.append("")
@@ -1049,8 +1080,9 @@ class ReasoningEngine:
         parts.append("3. 波动幅度止损锚点是参考值，你可以根据市场状态动态调整止损位置。")
         parts.append("4. 基差和季节性是补充维度，可辅助判断供需格局和时机选择。")
         if multi_dimension_result:
-            parts.append("5. 多维度评分是五维度综合结果，重点关注维度间一致性。"
-                        "当维度一致性高时信号更可靠；分歧大时建议谨慎。")
+            parts.append(
+                "5. 多维度评分是五维度综合结果，重点关注维度间一致性。当维度一致性高时信号更可靠；分歧大时建议谨慎。"
+            )
 
         return "\n".join(parts)
 
@@ -1078,12 +1110,12 @@ class ReasoningEngine:
         import re
 
         # 找 ```json ... ``` 块
-        json_match = re.search(r'```json\s*(.*?)\s*```', text, re.DOTALL)
+        json_match = re.search(r"```json\s*(.*?)\s*```", text, re.DOTALL)
         if json_match:
             return json_match.group(1)
 
         # 找 { ... } 块
-        brace_match = re.search(r'\{.*\}', text, re.DOTALL)
+        brace_match = re.search(r"\{.*\}", text, re.DOTALL)
         if brace_match:
             return brace_match.group(0)
 
@@ -1111,33 +1143,33 @@ class ReasoningEngine:
     def _validate_response(self, data: dict) -> dict:
         """验证和规范化响应"""
         # 确保 routes 存在
-        if 'routes' not in data:
-            data['routes'] = []
+        if "routes" not in data:
+            data["routes"] = []
 
         # 确保每个 route 有必要的字段
-        for route in data['routes']:
-            if 'route_id' not in route:
-                route['route_id'] = 'A'
-            if 'name' not in route:
-                route['name'] = '未命名路线'
-            if 'action' not in route:
-                route['action'] = '无操作'
-            if 'confidence' not in route:
-                route['confidence'] = 0.5
-            if 'reasoning' not in route:
-                route['reasoning'] = '无推理'
-            if 'constraints' not in route:
-                route['constraints'] = []
-            if 'risks' not in route:
-                route['risks'] = []
+        for route in data["routes"]:
+            if "route_id" not in route:
+                route["route_id"] = "A"
+            if "name" not in route:
+                route["name"] = "未命名路线"
+            if "action" not in route:
+                route["action"] = "无操作"
+            if "confidence" not in route:
+                route["confidence"] = 0.5
+            if "reasoning" not in route:
+                route["reasoning"] = "无推理"
+            if "constraints" not in route:
+                route["constraints"] = []
+            if "risks" not in route:
+                route["risks"] = []
 
         # 确保 recommended_route 存在
-        if 'recommended_route' not in data and data['routes']:
-            data['recommended_route'] = data['routes'][0]['route_id']
+        if "recommended_route" not in data and data["routes"]:
+            data["recommended_route"] = data["routes"][0]["route_id"]
 
         # 确保 warnings 存在
-        if 'warnings' not in data:
-            data['warnings'] = []
+        if "warnings" not in data:
+            data["warnings"] = []
 
         return data
 
@@ -1197,12 +1229,15 @@ class ReasoningEngine:
                 },
             ]
 
-        return json.dumps({
-            "routes": routes,
-            "recommended_route": "A",
-            "warnings": ["紧急 fallback 模式，建议质量有限"],
-            "reasoning_summary": f"市场处于{phase}阶段，使用规则退化建议",
-        }, ensure_ascii=False)
+        return json.dumps(
+            {
+                "routes": routes,
+                "recommended_route": "A",
+                "warnings": ["紧急 fallback 模式，建议质量有限"],
+                "reasoning_summary": f"市场处于{phase}阶段，使用规则退化建议",
+            },
+            ensure_ascii=False,
+        )
 
 
 class ConstraintGenerator:
@@ -1218,28 +1253,26 @@ class ConstraintGenerator:
         route_data: dict,
         context: MarketContext,
         experience_aggregation: dict,
-    ) -> List[Constraint]:
+    ) -> list[Constraint]:
         """从路线数据生成约束"""
         constraints = []
 
         # 从 LLM 输出中提取约束
-        for c_data in route_data.get('constraints', []):
+        for c_data in route_data.get("constraints", []):
             constraint = Constraint(
-                constraint_type=c_data.get('constraint_type', 'UNKNOWN'),
-                value=c_data.get('value', ''),
-                numeric_value=c_data.get('numeric_value', 0.0),
-                confidence=c_data.get('confidence', 0.5),
-                reasoning=c_data.get('reasoning', ''),
-                historical_basis=c_data.get('historical_basis', ''),
-                uncertainty_range=c_data.get('uncertainty_range', ''),
+                constraint_type=c_data.get("constraint_type", "UNKNOWN"),
+                value=c_data.get("value", ""),
+                numeric_value=c_data.get("numeric_value", 0.0),
+                confidence=c_data.get("confidence", 0.5),
+                reasoning=c_data.get("reasoning", ""),
+                historical_basis=c_data.get("historical_basis", ""),
+                uncertainty_range=c_data.get("uncertainty_range", ""),
             )
             constraints.append(constraint)
 
         # 如果 LLM 没有提供足够的约束，用经验数据补充
         if not constraints:
-            constraints = self._generate_from_experience(
-                context, experience_aggregation
-            )
+            constraints = self._generate_from_experience(context, experience_aggregation)
 
         return constraints
 
@@ -1247,16 +1280,16 @@ class ConstraintGenerator:
         self,
         context: MarketContext,
         experience_aggregation: dict,
-    ) -> List[Constraint]:
+    ) -> list[Constraint]:
         """从经验数据生成约束"""
         constraints = []
 
         # 找到最佳动作
         best_action = None
-        best_score = -float('inf')
+        best_score = -float("inf")
 
         for action, stats in experience_aggregation.items():
-            score = stats.get('risk_adjusted_return', 0) * stats.get('win_rate', 0)
+            score = stats.get("risk_adjusted_return", 0) * stats.get("win_rate", 0)
             if score > best_score:
                 best_score = score
                 best_action = action
@@ -1265,29 +1298,37 @@ class ConstraintGenerator:
             stats = experience_aggregation[best_action]
 
             # 仓位约束
-            if stats['win_rate'] > 0.5:
-                position_pct = min(5, max(1, int(stats['win_rate'] * 8)))
-                constraints.append(Constraint(
-                    constraint_type='POSITION_SIZE',
-                    value=f"{position_pct}%",
-                    numeric_value=position_pct / 100,
-                    confidence=stats['win_rate'],
-                    reasoning=f"历史胜率{int(stats['win_rate'] * 100)}%，风险调整收益{stats['risk_adjusted_return']:+.2f}",
-                    historical_basis=f"基于{stats['count']}次相似情境",
-                ))
+            if stats["win_rate"] > 0.5:
+                position_pct = min(5, max(1, int(stats["win_rate"] * 8)))
+                constraints.append(
+                    Constraint(
+                        constraint_type="POSITION_SIZE",
+                        value=f"{position_pct}%",
+                        numeric_value=position_pct / 100,
+                        confidence=stats["win_rate"],
+                        reasoning=f"历史胜率{int(stats['win_rate'] * 100)}%，风险调整收益{stats['risk_adjusted_return']:+.2f}",
+                        historical_basis=f"基于{stats['count']}次相似情境",
+                    )
+                )
 
             # 止损约束
             atr = context.snapshot.atr
             if atr > 0:
                 stop_distance = atr * 2  # 默认 2 倍 ATR
-                stop_price = context.current_price - stop_distance if best_action == 'LONG' else context.current_price + stop_distance
-                constraints.append(Constraint(
-                    constraint_type='STOP_LOSS',
-                    value=f"{stop_price:.0f}（2倍ATR）",
-                    numeric_value=stop_price,
-                    confidence=0.6,
-                    reasoning=f"基于当前ATR({atr:.2f})的2倍设置止损",
-                    historical_basis=f"相似情境平均最大回撤{stats.get('avg_max_drawdown', 0):.2f}%",
-                ))
+                stop_price = (
+                    context.current_price - stop_distance
+                    if best_action == "LONG"
+                    else context.current_price + stop_distance
+                )
+                constraints.append(
+                    Constraint(
+                        constraint_type="STOP_LOSS",
+                        value=f"{stop_price:.0f}（2倍ATR）",
+                        numeric_value=stop_price,
+                        confidence=0.6,
+                        reasoning=f"基于当前ATR({atr:.2f})的2倍设置止损",
+                        historical_basis=f"相似情境平均最大回撤{stats.get('avg_max_drawdown', 0):.2f}%",
+                    )
+                )
 
         return constraints

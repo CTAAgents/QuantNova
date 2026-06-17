@@ -16,11 +16,13 @@
 """
 
 import logging
-from dataclasses import dataclass, field
-from typing import Optional, List, Dict, Any, Tuple
+from dataclasses import dataclass
 from datetime import datetime
-import pandas as pd
+from typing import Any
+
 import numpy as np
+import pandas as pd
+
 
 logger = logging.getLogger(__name__)
 
@@ -33,24 +35,20 @@ SPREAD_PAIRS = {
     # 黑色系跨期
     "RB_spread": {"near": "RB", "far": "RB", "description": "螺纹钢跨期套利"},
     "HC_spread": {"near": "HC", "far": "HC", "description": "热卷跨期套利"},
-    "I_spread":  {"near": "I",  "far": "I",  "description": "铁矿石跨期套利"},
-    "J_spread":  {"near": "J",  "far": "J",  "description": "焦炭跨期套利"},
+    "I_spread": {"near": "I", "far": "I", "description": "铁矿石跨期套利"},
+    "J_spread": {"near": "J", "far": "J", "description": "焦炭跨期套利"},
     "JM_spread": {"near": "JM", "far": "JM", "description": "焦煤跨期套利"},
-
     # 黑色系跨品种
-    "rebar_iron": {"near": "RB", "far": "I",  "description": "螺纹钢-铁矿石比价"},
+    "rebar_iron": {"near": "RB", "far": "I", "description": "螺纹钢-铁矿石比价"},
     "coke_coking": {"near": "J", "far": "JM", "description": "焦炭-焦煤比价"},
     "hot_coil_rebar": {"near": "HC", "far": "RB", "description": "热卷-螺纹钢比价"},
-
     # 有色系
     "cu_al_spread": {"near": "CU", "far": "AL", "description": "铜铝比价"},
-
     # 能源化工
     "sc_fu_spread": {"near": "SC", "far": "FU", "description": "原油-燃料油价差"},
     "ta_ma_spread": {"near": "TA", "far": "MA", "description": "PTA-甲醇比价"},
-
     # 农产品
-    "soybean_oil": {"near": "M",  "far": "Y",  "description": "豆粕-豆油比价"},
+    "soybean_oil": {"near": "M", "far": "Y", "description": "豆粕-豆油比价"},
 }
 
 
@@ -58,27 +56,29 @@ SPREAD_PAIRS = {
 # 价差数据结构
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class SpreadAnalysis:
     """价差分析结果"""
+
     pair_name: str
     near_symbol: str
     far_symbol: str
     description: str
-    spread: float               # 价差 = near - far (或 near/far 比价)
-    spread_ma20: float          # 20日价差均值
-    spread_std: float           # 20日价差标准差
-    z_score: float              # Z-Score = (spread - ma) / std
-    spread_percentile: float    # 价差在历史中的百分位 (0-100)
-    is_cointegrated: bool       # 是否协整（p-value < 0.05）
-    coint_pvalue: float         # 协整检验 p-value
-    half_life: float            # 均值回归半衰期（天）
-    signal: str                 # "LONG_SPREAD" / "SHORT_SPREAD" / "NEUTRAL"
-    signal_strength: float      # 信号强度 (0-1)
-    reason: str                 # 信号原因
+    spread: float  # 价差 = near - far (或 near/far 比价)
+    spread_ma20: float  # 20日价差均值
+    spread_std: float  # 20日价差标准差
+    z_score: float  # Z-Score = (spread - ma) / std
+    spread_percentile: float  # 价差在历史中的百分位 (0-100)
+    is_cointegrated: bool  # 是否协整（p-value < 0.05）
+    coint_pvalue: float  # 协整检验 p-value
+    half_life: float  # 均值回归半衰期（天）
+    signal: str  # "LONG_SPREAD" / "SHORT_SPREAD" / "NEUTRAL"
+    signal_strength: float  # 信号强度 (0-1)
+    reason: str  # 信号原因
     timestamp: str = ""
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "pair_name": self.pair_name,
             "near": self.near_symbol,
@@ -103,6 +103,7 @@ class SpreadAnalysis:
 # ArbitrageAnalyzer
 # ---------------------------------------------------------------------------
 
+
 class ArbitrageAnalyzer:
     """套利分析器
 
@@ -119,11 +120,12 @@ class ArbitrageAnalyzer:
     def add_spread_pair(self, name: str, near: str, far: str, description: str = ""):
         """添加自定义价差对"""
         self._spread_pairs[name] = {
-            "near": near, "far": far,
+            "near": near,
+            "far": far,
             "description": description or f"{near}-{far} 价差",
         }
 
-    def get_available_pairs(self) -> Dict[str, str]:
+    def get_available_pairs(self) -> dict[str, str]:
         """获取可用价差对"""
         return {k: v["description"] for k, v in self._spread_pairs.items()}
 
@@ -152,25 +154,35 @@ class ArbitrageAnalyzer:
         ts = datetime.now().isoformat()
 
         # 对齐日期
-        if 'date' in near_df.columns and 'date' in far_df.columns:
-            near_df = near_df.set_index('date')
-            far_df = far_df.set_index('date')
+        if "date" in near_df.columns and "date" in far_df.columns:
+            near_df = near_df.set_index("date")
+            far_df = far_df.set_index("date")
             common_dates = near_df.index.intersection(far_df.index)
             near_df = near_df.loc[common_dates]
             far_df = far_df.loc[common_dates]
 
         if len(near_df) < lookback + 5:
             return SpreadAnalysis(
-                pair_name=pair_name, near_symbol="", far_symbol="",
-                description=description, spread=0, spread_ma20=0,
-                spread_std=1, z_score=0, spread_percentile=50,
-                is_cointegrated=False, coint_pvalue=1.0,
-                half_life=0, signal="NEUTRAL", signal_strength=0,
-                reason="数据不足", timestamp=ts,
+                pair_name=pair_name,
+                near_symbol="",
+                far_symbol="",
+                description=description,
+                spread=0,
+                spread_ma20=0,
+                spread_std=1,
+                z_score=0,
+                spread_percentile=50,
+                is_cointegrated=False,
+                coint_pvalue=1.0,
+                half_life=0,
+                signal="NEUTRAL",
+                signal_strength=0,
+                reason="数据不足",
+                timestamp=ts,
             )
 
-        near_close = near_df['close'].values.astype(float)
-        far_close = far_df['close'].values.astype(float)
+        near_close = near_df["close"].values.astype(float)
+        far_close = far_df["close"].values.astype(float)
 
         # 计算价差/比价
         if is_ratio:
@@ -188,9 +200,7 @@ class ArbitrageAnalyzer:
         historical_percentile = np.sum(spread_series <= spread) / len(spread_series) * 100
 
         # 协整检验（简化版）
-        is_coint, coint_pvalue, half_life = self._test_cointegration(
-            spread_series, lookback
-        )
+        is_coint, coint_pvalue, half_life = self._test_cointegration(spread_series, lookback)
 
         # 生成信号
         signal, signal_strength, reason = self._generate_signal(
@@ -199,8 +209,8 @@ class ArbitrageAnalyzer:
 
         return SpreadAnalysis(
             pair_name=pair_name,
-            near_symbol=near_df.attrs.get('symbol', ''),
-            far_symbol=far_df.attrs.get('symbol', ''),
+            near_symbol=near_df.attrs.get("symbol", ""),
+            far_symbol=far_df.attrs.get("symbol", ""),
             description=description,
             spread=spread,
             spread_ma20=spread_ma,
@@ -216,9 +226,7 @@ class ArbitrageAnalyzer:
             timestamp=ts,
         )
 
-    def _test_cointegration(
-        self, spread: np.ndarray, lookback: int
-    ) -> Tuple[bool, float, float]:
+    def _test_cointegration(self, spread: np.ndarray, lookback: int) -> tuple[bool, float, float]:
         """简化版协整检验
 
         返回:
@@ -266,7 +274,7 @@ class ArbitrageAnalyzer:
             is_coint = min(above_mean, below_mean) >= lookback * 0.25
 
             # 半衰期估计（简化）
-            lagged = spread[-lookback-1:-1]
+            lagged = spread[-lookback - 1 : -1]
             current = spread[-lookback:]
             if len(lagged) > 5 and np.std(lagged) > 0:
                 correlation = np.corrcoef(lagged, current)[0, 1]
@@ -279,7 +287,7 @@ class ArbitrageAnalyzer:
 
     def _generate_signal(
         self, z_score: float, percentile: float, is_coint: bool, half_life: float, is_ratio: bool
-    ) -> Tuple[str, float, str]:
+    ) -> tuple[str, float, str]:
         """生成套利信号
 
         返回:
@@ -328,9 +336,7 @@ class ArbitrageAnalyzer:
 
         return signal, strength, reason
 
-    def scan_all_pairs(
-        self, get_kline_func, symbols: List[str] = None
-    ) -> List[SpreadAnalysis]:
+    def scan_all_pairs(self, get_kline_func, symbols: list[str] = None) -> list[SpreadAnalysis]:
         """扫描所有价差对的套利机会
 
         参数:
@@ -360,13 +366,11 @@ class ArbitrageAnalyzer:
                     continue
 
                 # 设置 symbol 属性
-                near_df.attrs['symbol'] = near
-                far_df.attrs['symbol'] = far
+                near_df.attrs["symbol"] = near
+                far_df.attrs["symbol"] = far
 
                 is_ratio = pair_name.endswith("_ratio") or "比价" in desc
-                result = self.analyze_spread(
-                    near_df, far_df, pair_name, desc, is_ratio
-                )
+                result = self.analyze_spread(near_df, far_df, pair_name, desc, is_ratio)
 
                 if result.signal != "NEUTRAL":
                     results.append(result)
@@ -378,7 +382,7 @@ class ArbitrageAnalyzer:
         results.sort(key=lambda x: x.signal_strength, reverse=True)
         return results
 
-    def format_arbitrage_brief(self, results: List[SpreadAnalysis]) -> str:
+    def format_arbitrage_brief(self, results: list[SpreadAnalysis]) -> str:
         """格式化套利分析简报"""
         if not results:
             return "## 套利分析\n\n暂无明显套利机会。"

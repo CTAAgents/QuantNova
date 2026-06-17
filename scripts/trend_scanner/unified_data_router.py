@@ -29,13 +29,15 @@
         print(f"数据来源: {resp.source}, 回退: {resp.fallback_used}")
 """
 
-import os
 import json
 import logging
-from dataclasses import dataclass, field
-from typing import Optional, List, Dict, Any, Sequence
+import os
+from dataclasses import dataclass
 from datetime import datetime, timedelta
+from typing import Any
+
 import pandas as pd
+
 
 logger = logging.getLogger(__name__)
 
@@ -44,29 +46,31 @@ logger = logging.getLogger(__name__)
 # 统一返回格式
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class DataResponse:
     """统一数据返回格式"""
+
     ok: bool = False
-    source: str = ""              # 'duckdb', 'tqsdk', 'pytdx', 'akshare', 'csv'
-    fallback_used: bool = False   # 是否使用了降级数据源
-    data_type: str = ""           # 'kline', 'quote', 'basis', 'seasonality', 'inventory'
-    count: int = 0                # 数据条数
-    data: Any = None              # DataFrame 或 Dict
-    error: Optional[str] = None
-    timestamp: str = ""           # ISO 格式获取时间
+    source: str = ""  # 'duckdb', 'tqsdk', 'pytdx', 'akshare', 'csv'
+    fallback_used: bool = False  # 是否使用了降级数据源
+    data_type: str = ""  # 'kline', 'quote', 'basis', 'seasonality', 'inventory'
+    count: int = 0  # 数据条数
+    data: Any = None  # DataFrame 或 Dict
+    error: str | None = None
+    timestamp: str = ""  # ISO 格式获取时间
     staleness_hours: float = 0.0  # 数据滞后小时数（0=实时）
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
-            'ok': self.ok,
-            'source': self.source,
-            'fallback_used': self.fallback_used,
-            'data_type': self.data_type,
-            'count': self.count,
-            'error': self.error,
-            'timestamp': self.timestamp,
-            'staleness_hours': self.staleness_hours,
+            "ok": self.ok,
+            "source": self.source,
+            "fallback_used": self.fallback_used,
+            "data_type": self.data_type,
+            "count": self.count,
+            "error": self.error,
+            "timestamp": self.timestamp,
+            "staleness_hours": self.staleness_hours,
         }
 
 
@@ -75,28 +79,28 @@ class DataResponse:
 # ---------------------------------------------------------------------------
 
 DEFAULT_ROUTING = {
-    "kline":        ["duckdb", "tqsdk", "pytdx", "csv"],
-    "quote":        ["duckdb", "tqsdk", "pytdx"],
-    "basis":        ["akshare", "pytdx"],
-    "seasonality":  ["akshare", "csv"],
-    "inventory":    ["akshare"],
-    "top_list":     ["akshare"],
-    "margin":       ["akshare"],
-    "macro":        ["akshare"],
-    "delivery":     ["akshare"],
+    "kline": ["duckdb", "tqsdk", "pytdx", "csv"],
+    "quote": ["duckdb", "tqsdk", "pytdx"],
+    "basis": ["akshare", "pytdx"],
+    "seasonality": ["akshare", "csv"],
+    "inventory": ["akshare"],
+    "top_list": ["akshare"],
+    "margin": ["akshare"],
+    "macro": ["akshare"],
+    "delivery": ["akshare"],
 }
 
 # 数据时效性阈值（小时）
 DEFAULT_STALENESS_THRESHOLD = {
-    "kline": 4,          # K线允许4小时滞后
-    "quote": 0.5,        # 行情30分钟
-    "basis": 24,         # 基差允许1天
+    "kline": 4,  # K线允许4小时滞后
+    "quote": 0.5,  # 行情30分钟
+    "basis": 24,  # 基差允许1天
     "seasonality": 168,  # 季节性允许1周
-    "inventory": 24,     # 仓单允许1天
-    "top_list": 24,      # 龙虎榜允许1天
-    "margin": 168,       # 保证金允许1周
-    "macro": 168,        # 宏观数据允许1周
-    "delivery": 720,     # 交割数据允许1月
+    "inventory": 24,  # 仓单允许1天
+    "top_list": 24,  # 龙虎榜允许1天
+    "margin": 168,  # 保证金允许1周
+    "macro": 168,  # 宏观数据允许1周
+    "delivery": 720,  # 交割数据允许1月
 }
 
 
@@ -107,46 +111,107 @@ DEFAULT_STALENESS_THRESHOLD = {
 # 交易所 → pytdx market 编号
 PYTDX_MARKET_MAP = {
     "SHFE": 29,
-    "DCE":  28,
+    "DCE": 28,
     "CZCE": 30,
     "CFFEX": 47,
-    "INE":  48,
+    "INE": 48,
 }
 
 # 品种 → 交易所映射（常见品种）
 VARIETY_EXCHANGE_MAP = {
     # 黑色系
-    "RB": "SHFE", "HC": "SHFE", "I": "DCE", "J": "DCE", "JM": "DCE",
-    "SF": "CZCE", "SM": "CZCE",
+    "RB": "SHFE",
+    "HC": "SHFE",
+    "I": "DCE",
+    "J": "DCE",
+    "JM": "DCE",
+    "SF": "CZCE",
+    "SM": "CZCE",
     # 有色
-    "CU": "SHFE", "AL": "SHFE", "ZN": "SHFE", "PB": "SHFE",
-    "NI": "SHFE", "SN": "SHFE", "AO": "SHFE", "SS": "SHFE",
+    "CU": "SHFE",
+    "AL": "SHFE",
+    "ZN": "SHFE",
+    "PB": "SHFE",
+    "NI": "SHFE",
+    "SN": "SHFE",
+    "AO": "SHFE",
+    "SS": "SHFE",
     # 能源化工
-    "SC": "INE", "FU": "SHFE", "BU": "SHFE", "RU": "SHFE",
-    "TA": "CZCE", "MA": "CZCE", "SA": "CZCE", "FG": "CZCE",
-    "EG": "DCE", "EB": "DCE", "PP": "DCE", "V": "DCE", "L": "DCE",
-    "PG": "DCE", "LU": "INE", "NR": "INE", "BC": "INE", "EC": "INE",
+    "SC": "INE",
+    "FU": "SHFE",
+    "BU": "SHFE",
+    "RU": "SHFE",
+    "TA": "CZCE",
+    "MA": "CZCE",
+    "SA": "CZCE",
+    "FG": "CZCE",
+    "EG": "DCE",
+    "EB": "DCE",
+    "PP": "DCE",
+    "V": "DCE",
+    "L": "DCE",
+    "PG": "DCE",
+    "LU": "INE",
+    "NR": "INE",
+    "BC": "INE",
+    "EC": "INE",
     # 农产品
-    "CF": "CZCE", "SR": "CZCE", "AP": "CZCE", "RM": "CZCE", "OI": "CZCE",
-    "M": "DCE", "Y": "DCE", "P": "DCE", "C": "DCE", "CS": "DCE",
-    "A": "DCE", "B": "DCE", "JD": "DCE", "LH": "DCE",
+    "CF": "CZCE",
+    "SR": "CZCE",
+    "AP": "CZCE",
+    "RM": "CZCE",
+    "OI": "CZCE",
+    "M": "DCE",
+    "Y": "DCE",
+    "P": "DCE",
+    "C": "DCE",
+    "CS": "DCE",
+    "A": "DCE",
+    "B": "DCE",
+    "JD": "DCE",
+    "LH": "DCE",
     # 贵金属
-    "AU": "SHFE", "AG": "SHFE",
+    "AU": "SHFE",
+    "AG": "SHFE",
     # 中金所
-    "IF": "CFFEX", "IC": "CFFEX", "IH": "CFFEX", "IM": "CFFEX",
-    "T": "CFFEX", "TF": "CFFEX", "TL": "CFFEX", "TS": "CFFEX",
+    "IF": "CFFEX",
+    "IC": "CFFEX",
+    "IH": "CFFEX",
+    "IM": "CFFEX",
+    "T": "CFFEX",
+    "TF": "CFFEX",
+    "TL": "CFFEX",
+    "TS": "CFFEX",
 }
 
 # 品种 → AkShare 代码映射
 # AkShare 期货品种代码格式与我们的统一格式有差异，需要转换
 AKSHARE_FUTURES_MAP = {
-    "RB": "螺纹钢", "HC": "热卷", "I": "铁矿石", "J": "焦炭", "JM": "焦煤",
-    "CU": "沪铜", "AL": "沪铝", "ZN": "沪锌", "NI": "沪镍",
-    "AU": "沪金", "AG": "沪银",
-    "SC": "原油", "FU": "燃料油", "BU": "沥青", "RU": "橡胶",
-    "TA": "PTA", "MA": "甲醇", "SA": "纯碱",
-    "CF": "棉花", "SR": "白糖", "M": "豆粕", "Y": "豆油", "P": "棕榈油",
-    "C": "玉米", "CS": "淀粉",
+    "RB": "螺纹钢",
+    "HC": "热卷",
+    "I": "铁矿石",
+    "J": "焦炭",
+    "JM": "焦煤",
+    "CU": "沪铜",
+    "AL": "沪铝",
+    "ZN": "沪锌",
+    "NI": "沪镍",
+    "AU": "沪金",
+    "AG": "沪银",
+    "SC": "原油",
+    "FU": "燃料油",
+    "BU": "沥青",
+    "RU": "橡胶",
+    "TA": "PTA",
+    "MA": "甲醇",
+    "SA": "纯碱",
+    "CF": "棉花",
+    "SR": "白糖",
+    "M": "豆粕",
+    "Y": "豆油",
+    "P": "棕榈油",
+    "C": "玉米",
+    "CS": "淀粉",
 }
 
 
@@ -166,11 +231,12 @@ def normalize_symbol(symbol: str) -> str:
     # 移除交易所前缀
     for ex in ["SHFE.", "DCE.", "CZCE.", "CFFEX.", "INE."]:
         if s.startswith(ex):
-            s = s[len(ex):]
+            s = s[len(ex) :]
             break
     # 移除合约月（如 RB2609 → RB）
     import re
-    s = re.sub(r'\d{3,4}$', '', s)
+
+    s = re.sub(r"\d{3,4}$", "", s)
     return s
 
 
@@ -178,13 +244,14 @@ def normalize_symbol(symbol: str) -> str:
 # PytdxSource — 通达信 Python 直连
 # ---------------------------------------------------------------------------
 
+
 class PytdxSource:
     """通达信数据源（通过 pytdx 直连行情服务器）
 
     作为 TqSdk 的备选数据源，提供 K线/行情数据。
     """
 
-    def __init__(self, host: str = '119.147.212.81', port: int = 7709):
+    def __init__(self, host: str = "119.147.212.81", port: int = 7709):
         self._host = host
         self._port = port
         self._api = None
@@ -196,6 +263,7 @@ class PytdxSource:
             return True
         try:
             from pytdx.hq import TdxHq_API
+
             self._api = TdxHq_API()
             self._connected = self._api.connect(self._host, self._port)
             return self._connected
@@ -226,11 +294,12 @@ class PytdxSource:
         # pytdx 格式: 小写品种+4位年月，如 "rb2610"
         # 如果传入的是具体合约（如 jm2609），直接使用
         import re
-        if re.search(r'\d{3,4}$', symbol.lower()):
+
+        if re.search(r"\d{3,4}$", symbol.lower()):
             # 已有合约月
-            code = symbol.lower().split('.')[-1]  # 去掉交易所前缀
+            code = symbol.lower().split(".")[-1]  # 去掉交易所前缀
             if not code[0].isdigit():
-                code = re.sub(r'^[A-Za-z]+\.', '', code)  # 再去一层
+                code = re.sub(r"^[A-Za-z]+\.", "", code)  # 再去一层
             # 补零：郑商所3位，其他4位
             if exchange == "CZCE":
                 # CZCE 格式: CF609 → pytdx 用 CF609
@@ -267,7 +336,7 @@ class PytdxSource:
             month = 1
         return f"{year}{month:02d}"
 
-    def get_kline(self, symbol: str, days: int = 120, period: str = "daily") -> Optional[pd.DataFrame]:
+    def get_kline(self, symbol: str, days: int = 120, period: str = "daily") -> pd.DataFrame | None:
         """获取K线数据"""
         if not self._ensure_connection():
             return None
@@ -280,11 +349,11 @@ class PytdxSource:
 
         # period 映射
         category_map = {
-            "daily": 4,     # 日线
-            "1h": 5,        # 60分钟
-            "15m": 6,       # 15分钟
-            "30m": 5,       # 30分钟 → 用60分钟近似
-            "5m": 7,        # 5分钟
+            "daily": 4,  # 日线
+            "1h": 5,  # 60分钟
+            "15m": 6,  # 15分钟
+            "30m": 5,  # 30分钟 → 用60分钟近似
+            "5m": 7,  # 5分钟
         }
         category = category_map.get(period, 4)
 
@@ -313,31 +382,31 @@ class PytdxSource:
 
             # 标准化列名
             col_map = {
-                'datetime': 'date',
-                'open': 'open',
-                'high': 'high',
-                'low': 'low',
-                'close': 'close',
-                'vol': 'volume',
-                'amount': 'amount',
+                "datetime": "date",
+                "open": "open",
+                "high": "high",
+                "low": "low",
+                "close": "close",
+                "vol": "volume",
+                "amount": "amount",
             }
             df = df.rename(columns=col_map)
 
             # 添加 open_interest 列（pytdx 可能没有）
-            if 'open_interest' not in df.columns:
-                if 'oi' in df.columns:
-                    df['open_interest'] = df['oi']
+            if "open_interest" not in df.columns:
+                if "oi" in df.columns:
+                    df["open_interest"] = df["oi"]
                 else:
-                    df['open_interest'] = 0
+                    df["open_interest"] = 0
 
             # 确保必要列存在
-            required = ['date', 'open', 'high', 'low', 'close', 'volume', 'open_interest']
+            required = ["date", "open", "high", "low", "close", "volume", "open_interest"]
             for col in required:
                 if col not in df.columns:
                     return None
 
             df = df[required].tail(days)
-            df['date'] = pd.to_datetime(df['date'])
+            df["date"] = pd.to_datetime(df["date"])
             df = df.reset_index(drop=True)
             return df
 
@@ -345,7 +414,7 @@ class PytdxSource:
             logger.debug(f"pytdx get_kline 失败: {e}")
             return None
 
-    def get_quote(self, symbol: str) -> Optional[Dict[str, Any]]:
+    def get_quote(self, symbol: str) -> dict[str, Any] | None:
         """获取实时行情"""
         if not self._ensure_connection():
             return None
@@ -363,16 +432,16 @@ class PytdxSource:
 
             q = data[0]
             return {
-                'symbol': symbol,
-                'last_price': q.get('price', 0),
-                'open': q.get('open', 0),
-                'high': q.get('high', 0),
-                'low': q.get('low', 0),
-                'pre_close': q.get('last_close', 0),
-                'volume': q.get('vol', 0),
-                'open_interest': q.get('oi', 0),
-                'bid_price1': q.get('bid1', 0),
-                'ask_price1': q.get('ask1', 0),
+                "symbol": symbol,
+                "last_price": q.get("price", 0),
+                "open": q.get("open", 0),
+                "high": q.get("high", 0),
+                "low": q.get("low", 0),
+                "pre_close": q.get("last_close", 0),
+                "volume": q.get("vol", 0),
+                "open_interest": q.get("oi", 0),
+                "bid_price1": q.get("bid1", 0),
+                "ask_price1": q.get("ask1", 0),
             }
 
         except Exception as e:
@@ -393,6 +462,7 @@ class PytdxSource:
 # AkShareSource — 基差/季节性/仓单
 # ---------------------------------------------------------------------------
 
+
 class AkShareSource:
     """AkShare 数据源（基差、季节性、仓单等辅助数据）
 
@@ -403,11 +473,12 @@ class AkShareSource:
     def is_available(self) -> bool:
         try:
             import akshare
+
             return True
         except ImportError:
             return False
 
-    def get_basis(self, symbol: str) -> Optional[Dict[str, Any]]:
+    def get_basis(self, symbol: str) -> dict[str, Any] | None:
         """获取基差数据
 
         基差 = 现货价格 - 期货价格
@@ -424,27 +495,28 @@ class AkShareSource:
         """
         try:
             import akshare as ak
+
             variety = normalize_symbol(symbol)
 
             # 使用 futures_spot_price() 获取基差数据
             df = ak.futures_spot_price()
             if df is not None and len(df) > 0:
                 # 过滤当前品种
-                variety_row = df[df['symbol'] == variety]
+                variety_row = df[df["symbol"] == variety]
                 if len(variety_row) > 0:
                     latest = variety_row.iloc[0]
-                    spot = float(latest.get('spot_price', 0) or 0)
-                    futures = float(latest.get('dominant_contract_price', 0) or 0)
-                    basis = float(latest.get('dom_basis', 0) or 0)
-                    basis_rate = float(latest.get('dom_basis_rate', 0) or 0) * 100
+                    spot = float(latest.get("spot_price", 0) or 0)
+                    futures = float(latest.get("dominant_contract_price", 0) or 0)
+                    basis = float(latest.get("dom_basis", 0) or 0)
+                    basis_rate = float(latest.get("dom_basis_rate", 0) or 0) * 100
 
                     return {
-                        'symbol': variety,
-                        'spot_price': spot,
-                        'futures_price': futures,
-                        'basis': basis,
-                        'basis_rate': round(basis_rate, 2),
-                        'date': str(latest.get('date', datetime.now().strftime('%Y%m%d'))),
+                        "symbol": variety,
+                        "spot_price": spot,
+                        "futures_price": futures,
+                        "basis": basis,
+                        "basis_rate": round(basis_rate, 2),
+                        "date": str(latest.get("date", datetime.now().strftime("%Y%m%d"))),
                     }
 
             return None
@@ -453,7 +525,7 @@ class AkShareSource:
             logger.debug(f"AkShare get_basis 异常: {e}")
             return None
 
-    def get_seasonality(self, symbol: str, years: int = 5) -> Optional[Dict[str, Any]]:
+    def get_seasonality(self, symbol: str, years: int = 5) -> dict[str, Any] | None:
         """获取季节性规律数据
 
         返回各月份的历史平均涨跌幅，用于判断季节性趋势。
@@ -470,6 +542,7 @@ class AkShareSource:
         """
         try:
             import akshare as ak
+
             variety = normalize_symbol(symbol)
             cn_name = AKSHARE_FUTURES_MAP.get(variety)
             if not cn_name:
@@ -477,31 +550,34 @@ class AkShareSource:
 
             # 获取历史主力合约日线
             try:
-                df = ak.futures_main_sina(symbol=cn_name, start_date=f"{datetime.now().year - years}0101",
-                                          end_date=datetime.now().strftime('%Y%m%d'))
+                df = ak.futures_main_sina(
+                    symbol=cn_name,
+                    start_date=f"{datetime.now().year - years}0101",
+                    end_date=datetime.now().strftime("%Y%m%d"),
+                )
                 if df is None or len(df) == 0:
                     return None
 
                 # 标准化列名
                 df.columns = [c.lower().strip() for c in df.columns]
-                date_col = 'date' if 'date' in df.columns else df.columns[0]
-                close_col = 'close' if 'close' in df.columns else '收盘价' if '收盘价' in df.columns else df.columns[-1]
+                date_col = "date" if "date" in df.columns else df.columns[0]
+                close_col = "close" if "close" in df.columns else "收盘价" if "收盘价" in df.columns else df.columns[-1]
 
                 df[date_col] = pd.to_datetime(df[date_col])
-                df[close_col] = pd.to_numeric(df[close_col], errors='coerce')
+                df[close_col] = pd.to_numeric(df[close_col], errors="coerce")
                 df = df.dropna(subset=[close_col])
 
                 if len(df) < 100:
                     return None
 
                 # 按月份计算平均涨跌幅
-                df['month'] = df[date_col].dt.month
-                df['monthly_return'] = df[close_col].pct_change() * 100
+                df["month"] = df[date_col].dt.month
+                df["monthly_return"] = df[close_col].pct_change() * 100
 
                 monthly_avg = {}
                 monthly_pos_rate = {}
                 for month in range(1, 13):
-                    month_data = df[df['month'] == month]['monthly_return'].dropna()
+                    month_data = df[df["month"] == month]["monthly_return"].dropna()
                     if len(month_data) > 10:
                         monthly_avg[month] = round(month_data.mean(), 2)
                         monthly_pos_rate[month] = round((month_data > 0).mean() * 100, 1)
@@ -514,14 +590,14 @@ class AkShareSource:
                 current_signal = monthly_avg.get(current_month, 0)
 
                 return {
-                    'symbol': variety,
-                    'monthly_avg_change': monthly_avg,
-                    'monthly_pos_rate': monthly_pos_rate,
-                    'strong_months': strong_months,
-                    'weak_months': weak_months,
-                    'current_month_signal': current_signal,
-                    'current_month_pos_rate': monthly_pos_rate.get(current_month, 0),
-                    'years_covered': years,
+                    "symbol": variety,
+                    "monthly_avg_change": monthly_avg,
+                    "monthly_pos_rate": monthly_pos_rate,
+                    "strong_months": strong_months,
+                    "weak_months": weak_months,
+                    "current_month_signal": current_signal,
+                    "current_month_pos_rate": monthly_pos_rate.get(current_month, 0),
+                    "years_covered": years,
                 }
 
             except Exception as e:
@@ -532,7 +608,7 @@ class AkShareSource:
             logger.debug(f"AkShare get_seasonality 异常: {e}")
             return None
 
-    def get_inventory(self, symbol: str) -> Optional[Dict[str, Any]]:
+    def get_inventory(self, symbol: str) -> dict[str, Any] | None:
         """获取仓单数据
 
         返回:
@@ -545,6 +621,7 @@ class AkShareSource:
         """
         try:
             import akshare as ak
+
             variety = normalize_symbol(symbol)
             cn_name = AKSHARE_FUTURES_MAP.get(variety)
             if not cn_name:
@@ -555,10 +632,10 @@ class AkShareSource:
                 if df is not None and len(df) > 0:
                     latest = df.iloc[-1]
                     return {
-                        'symbol': variety,
-                        'warehouse_receipts': int(latest.iloc[-2] if len(latest) >= 2 else 0),
-                        'change': int(latest.iloc[-1] if len(latest) >= 1 else 0),
-                        'date': str(latest.name) if hasattr(latest, 'name') else datetime.now().strftime('%Y-%m-%d'),
+                        "symbol": variety,
+                        "warehouse_receipts": int(latest.iloc[-2] if len(latest) >= 2 else 0),
+                        "change": int(latest.iloc[-1] if len(latest) >= 1 else 0),
+                        "date": str(latest.name) if hasattr(latest, "name") else datetime.now().strftime("%Y-%m-%d"),
                     }
             except Exception as e:
                 logger.debug(f"AkShare 仓单获取失败({variety}): {e}")
@@ -569,7 +646,7 @@ class AkShareSource:
             logger.debug(f"AkShare get_inventory 异常: {e}")
             return None
 
-    def get_top_list(self, symbol: str) -> Optional[Dict[str, Any]]:
+    def get_top_list(self, symbol: str) -> dict[str, Any] | None:
         """获取龙虎榜数据（交易所每日公布的多空持仓排名）
 
         支持交易所：DCE（大商所）、SHFE（上期所）、CZCE（郑商所）
@@ -590,20 +667,21 @@ class AkShareSource:
         """
         try:
             import akshare as ak
+
             variety = normalize_symbol(symbol)
-            exchange = VARIETY_EXCHANGE_MAP.get(variety, '')
+            exchange = VARIETY_EXCHANGE_MAP.get(variety, "")
             if not exchange:
                 return None
 
             # 根据交易所选择数据源
-            date_str = datetime.now().strftime('%Y%m%d')
+            date_str = datetime.now().strftime("%Y%m%d")
             df = None
 
-            if exchange == 'DCE':
+            if exchange == "DCE":
                 # 大商所持仓排名
                 for d in range(5):
                     try:
-                        test_date = (datetime.now() - timedelta(days=d)).strftime('%Y%m%d')
+                        test_date = (datetime.now() - timedelta(days=d)).strftime("%Y%m%d")
                         df = ak.futures_dce_position_rank(date=test_date)
                         if df is not None and len(df) > 0:
                             date_str = test_date
@@ -611,11 +689,11 @@ class AkShareSource:
                     except Exception:
                         continue
 
-            elif exchange == 'SHFE':
+            elif exchange == "SHFE":
                 # 上期所持仓排名
                 for d in range(5):
                     try:
-                        test_date = (datetime.now() - timedelta(days=d)).strftime('%Y%m%d')
+                        test_date = (datetime.now() - timedelta(days=d)).strftime("%Y%m%d")
                         df = ak.futures_shfe_warehouse_receipt(date=test_date)
                         if df is not None and len(df) > 0:
                             date_str = test_date
@@ -623,11 +701,11 @@ class AkShareSource:
                     except Exception:
                         continue
 
-            elif exchange == 'CZCE':
+            elif exchange == "CZCE":
                 # 郑商所持仓排名
                 for d in range(5):
                     try:
-                        test_date = (datetime.now() - timedelta(days=d)).strftime('%Y%m%d')
+                        test_date = (datetime.now() - timedelta(days=d)).strftime("%Y%m%d")
                         df = ak.futures_czce_warehouse_receipt(date=test_date)
                         if df is not None and len(df) > 0:
                             date_str = test_date
@@ -654,15 +732,15 @@ class AkShareSource:
 
             for i, c in enumerate(cols):
                 c_lower = c.lower()
-                if '会员' in c or '经纪' in c or '公司' in c:
+                if "会员" in c or "经纪" in c or "公司" in c:
                     name_col = i
-                elif ('买' in c or '多' in c) and ('持仓' in c or '量' in c):
+                elif ("买" in c or "多" in c) and ("持仓" in c or "量" in c):
                     buy_vol_col = i
-                elif ('卖' in c or '空' in c) and ('持仓' in c or '量' in c):
+                elif ("卖" in c or "空" in c) and ("持仓" in c or "量" in c):
                     sell_vol_col = i
-                elif ('买' in c or '多' in c) and ('增减' in c or '变化' in c):
+                elif ("买" in c or "多" in c) and ("增减" in c or "变化" in c):
                     buy_change_col = i
-                elif ('卖' in c or '空' in c) and ('增减' in c or '变化' in c):
+                elif ("卖" in c or "空" in c) and ("增减" in c or "变化" in c):
                     sell_change_col = i
 
             # 如果找不到明确的买卖列，尝试按位置推断
@@ -691,45 +769,63 @@ class AkShareSource:
             # 解析数据
             if name_col is not None:
                 for idx, row in df.iterrows():
-                    broker = str(row.iloc[name_col]) if pd.notna(row.iloc[name_col]) else ''
-                    if not broker or broker == 'nan':
+                    broker = str(row.iloc[name_col]) if pd.notna(row.iloc[name_col]) else ""
+                    if not broker or broker == "nan":
                         continue
 
-                    buy_vol = int(row.iloc[buy_vol_col]) if buy_vol_col is not None and pd.notna(row.iloc[buy_vol_col]) else 0
-                    sell_vol = int(row.iloc[sell_vol_col]) if sell_vol_col is not None and pd.notna(row.iloc[sell_vol_col]) else 0
-                    buy_chg = int(row.iloc[buy_change_col]) if buy_change_col is not None and pd.notna(row.iloc[buy_change_col]) else 0
-                    sell_chg = int(row.iloc[sell_change_col]) if sell_change_col is not None and pd.notna(row.iloc[sell_change_col]) else 0
+                    buy_vol = (
+                        int(row.iloc[buy_vol_col]) if buy_vol_col is not None and pd.notna(row.iloc[buy_vol_col]) else 0
+                    )
+                    sell_vol = (
+                        int(row.iloc[sell_vol_col])
+                        if sell_vol_col is not None and pd.notna(row.iloc[sell_vol_col])
+                        else 0
+                    )
+                    buy_chg = (
+                        int(row.iloc[buy_change_col])
+                        if buy_change_col is not None and pd.notna(row.iloc[buy_change_col])
+                        else 0
+                    )
+                    sell_chg = (
+                        int(row.iloc[sell_change_col])
+                        if sell_change_col is not None and pd.notna(row.iloc[sell_change_col])
+                        else 0
+                    )
 
                     if buy_vol > 0:
-                        top_buy.append({
-                            'rank': len(top_buy) + 1,
-                            'broker': broker,
-                            'volume': buy_vol,
-                            'change': buy_chg,
-                        })
+                        top_buy.append(
+                            {
+                                "rank": len(top_buy) + 1,
+                                "broker": broker,
+                                "volume": buy_vol,
+                                "change": buy_chg,
+                            }
+                        )
                     if sell_vol > 0:
-                        top_sell.append({
-                            'rank': len(top_sell) + 1,
-                            'broker': broker,
-                            'volume': sell_vol,
-                            'change': sell_chg,
-                        })
+                        top_sell.append(
+                            {
+                                "rank": len(top_sell) + 1,
+                                "broker": broker,
+                                "volume": sell_vol,
+                                "change": sell_chg,
+                            }
+                        )
 
             # 按持仓量排序
-            top_buy.sort(key=lambda x: x['volume'], reverse=True)
-            top_sell.sort(key=lambda x: x['volume'], reverse=True)
+            top_buy.sort(key=lambda x: x["volume"], reverse=True)
+            top_sell.sort(key=lambda x: x["volume"], reverse=True)
 
             # 重新排名
             for i, item in enumerate(top_buy[:10]):
-                item['rank'] = i + 1
+                item["rank"] = i + 1
             for i, item in enumerate(top_sell[:10]):
-                item['rank'] = i + 1
+                item["rank"] = i + 1
 
             # 计算集中度
-            total_buy = sum(e['volume'] for e in top_buy)
-            total_sell = sum(e['volume'] for e in top_sell)
-            top5_buy = sum(e['volume'] for e in top_buy[:5])
-            top5_sell = sum(e['volume'] for e in top_sell[:5])
+            total_buy = sum(e["volume"] for e in top_buy)
+            total_sell = sum(e["volume"] for e in top_sell)
+            top5_buy = sum(e["volume"] for e in top_buy[:5])
+            top5_sell = sum(e["volume"] for e in top_sell[:5])
 
             concentration_buy = (top5_buy / total_buy * 100) if total_buy > 0 else 0
             concentration_sell = (top5_sell / total_sell * 100) if total_sell > 0 else 0
@@ -761,16 +857,16 @@ class AkShareSource:
                     parts.append("多空均衡")
 
             return {
-                'symbol': variety,
-                'date': f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:8]}",
-                'exchange': exchange,
-                'top_buy': top_buy[:10],
-                'top_sell': top_sell[:10],
-                'net_buy': total_buy,
-                'net_sell': total_sell,
-                'concentration_buy': round(concentration_buy, 1),
-                'concentration_sell': round(concentration_sell, 1),
-                'interpretation': "；".join(parts) if parts else "数据有限",
+                "symbol": variety,
+                "date": f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:8]}",
+                "exchange": exchange,
+                "top_buy": top_buy[:10],
+                "top_sell": top_sell[:10],
+                "net_buy": total_buy,
+                "net_sell": total_sell,
+                "concentration_buy": round(concentration_buy, 1),
+                "concentration_sell": round(concentration_sell, 1),
+                "interpretation": "；".join(parts) if parts else "数据有限",
             }
 
         except Exception as e:
@@ -779,7 +875,7 @@ class AkShareSource:
             logger.debug(f"AkShare get_top_list 异常: {e}")
             return None
 
-    def get_margin(self, symbol: str) -> Optional[Dict[str, Any]]:
+    def get_margin(self, symbol: str) -> dict[str, Any] | None:
         """获取保证金数据
 
         返回:
@@ -794,6 +890,7 @@ class AkShareSource:
         """
         try:
             import akshare as ak
+
             variety = normalize_symbol(symbol)
 
             # 使用 futures_fees_info() 获取保证金和手续费数据
@@ -801,24 +898,24 @@ class AkShareSource:
             if df is not None and len(df) > 0:
                 # 过滤当前品种（按品种代码或品种名称）
                 variety_row = df[
-                    (df['品种代码'] == variety) |
-                    (df['品种名称'].str.contains(AKSHARE_FUTURES_MAP.get(variety, variety), case=False, na=False))
+                    (df["品种代码"] == variety)
+                    | (df["品种名称"].str.contains(AKSHARE_FUTURES_MAP.get(variety, variety), case=False, na=False))
                 ]
                 if len(variety_row) > 0:
                     row = variety_row.iloc[0]
                     # 提取保证金比例
-                    exchange_margin = float(row.get('做多保证金率', 0) or 0) * 100
+                    exchange_margin = float(row.get("做多保证金率", 0) or 0) * 100
                     broker_margin = exchange_margin * 1.05  # 经纪商通常加收5%
-                    margin_per_lot = float(row.get('做多1手保证金', 0) or 0)
-                    contract_multiplier = int(row.get('合约乘数', 0) or 0)
+                    margin_per_lot = float(row.get("做多1手保证金", 0) or 0)
+                    contract_multiplier = int(row.get("合约乘数", 0) or 0)
 
                     return {
-                        'symbol': variety,
-                        'exchange_margin_ratio': round(exchange_margin, 2),
-                        'broker_margin_ratio': round(broker_margin, 2),
-                        'margin_per_lot': round(margin_per_lot, 2),
-                        'contract_multiplier': contract_multiplier,
-                        'date': datetime.now().strftime('%Y-%m-%d'),
+                        "symbol": variety,
+                        "exchange_margin_ratio": round(exchange_margin, 2),
+                        "broker_margin_ratio": round(broker_margin, 2),
+                        "margin_per_lot": round(margin_per_lot, 2),
+                        "contract_multiplier": contract_multiplier,
+                        "date": datetime.now().strftime("%Y-%m-%d"),
                     }
 
             return None
@@ -829,7 +926,7 @@ class AkShareSource:
             logger.debug(f"AkShare get_margin 异常: {e}")
             return None
 
-    def get_macro(self, symbol: str) -> Optional[Dict[str, Any]]:
+    def get_macro(self, symbol: str) -> dict[str, Any] | None:
         """获取宏观经济数据（GDP、CPI、PMI、利率等）
 
         返回:
@@ -847,42 +944,69 @@ class AkShareSource:
         """
         try:
             import akshare as ak
+
             variety = normalize_symbol(symbol)
             indicators = {}
 
             # 品种-宏观指标关联映射
             COMMODITY_MACRO_MAP = {
                 # 黑色系 - 关联房地产/基建
-                'RB': {'sector': 'black', 'macro_focus': ['PMI', '房地产投资', '基建投资'], 'interpretation_prefix': '黑色系'},
-                'HC': {'sector': 'black', 'macro_focus': ['PMI', '房地产投资'], 'interpretation_prefix': '黑色系'},
-                'I': {'sector': 'black', 'macro_focus': ['PMI', '粗钢产量'], 'interpretation_prefix': '黑色系'},
-                'J': {'sector': 'black', 'macro_focus': ['PMI', '焦化开工率'], 'interpretation_prefix': '黑色系'},
-                'JM': {'sector': 'black', 'macro_focus': ['PMI', '焦化开工率'], 'interpretation_prefix': '黑色系'},
+                "RB": {
+                    "sector": "black",
+                    "macro_focus": ["PMI", "房地产投资", "基建投资"],
+                    "interpretation_prefix": "黑色系",
+                },
+                "HC": {"sector": "black", "macro_focus": ["PMI", "房地产投资"], "interpretation_prefix": "黑色系"},
+                "I": {"sector": "black", "macro_focus": ["PMI", "粗钢产量"], "interpretation_prefix": "黑色系"},
+                "J": {"sector": "black", "macro_focus": ["PMI", "焦化开工率"], "interpretation_prefix": "黑色系"},
+                "JM": {"sector": "black", "macro_focus": ["PMI", "焦化开工率"], "interpretation_prefix": "黑色系"},
                 # 有色金属 - 关联全球制造业
-                'CU': {'sector': 'nonferrous', 'macro_focus': ['PMI', '全球制造业'], 'interpretation_prefix': '有色金属'},
-                'AL': {'sector': 'nonferrous', 'macro_focus': ['PMI', '电力成本'], 'interpretation_prefix': '有色金属'},
-                'ZN': {'sector': 'nonferrous', 'macro_focus': ['PMI', '镀锌需求'], 'interpretation_prefix': '有色金属'},
-                'NI': {'sector': 'nonferrous', 'macro_focus': ['PMI', '不锈钢需求'], 'interpretation_prefix': '有色金属'},
+                "CU": {
+                    "sector": "nonferrous",
+                    "macro_focus": ["PMI", "全球制造业"],
+                    "interpretation_prefix": "有色金属",
+                },
+                "AL": {"sector": "nonferrous", "macro_focus": ["PMI", "电力成本"], "interpretation_prefix": "有色金属"},
+                "ZN": {"sector": "nonferrous", "macro_focus": ["PMI", "镀锌需求"], "interpretation_prefix": "有色金属"},
+                "NI": {
+                    "sector": "nonferrous",
+                    "macro_focus": ["PMI", "不锈钢需求"],
+                    "interpretation_prefix": "有色金属",
+                },
                 # 能源化工 - 关联原油/通胀
-                'SC': {'sector': 'energy', 'macro_focus': ['原油价格', '通胀'], 'interpretation_prefix': '能源'},
-                'FU': {'sector': 'energy', 'macro_focus': ['原油价格', '航运需求'], 'interpretation_prefix': '能源'},
-                'BU': {'sector': 'energy', 'macro_focus': ['原油价格', '基建需求'], 'interpretation_prefix': '能源'},
-                'RU': {'sector': 'energy', 'macro_focus': ['汽车产销', '轮胎需求'], 'interpretation_prefix': '化工'},
-                'TA': {'sector': 'chemical', 'macro_focus': ['纺织需求', 'PTA开工率'], 'interpretation_prefix': '化工'},
-                'MA': {'sector': 'chemical', 'macro_focus': ['煤化工', '甲醇开工率'], 'interpretation_prefix': '化工'},
+                "SC": {"sector": "energy", "macro_focus": ["原油价格", "通胀"], "interpretation_prefix": "能源"},
+                "FU": {"sector": "energy", "macro_focus": ["原油价格", "航运需求"], "interpretation_prefix": "能源"},
+                "BU": {"sector": "energy", "macro_focus": ["原油价格", "基建需求"], "interpretation_prefix": "能源"},
+                "RU": {"sector": "energy", "macro_focus": ["汽车产销", "轮胎需求"], "interpretation_prefix": "化工"},
+                "TA": {"sector": "chemical", "macro_focus": ["纺织需求", "PTA开工率"], "interpretation_prefix": "化工"},
+                "MA": {"sector": "chemical", "macro_focus": ["煤化工", "甲醇开工率"], "interpretation_prefix": "化工"},
                 # 农产品 - 关联通胀/天气
-                'M': {'sector': 'agriculture', 'macro_focus': ['CPI', '大豆压榨'], 'interpretation_prefix': '农产品'},
-                'Y': {'sector': 'agriculture', 'macro_focus': ['CPI', '油脂需求'], 'interpretation_prefix': '农产品'},
-                'P': {'sector': 'agriculture', 'macro_focus': ['CPI', '棕榈油产量'], 'interpretation_prefix': '农产品'},
-                'C': {'sector': 'agriculture', 'macro_focus': ['CPI', '饲料需求'], 'interpretation_prefix': '农产品'},
-                'CF': {'sector': 'agriculture', 'macro_focus': ['纺织需求', '棉花库存'], 'interpretation_prefix': '农产品'},
-                'SR': {'sector': 'agriculture', 'macro_focus': ['CPI', '白糖产量'], 'interpretation_prefix': '农产品'},
+                "M": {"sector": "agriculture", "macro_focus": ["CPI", "大豆压榨"], "interpretation_prefix": "农产品"},
+                "Y": {"sector": "agriculture", "macro_focus": ["CPI", "油脂需求"], "interpretation_prefix": "农产品"},
+                "P": {"sector": "agriculture", "macro_focus": ["CPI", "棕榈油产量"], "interpretation_prefix": "农产品"},
+                "C": {"sector": "agriculture", "macro_focus": ["CPI", "饲料需求"], "interpretation_prefix": "农产品"},
+                "CF": {
+                    "sector": "agriculture",
+                    "macro_focus": ["纺织需求", "棉花库存"],
+                    "interpretation_prefix": "农产品",
+                },
+                "SR": {"sector": "agriculture", "macro_focus": ["CPI", "白糖产量"], "interpretation_prefix": "农产品"},
                 # 贵金属 - 关联避险/通胀
-                'AU': {'sector': 'precious', 'macro_focus': ['避险需求', '实际利率'], 'interpretation_prefix': '贵金属'},
-                'AG': {'sector': 'precious', 'macro_focus': ['避险需求', '工业需求'], 'interpretation_prefix': '贵金属'},
+                "AU": {
+                    "sector": "precious",
+                    "macro_focus": ["避险需求", "实际利率"],
+                    "interpretation_prefix": "贵金属",
+                },
+                "AG": {
+                    "sector": "precious",
+                    "macro_focus": ["避险需求", "工业需求"],
+                    "interpretation_prefix": "贵金属",
+                },
             }
 
-            commodity_info = COMMODITY_MACRO_MAP.get(variety, {'sector': 'other', 'macro_focus': [], 'interpretation_prefix': '品种'})
+            commodity_info = COMMODITY_MACRO_MAP.get(
+                variety, {"sector": "other", "macro_focus": [], "interpretation_prefix": "品种"}
+            )
 
             # GDP
             try:
@@ -890,8 +1014,8 @@ class AkShareSource:
                 if gdp_df is not None and len(gdp_df) > 0:
                     latest = gdp_df.iloc[0]  # 最新数据在第一行
                     for col in gdp_df.columns:
-                        if '同比' in str(col) or '增速' in str(col):
-                            indicators['gdp_growth'] = float(latest[col]) if pd.notna(latest[col]) else None
+                        if "同比" in str(col) or "增速" in str(col):
+                            indicators["gdp_growth"] = float(latest[col]) if pd.notna(latest[col]) else None
                             break
             except Exception:
                 pass
@@ -901,7 +1025,9 @@ class AkShareSource:
                 cpi_df = ak.macro_china_cpi_yearly()
                 if cpi_df is not None and len(cpi_df) > 0:
                     latest = cpi_df.iloc[-1]
-                    indicators['cpi_yoy'] = float(latest.get('今值', None)) if pd.notna(latest.get('今值', None)) else None
+                    indicators["cpi_yoy"] = (
+                        float(latest.get("今值", None)) if pd.notna(latest.get("今值", None)) else None
+                    )
             except Exception:
                 pass
 
@@ -910,7 +1036,9 @@ class AkShareSource:
                 pmi_df = ak.macro_china_pmi()
                 if pmi_df is not None and len(pmi_df) > 0:
                     latest = pmi_df.iloc[0]  # 最新数据在第一行
-                    indicators['pmi'] = float(latest.get('制造业-指数', None)) if pd.notna(latest.get('制造业-指数', None)) else None
+                    indicators["pmi"] = (
+                        float(latest.get("制造业-指数", None)) if pd.notna(latest.get("制造业-指数", None)) else None
+                    )
             except Exception:
                 pass
 
@@ -918,9 +1046,9 @@ class AkShareSource:
                 return None
 
             # 品种特定解读
-            pmi = indicators.get('pmi')
-            gdp = indicators.get('gdp_growth')
-            cpi = indicators.get('cpi_yoy')
+            pmi = indicators.get("pmi")
+            gdp = indicators.get("gdp_growth")
+            cpi = indicators.get("cpi_yoy")
             parts = []
 
             # 通用解读
@@ -938,39 +1066,39 @@ class AkShareSource:
                     parts.append(f"GDP增速{gdp:.1f}%，经济衰退风险")
 
             # 品种特定解读
-            prefix = commodity_info['interpretation_prefix']
-            if commodity_info['sector'] == 'black':
+            prefix = commodity_info["interpretation_prefix"]
+            if commodity_info["sector"] == "black":
                 if pmi is not None and pmi > 50:
                     parts.append(f"{prefix}板块：PMI扩张利好需求")
                 elif pmi is not None and pmi < 49:
                     parts.append(f"{prefix}板块：PMI收缩利空需求")
-            elif commodity_info['sector'] == 'energy':
+            elif commodity_info["sector"] == "energy":
                 parts.append(f"{prefix}板块：关注原油价格和通胀走势")
-            elif commodity_info['sector'] == 'agriculture':
+            elif commodity_info["sector"] == "agriculture":
                 if cpi is not None and cpi > 2:
                     parts.append(f"{prefix}板块：CPI偏高，通胀支撑价格")
                 elif cpi is not None and cpi < 0:
                     parts.append(f"{prefix}板块：CPI为负，通缩压力")
-            elif commodity_info['sector'] == 'precious':
+            elif commodity_info["sector"] == "precious":
                 parts.append(f"{prefix}板块：关注实际利率和避险情绪")
 
             return {
-                'symbol': variety,
-                'indicators': indicators,
-                'gdp_growth': indicators.get('gdp_growth'),
-                'cpi_yoy': indicators.get('cpi_yoy'),
-                'pmi': indicators.get('pmi'),
-                'interest_rate': indicators.get('interest_rate'),
-                'date': datetime.now().strftime('%Y-%m-%d'),
-                'interpretation': "；".join(parts) if parts else "数据有限",
-                'commodity_specific': commodity_info,
+                "symbol": variety,
+                "indicators": indicators,
+                "gdp_growth": indicators.get("gdp_growth"),
+                "cpi_yoy": indicators.get("cpi_yoy"),
+                "pmi": indicators.get("pmi"),
+                "interest_rate": indicators.get("interest_rate"),
+                "date": datetime.now().strftime("%Y-%m-%d"),
+                "interpretation": "；".join(parts) if parts else "数据有限",
+                "commodity_specific": commodity_info,
             }
 
         except Exception as e:
             logger.debug(f"AkShare get_macro 异常: {e}")
             return None
 
-    def get_delivery(self, symbol: str) -> Optional[Dict[str, Any]]:
+    def get_delivery(self, symbol: str) -> dict[str, Any] | None:
         """获取交割数据（交割月、交割量、仓单注册量）
 
         返回:
@@ -985,7 +1113,6 @@ class AkShareSource:
             }
         """
         try:
-            import akshare as ak
             variety = normalize_symbol(symbol)
             cn_name = AKSHARE_FUTURES_MAP.get(variety)
             if not cn_name:
@@ -994,7 +1121,7 @@ class AkShareSource:
             # 计算交割月（商品期货通常在1/5/9月或合约月份交割）
             now = datetime.now()
             delivery_months = [1, 5, 9]  # 黑色系、农产品等常见交割月
-            if variety in ['CU', 'AL', 'ZN', 'PB', 'NI', 'SN']:  # 有色系
+            if variety in ["CU", "AL", "ZN", "PB", "NI", "SN"]:  # 有色系
                 delivery_months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
             # 找到最近的交割月
@@ -1013,7 +1140,7 @@ class AkShareSource:
             try:
                 inv = self.get_inventory(symbol)
                 if inv:
-                    registered_warrants = inv.get('warehouse_receipts', 0)
+                    registered_warrants = inv.get("warehouse_receipts", 0)
             except Exception:
                 pass
 
@@ -1026,13 +1153,13 @@ class AkShareSource:
                 interpretation = f"距交割月{days_to_delivery}天，交割因素影响较小"
 
             return {
-                'symbol': variety,
-                'delivery_month': next_delivery.strftime('%Y-%m'),
-                'next_delivery_date': next_delivery.strftime('%Y-%m-%d'),
-                'registered_warrants': registered_warrants,
-                'delivery_volume': 0,
-                'days_to_delivery': days_to_delivery,
-                'interpretation': interpretation,
+                "symbol": variety,
+                "delivery_month": next_delivery.strftime("%Y-%m"),
+                "next_delivery_date": next_delivery.strftime("%Y-%m-%d"),
+                "registered_warrants": registered_warrants,
+                "delivery_volume": 0,
+                "days_to_delivery": days_to_delivery,
+                "interpretation": interpretation,
             }
 
         except Exception as e:
@@ -1043,6 +1170,7 @@ class AkShareSource:
 # ---------------------------------------------------------------------------
 # UnifiedDataRouter — 统一数据路由器
 # ---------------------------------------------------------------------------
+
 
 class UnifiedDataRouter:
     """统一期货数据路由器
@@ -1056,11 +1184,11 @@ class UnifiedDataRouter:
     - 回写缓存：远程数据自动回写本地 DuckDB
     """
 
-    def __init__(self, config_path: Optional[str] = None, db_dir: str = "data"):
+    def __init__(self, config_path: str | None = None, db_dir: str = "data"):
         self._db_dir = db_dir
         self._routing = dict(DEFAULT_ROUTING)
         self._staleness_threshold = dict(DEFAULT_STALENESS_THRESHOLD)
-        self._sources: Dict[str, Any] = {}  # 缓存各数据源实例
+        self._sources: dict[str, Any] = {}  # 缓存各数据源实例
         self._config_path = config_path
 
         # 加载配置
@@ -1070,22 +1198,22 @@ class UnifiedDataRouter:
     def _load_config(self, config_path: str):
         """从 config.json 加载路由配置"""
         try:
-            with open(config_path, 'r', encoding='utf-8') as f:
+            with open(config_path, encoding="utf-8") as f:
                 cfg = json.load(f)
 
-            data_routing = cfg.get('data_routing', {})
+            data_routing = cfg.get("data_routing", {})
             if data_routing:
                 # 合并路由优先级
-                for dtype, priorities in data_routing.get('priorities', {}).items():
+                for dtype, priorities in data_routing.get("priorities", {}).items():
                     self._routing[dtype] = priorities
 
                 # 合并时效性阈值
-                for dtype, hours in data_routing.get('staleness_threshold', {}).items():
+                for dtype, hours in data_routing.get("staleness_threshold", {}).items():
                     self._staleness_threshold[dtype] = hours
 
                 # 加载数据库路径
-                if 'db_dir' in data_routing:
-                    self._db_dir = data_routing['db_dir']
+                if "db_dir" in data_routing:
+                    self._db_dir = data_routing["db_dir"]
 
             logger.info(f"数据路由配置已加载: {data_routing}")
 
@@ -1094,7 +1222,7 @@ class UnifiedDataRouter:
 
     # ---- 数据源获取（延迟初始化） ----
 
-    def _get_source(self, source_name: str) -> Optional[Any]:
+    def _get_source(self, source_name: str) -> Any | None:
         """获取数据源实例（延迟初始化 + 缓存）"""
         if source_name in self._sources:
             return self._sources[source_name]
@@ -1103,12 +1231,14 @@ class UnifiedDataRouter:
         try:
             if source_name == "duckdb":
                 from trend_scanner.storage.data_sync import DataSyncManager
-                sqlite_path = os.path.join(self._db_dir, 'meta.db')
-                duckdb_path = os.path.join(self._db_dir, 'market.db')
+
+                sqlite_path = os.path.join(self._db_dir, "meta.db")
+                duckdb_path = os.path.join(self._db_dir, "market.db")
                 source = DataSyncManager(sqlite_path=sqlite_path, duckdb_path=duckdb_path)
 
             elif source_name == "tqsdk":
                 from trend_scanner.tqsdk_bridge import TqSdkBridge
+
                 source = TqSdkBridge()
 
             elif source_name == "pytdx":
@@ -1119,6 +1249,7 @@ class UnifiedDataRouter:
 
             elif source_name == "csv":
                 from trend_scanner.data_source import CsvSource
+
                 source = CsvSource(data_dir=self._db_dir)
 
         except Exception as e:
@@ -1128,7 +1259,7 @@ class UnifiedDataRouter:
             self._sources[source_name] = source
         return source
 
-    def _try_source(self, source_name: str, method: str, **kwargs) -> Optional[Any]:
+    def _try_source(self, source_name: str, method: str, **kwargs) -> Any | None:
         """尝试从单个数据源获取数据
 
         参数:
@@ -1144,14 +1275,14 @@ class UnifiedDataRouter:
             return None
 
         # 检查数据源可用性
-        if hasattr(source, 'is_available') and callable(source.is_available):
+        if hasattr(source, "is_available") and callable(source.is_available):
             if not source.is_available():
                 return None
         # DuckDB (DataSyncManager) 无 is_available，检查鸭子类型方式
         if source_name == "duckdb":
             try:
                 stats = source.get_statistics()
-                if not stats or not stats.get('sqlite', {}).get('total_symbols', 0):
+                if not stats or not stats.get("sqlite", {}).get("total_symbols", 0):
                     return None
             except Exception:
                 return None
@@ -1162,20 +1293,20 @@ class UnifiedDataRouter:
             # DuckDB 路由: get_kline 方法在 DataSyncManager 上
             if source_name == "duckdb" and method == "get_kline":
                 return source.get_kline(
-                    kwargs.get('symbol'),
-                    days=kwargs.get('days', 120),
-                    timeframe=kwargs.get('period', 'daily'),
+                    kwargs.get("symbol"),
+                    days=kwargs.get("days", 120),
+                    timeframe=kwargs.get("period", "daily"),
                     allow_tqsdk_fallback=False,  # 路由层自己管 fallback
                 )
             elif source_name == "duckdb" and method == "get_quote":
                 # DuckDB 没有 get_quote，从 SQLite 获取
-                quote = source.sqlite.get_symbol(kwargs.get('symbol'))
+                quote = source.sqlite.get_symbol(kwargs.get("symbol"))
                 if quote:
                     return {
-                        'symbol': quote.get('symbol', kwargs.get('symbol')),
-                        'last_price': quote.get('last_price', 0),
-                        'open_interest': quote.get('open_interest', 0),
-                        'volume': quote.get('volume', 0),
+                        "symbol": quote.get("symbol", kwargs.get("symbol")),
+                        "last_price": quote.get("last_price", 0),
+                        "open_interest": quote.get("open_interest", 0),
+                        "volume": quote.get("volume", 0),
                     }
                 return None
             return None
@@ -1198,35 +1329,44 @@ class UnifiedDataRouter:
         ts = datetime.now().isoformat()
 
         # 时效性检查
-        staleness = self._check_staleness(variety, 'kline')
+        staleness = self._check_staleness(variety, "kline")
 
-        for i, source_name in enumerate(self._routing.get('kline', DEFAULT_ROUTING['kline'])):
+        for i, source_name in enumerate(self._routing.get("kline", DEFAULT_ROUTING["kline"])):
             result = self._try_source(
-                source_name, 'get_kline',
-                symbol=variety, days=days, period=period,
+                source_name,
+                "get_kline",
+                symbol=variety,
+                days=days,
+                period=period,
             )
 
             if result is not None:
                 count = len(result) if isinstance(result, pd.DataFrame) else 0
                 # 远程数据回写本地缓存
-                if source_name in ('tqsdk', 'pytdx') and isinstance(result, pd.DataFrame):
+                if source_name in ("tqsdk", "pytdx") and isinstance(result, pd.DataFrame):
                     self._cache_kline(variety, result, period, source_name)
 
                 return DataResponse(
                     ok=True,
                     source=source_name,
                     fallback_used=(i > 0),
-                    data_type='kline',
+                    data_type="kline",
                     count=count,
                     data=result,
                     error=None,
                     timestamp=ts,
-                    staleness_hours=staleness if source_name == 'duckdb' else 0.0,
+                    staleness_hours=staleness if source_name == "duckdb" else 0.0,
                 )
 
         return DataResponse(
-            ok=False, source="", fallback_used=False, data_type='kline',
-            count=0, data=None, error="所有数据源均无法获取K线数据", timestamp=ts,
+            ok=False,
+            source="",
+            fallback_used=False,
+            data_type="kline",
+            count=0,
+            data=None,
+            error="所有数据源均无法获取K线数据",
+            timestamp=ts,
             staleness_hours=staleness,
         )
 
@@ -1238,25 +1378,37 @@ class UnifiedDataRouter:
         variety = normalize_symbol(symbol)
         ts = datetime.now().isoformat()
 
-        staleness = self._check_staleness(variety, 'quote')
+        staleness = self._check_staleness(variety, "quote")
 
-        for i, source_name in enumerate(self._routing.get('quote', DEFAULT_ROUTING['quote'])):
-            result = self._try_source(source_name, 'get_quote', symbol=variety)
+        for i, source_name in enumerate(self._routing.get("quote", DEFAULT_ROUTING["quote"])):
+            result = self._try_source(source_name, "get_quote", symbol=variety)
 
             if result is not None:
                 # 远程数据回写本地
-                if source_name in ('tqsdk', 'pytdx'):
+                if source_name in ("tqsdk", "pytdx"):
                     self._cache_quote(variety, result, source_name)
 
                 return DataResponse(
-                    ok=True, source=source_name, fallback_used=(i > 0),
-                    data_type='quote', count=1, data=result, error=None,
-                    timestamp=ts, staleness_hours=staleness if source_name == 'duckdb' else 0.0,
+                    ok=True,
+                    source=source_name,
+                    fallback_used=(i > 0),
+                    data_type="quote",
+                    count=1,
+                    data=result,
+                    error=None,
+                    timestamp=ts,
+                    staleness_hours=staleness if source_name == "duckdb" else 0.0,
                 )
 
         return DataResponse(
-            ok=False, source="", fallback_used=False, data_type='quote',
-            count=0, data=None, error="所有数据源均无法获取行情数据", timestamp=ts,
+            ok=False,
+            source="",
+            fallback_used=False,
+            data_type="quote",
+            count=0,
+            data=None,
+            error="所有数据源均无法获取行情数据",
+            timestamp=ts,
             staleness_hours=staleness,
         )
 
@@ -1268,22 +1420,34 @@ class UnifiedDataRouter:
         variety = normalize_symbol(symbol)
         ts = datetime.now().isoformat()
 
-        staleness = self._check_staleness(variety, 'basis')
+        staleness = self._check_staleness(variety, "basis")
 
-        for i, source_name in enumerate(self._routing.get('basis', DEFAULT_ROUTING['basis'])):
-            result = self._try_source(source_name, 'get_basis', symbol=variety)
+        for i, source_name in enumerate(self._routing.get("basis", DEFAULT_ROUTING["basis"])):
+            result = self._try_source(source_name, "get_basis", symbol=variety)
 
             if result is not None:
                 return DataResponse(
-                    ok=True, source=source_name, fallback_used=(i > 0),
-                    data_type='basis', count=1, data=result, error=None,
-                    timestamp=ts, staleness_hours=staleness,
+                    ok=True,
+                    source=source_name,
+                    fallback_used=(i > 0),
+                    data_type="basis",
+                    count=1,
+                    data=result,
+                    error=None,
+                    timestamp=ts,
+                    staleness_hours=staleness,
                 )
 
         return DataResponse(
-            ok=False, source="", fallback_used=False, data_type='basis',
-            count=0, data=None, error="无法获取基差数据（AkShare/Pytdx 均不可用）",
-            timestamp=ts, staleness_hours=staleness,
+            ok=False,
+            source="",
+            fallback_used=False,
+            data_type="basis",
+            count=0,
+            data=None,
+            error="无法获取基差数据（AkShare/Pytdx 均不可用）",
+            timestamp=ts,
+            staleness_hours=staleness,
         )
 
     def get_seasonality(self, symbol: str, years: int = 5) -> DataResponse:
@@ -1294,21 +1458,33 @@ class UnifiedDataRouter:
         variety = normalize_symbol(symbol)
         ts = datetime.now().isoformat()
 
-        staleness = self._check_staleness(variety, 'seasonality')
+        staleness = self._check_staleness(variety, "seasonality")
 
-        for i, source_name in enumerate(self._routing.get('seasonality', DEFAULT_ROUTING['seasonality'])):
-            result = self._try_source(source_name, 'get_seasonality', symbol=variety, years=years)
+        for i, source_name in enumerate(self._routing.get("seasonality", DEFAULT_ROUTING["seasonality"])):
+            result = self._try_source(source_name, "get_seasonality", symbol=variety, years=years)
 
             if result is not None:
                 return DataResponse(
-                    ok=True, source=source_name, fallback_used=(i > 0),
-                    data_type='seasonality', count=1, data=result, error=None,
-                    timestamp=ts, staleness_hours=staleness,
+                    ok=True,
+                    source=source_name,
+                    fallback_used=(i > 0),
+                    data_type="seasonality",
+                    count=1,
+                    data=result,
+                    error=None,
+                    timestamp=ts,
+                    staleness_hours=staleness,
                 )
 
         return DataResponse(
-            ok=False, source="", fallback_used=False, data_type='seasonality',
-            count=0, data=None, error="无法获取季节性数据", timestamp=ts,
+            ok=False,
+            source="",
+            fallback_used=False,
+            data_type="seasonality",
+            count=0,
+            data=None,
+            error="无法获取季节性数据",
+            timestamp=ts,
             staleness_hours=staleness,
         )
 
@@ -1320,21 +1496,33 @@ class UnifiedDataRouter:
         variety = normalize_symbol(symbol)
         ts = datetime.now().isoformat()
 
-        staleness = self._check_staleness(variety, 'inventory')
+        staleness = self._check_staleness(variety, "inventory")
 
-        for i, source_name in enumerate(self._routing.get('inventory', DEFAULT_ROUTING['inventory'])):
-            result = self._try_source(source_name, 'get_inventory', symbol=variety)
+        for i, source_name in enumerate(self._routing.get("inventory", DEFAULT_ROUTING["inventory"])):
+            result = self._try_source(source_name, "get_inventory", symbol=variety)
 
             if result is not None:
                 return DataResponse(
-                    ok=True, source=source_name, fallback_used=(i > 0),
-                    data_type='inventory', count=1, data=result, error=None,
-                    timestamp=ts, staleness_hours=staleness,
+                    ok=True,
+                    source=source_name,
+                    fallback_used=(i > 0),
+                    data_type="inventory",
+                    count=1,
+                    data=result,
+                    error=None,
+                    timestamp=ts,
+                    staleness_hours=staleness,
                 )
 
         return DataResponse(
-            ok=False, source="", fallback_used=False, data_type='inventory',
-            count=0, data=None, error="无法获取仓单数据", timestamp=ts,
+            ok=False,
+            source="",
+            fallback_used=False,
+            data_type="inventory",
+            count=0,
+            data=None,
+            error="无法获取仓单数据",
+            timestamp=ts,
             staleness_hours=staleness,
         )
 
@@ -1345,20 +1533,32 @@ class UnifiedDataRouter:
         """
         variety = normalize_symbol(symbol)
         ts = datetime.now().isoformat()
-        staleness = self._check_staleness(variety, 'top_list')
+        staleness = self._check_staleness(variety, "top_list")
 
-        for i, source_name in enumerate(self._routing.get('top_list', DEFAULT_ROUTING['top_list'])):
-            result = self._try_source(source_name, 'get_top_list', symbol=variety)
+        for i, source_name in enumerate(self._routing.get("top_list", DEFAULT_ROUTING["top_list"])):
+            result = self._try_source(source_name, "get_top_list", symbol=variety)
             if result is not None:
                 return DataResponse(
-                    ok=True, source=source_name, fallback_used=(i > 0),
-                    data_type='top_list', count=1, data=result, error=None,
-                    timestamp=ts, staleness_hours=staleness,
+                    ok=True,
+                    source=source_name,
+                    fallback_used=(i > 0),
+                    data_type="top_list",
+                    count=1,
+                    data=result,
+                    error=None,
+                    timestamp=ts,
+                    staleness_hours=staleness,
                 )
 
         return DataResponse(
-            ok=False, source="", fallback_used=False, data_type='top_list',
-            count=0, data=None, error="无法获取龙虎榜数据", timestamp=ts,
+            ok=False,
+            source="",
+            fallback_used=False,
+            data_type="top_list",
+            count=0,
+            data=None,
+            error="无法获取龙虎榜数据",
+            timestamp=ts,
             staleness_hours=staleness,
         )
 
@@ -1369,20 +1569,32 @@ class UnifiedDataRouter:
         """
         variety = normalize_symbol(symbol)
         ts = datetime.now().isoformat()
-        staleness = self._check_staleness(variety, 'margin')
+        staleness = self._check_staleness(variety, "margin")
 
-        for i, source_name in enumerate(self._routing.get('margin', DEFAULT_ROUTING['margin'])):
-            result = self._try_source(source_name, 'get_margin', symbol=variety)
+        for i, source_name in enumerate(self._routing.get("margin", DEFAULT_ROUTING["margin"])):
+            result = self._try_source(source_name, "get_margin", symbol=variety)
             if result is not None:
                 return DataResponse(
-                    ok=True, source=source_name, fallback_used=(i > 0),
-                    data_type='margin', count=1, data=result, error=None,
-                    timestamp=ts, staleness_hours=staleness,
+                    ok=True,
+                    source=source_name,
+                    fallback_used=(i > 0),
+                    data_type="margin",
+                    count=1,
+                    data=result,
+                    error=None,
+                    timestamp=ts,
+                    staleness_hours=staleness,
                 )
 
         return DataResponse(
-            ok=False, source="", fallback_used=False, data_type='margin',
-            count=0, data=None, error="无法获取保证金数据", timestamp=ts,
+            ok=False,
+            source="",
+            fallback_used=False,
+            data_type="margin",
+            count=0,
+            data=None,
+            error="无法获取保证金数据",
+            timestamp=ts,
             staleness_hours=staleness,
         )
 
@@ -1393,20 +1605,32 @@ class UnifiedDataRouter:
         """
         variety = normalize_symbol(symbol)
         ts = datetime.now().isoformat()
-        staleness = self._check_staleness(variety, 'macro')
+        staleness = self._check_staleness(variety, "macro")
 
-        for i, source_name in enumerate(self._routing.get('macro', DEFAULT_ROUTING['macro'])):
-            result = self._try_source(source_name, 'get_macro', symbol=variety)
+        for i, source_name in enumerate(self._routing.get("macro", DEFAULT_ROUTING["macro"])):
+            result = self._try_source(source_name, "get_macro", symbol=variety)
             if result is not None:
                 return DataResponse(
-                    ok=True, source=source_name, fallback_used=(i > 0),
-                    data_type='macro', count=1, data=result, error=None,
-                    timestamp=ts, staleness_hours=staleness,
+                    ok=True,
+                    source=source_name,
+                    fallback_used=(i > 0),
+                    data_type="macro",
+                    count=1,
+                    data=result,
+                    error=None,
+                    timestamp=ts,
+                    staleness_hours=staleness,
                 )
 
         return DataResponse(
-            ok=False, source="", fallback_used=False, data_type='macro',
-            count=0, data=None, error="无法获取宏观经济数据", timestamp=ts,
+            ok=False,
+            source="",
+            fallback_used=False,
+            data_type="macro",
+            count=0,
+            data=None,
+            error="无法获取宏观经济数据",
+            timestamp=ts,
             staleness_hours=staleness,
         )
 
@@ -1417,20 +1641,32 @@ class UnifiedDataRouter:
         """
         variety = normalize_symbol(symbol)
         ts = datetime.now().isoformat()
-        staleness = self._check_staleness(variety, 'delivery')
+        staleness = self._check_staleness(variety, "delivery")
 
-        for i, source_name in enumerate(self._routing.get('delivery', DEFAULT_ROUTING['delivery'])):
-            result = self._try_source(source_name, 'get_delivery', symbol=variety)
+        for i, source_name in enumerate(self._routing.get("delivery", DEFAULT_ROUTING["delivery"])):
+            result = self._try_source(source_name, "get_delivery", symbol=variety)
             if result is not None:
                 return DataResponse(
-                    ok=True, source=source_name, fallback_used=(i > 0),
-                    data_type='delivery', count=1, data=result, error=None,
-                    timestamp=ts, staleness_hours=staleness,
+                    ok=True,
+                    source=source_name,
+                    fallback_used=(i > 0),
+                    data_type="delivery",
+                    count=1,
+                    data=result,
+                    error=None,
+                    timestamp=ts,
+                    staleness_hours=staleness,
                 )
 
         return DataResponse(
-            ok=False, source="", fallback_used=False, data_type='delivery',
-            count=0, data=None, error="无法获取交割数据", timestamp=ts,
+            ok=False,
+            source="",
+            fallback_used=False,
+            data_type="delivery",
+            count=0,
+            data=None,
+            error="无法获取交割数据",
+            timestamp=ts,
             staleness_hours=staleness,
         )
 
@@ -1443,25 +1679,25 @@ class UnifiedDataRouter:
             滞后小时数（0 = 实时或无法判断）
         """
         # 从本地 DB 检查最新数据时间
-        duckdb = self._get_source('duckdb')
+        duckdb = self._get_source("duckdb")
         if duckdb is None:
             return 0.0
 
         try:
-            if data_type == 'kline':
-                date_range = duckdb.duckdb.get_kline_date_range(symbol, timeframe='daily')
-                if date_range and date_range.get('latest_date'):
-                    latest = pd.Timestamp(date_range['latest_date'])
+            if data_type == "kline":
+                date_range = duckdb.duckdb.get_kline_date_range(symbol, timeframe="daily")
+                if date_range and date_range.get("latest_date"):
+                    latest = pd.Timestamp(date_range["latest_date"])
                     now = pd.Timestamp.now()
                     # 如果是交易日下午3点后，今天应该有数据
                     hours = (now - latest).total_seconds() / 3600
                     return max(0, hours)
-            elif data_type == 'quote':
+            elif data_type == "quote":
                 # 从 SQLite 检查行情更新时间
                 sqlite = duckdb.sqlite
                 symbol_info = sqlite.get_symbol(symbol)
-                if symbol_info and symbol_info.get('updated_at'):
-                    latest = pd.Timestamp(symbol_info['updated_at'])
+                if symbol_info and symbol_info.get("updated_at"):
+                    latest = pd.Timestamp(symbol_info["updated_at"])
                     now = pd.Timestamp.now()
                     hours = (now - latest).total_seconds() / 3600
                     return max(0, hours)
@@ -1470,7 +1706,7 @@ class UnifiedDataRouter:
 
         return 0.0
 
-    def check_data_timeliness(self, symbol: str) -> Dict[str, Any]:
+    def check_data_timeliness(self, symbol: str) -> dict[str, Any]:
         """公开的时效性检查接口
 
         返回:
@@ -1482,44 +1718,44 @@ class UnifiedDataRouter:
             }
         """
         variety = normalize_symbol(symbol)
-        kline_staleness = self._check_staleness(variety, 'kline')
-        quote_staleness = self._check_staleness(variety, 'quote')
+        kline_staleness = self._check_staleness(variety, "kline")
+        quote_staleness = self._check_staleness(variety, "quote")
 
-        kline_threshold = self._staleness_threshold.get('kline', 4)
-        quote_threshold = self._staleness_threshold.get('quote', 0.5)
+        kline_threshold = self._staleness_threshold.get("kline", 4)
+        quote_threshold = self._staleness_threshold.get("quote", 0.5)
 
         def _status(hours, threshold):
             if hours == 0:
-                return 'unknown'
+                return "unknown"
             if hours <= threshold:
-                return 'fresh'
+                return "fresh"
             if hours <= threshold * 3:
-                return 'stale'
-            return 'critical'
+                return "stale"
+            return "critical"
 
         max_staleness = max(kline_staleness, quote_staleness)
-        overall = 'fresh'
+        overall = "fresh"
         if max_staleness > max(kline_threshold, quote_threshold) * 3:
-            overall = 'critical'
+            overall = "critical"
         elif max_staleness > max(kline_threshold, quote_threshold):
-            overall = 'stale'
+            overall = "stale"
 
         return {
-            'symbol': variety,
-            'kline': {
-                'staleness_hours': kline_staleness,
-                'status': _status(kline_staleness, kline_threshold),
-                'threshold_hours': kline_threshold,
+            "symbol": variety,
+            "kline": {
+                "staleness_hours": kline_staleness,
+                "status": _status(kline_staleness, kline_threshold),
+                "threshold_hours": kline_threshold,
             },
-            'quote': {
-                'staleness_hours': quote_staleness,
-                'status': _status(quote_staleness, quote_threshold),
-                'threshold_hours': quote_threshold,
+            "quote": {
+                "staleness_hours": quote_staleness,
+                "status": _status(quote_staleness, quote_threshold),
+                "threshold_hours": quote_threshold,
             },
-            'overall_status': overall,
+            "overall_status": overall,
         }
 
-    def is_data_stale(self, symbol: str, data_type: str = 'kline') -> bool:
+    def is_data_stale(self, symbol: str, data_type: str = "kline") -> bool:
         """判断数据是否过期"""
         staleness = self._check_staleness(symbol, data_type)
         threshold = self._staleness_threshold.get(data_type, 4)
@@ -1529,7 +1765,7 @@ class UnifiedDataRouter:
 
     def _cache_kline(self, symbol: str, df: pd.DataFrame, timeframe: str, source: str):
         """远程 K 线数据回写本地 DuckDB"""
-        duckdb_mgr = self._get_source('duckdb')
+        duckdb_mgr = self._get_source("duckdb")
         if duckdb_mgr is None:
             return
         try:
@@ -1537,9 +1773,9 @@ class UnifiedDataRouter:
         except Exception as e:
             logger.debug(f"K线缓存回写失败({symbol}): {e}")
 
-    def _cache_quote(self, symbol: str, quote: Dict, source: str):
+    def _cache_quote(self, symbol: str, quote: dict, source: str):
         """远程行情数据回写本地"""
-        duckdb_mgr = self._get_source('duckdb')
+        duckdb_mgr = self._get_source("duckdb")
         if duckdb_mgr is None:
             return
         try:
@@ -1550,40 +1786,40 @@ class UnifiedDataRouter:
 
     # ---- 路由配置管理 ----
 
-    def get_routing_config(self) -> Dict[str, Any]:
+    def get_routing_config(self) -> dict[str, Any]:
         """获取当前路由配置"""
         return {
-            'priorities': dict(self._routing),
-            'staleness_threshold': dict(self._staleness_threshold),
-            'db_dir': self._db_dir,
+            "priorities": dict(self._routing),
+            "staleness_threshold": dict(self._staleness_threshold),
+            "db_dir": self._db_dir,
         }
 
-    def update_routing(self, data_type: str, priorities: List[str]):
+    def update_routing(self, data_type: str, priorities: list[str]):
         """动态更新路由优先级
 
         参数:
             data_type: 数据类型 ('kline', 'quote', 'basis', 等)
             priorities: 优先级列表 (如 ['tqsdk', 'pytdx', 'csv'])
         """
-        valid_sources = {'duckdb', 'tqsdk', 'pytdx', 'akshare', 'csv'}
+        valid_sources = {"duckdb", "tqsdk", "pytdx", "akshare", "csv"}
         cleaned = [s for s in priorities if s in valid_sources]
         if cleaned:
             self._routing[data_type] = cleaned
             logger.info(f"路由优先级已更新: {data_type} → {cleaned}")
 
-    def get_available_sources(self) -> Dict[str, bool]:
+    def get_available_sources(self) -> dict[str, bool]:
         """检查所有数据源可用性"""
         result = {}
-        for name in ['duckdb', 'tqsdk', 'pytdx', 'akshare', 'csv']:
+        for name in ["duckdb", "tqsdk", "pytdx", "akshare", "csv"]:
             source = self._get_source(name)
             if source is not None:
-                if hasattr(source, 'is_available') and callable(source.is_available):
+                if hasattr(source, "is_available") and callable(source.is_available):
                     result[name] = source.is_available()
-                elif name == 'duckdb':
+                elif name == "duckdb":
                     # DataSyncManager 无 is_available，检查统计信息
                     try:
                         stats = source.get_statistics()
-                        result[name] = bool(stats and stats.get('sqlite', {}).get('total_symbols', 0) > 0)
+                        result[name] = bool(stats and stats.get("sqlite", {}).get("total_symbols", 0) > 0)
                     except Exception:
                         result[name] = False
                 else:
@@ -1594,12 +1830,12 @@ class UnifiedDataRouter:
 
     # ---- 兼容接口 ----
 
-    def get_kline_df(self, symbol: str, days: int = 120, period: str = "daily") -> Optional[pd.DataFrame]:
+    def get_kline_df(self, symbol: str, days: int = 120, period: str = "daily") -> pd.DataFrame | None:
         """兼容旧接口：返回 DataFrame 或 None"""
         resp = self.get_kline(symbol, days, period)
         return resp.data if resp.ok else None
 
-    def get_quote_dict(self, symbol: str) -> Optional[Dict[str, Any]]:
+    def get_quote_dict(self, symbol: str) -> dict[str, Any] | None:
         """兼容旧接口：返回 Dict 或 None"""
         resp = self.get_quote(symbol)
         return resp.data if resp.ok else None
@@ -1609,10 +1845,10 @@ class UnifiedDataRouter:
 # 模块级便捷函数
 # ---------------------------------------------------------------------------
 
-_router_instance: Optional[UnifiedDataRouter] = None
+_router_instance: UnifiedDataRouter | None = None
 
 
-def get_router(config_path: Optional[str] = None, db_dir: str = "data") -> UnifiedDataRouter:
+def get_router(config_path: str | None = None, db_dir: str = "data") -> UnifiedDataRouter:
     """获取全局路由器实例（单例）"""
     global _router_instance
     if _router_instance is None:

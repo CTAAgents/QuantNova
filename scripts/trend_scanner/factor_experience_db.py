@@ -16,9 +16,9 @@
 import json
 import logging
 import os
+from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Dict, List, Optional, Any
-from dataclasses import dataclass, field, asdict
+
 
 logger = logging.getLogger(__name__)
 
@@ -26,37 +26,39 @@ logger = logging.getLogger(__name__)
 @dataclass
 class EvolutionStep:
     """演化步骤"""
+
     round: int
     factor_name: str
-    logic: str                  # 因子逻辑描述
-    params: Dict                # 参数
+    logic: str  # 因子逻辑描述
+    params: dict  # 参数
     icir: float
     t_stat: float
-    decision: str               # promote/observe/eliminate
-    reasons: List[str]          # 决策原因
-    timestamp: str = ''
+    decision: str  # promote/observe/eliminate
+    reasons: list[str]  # 决策原因
+    timestamp: str = ""
 
 
 @dataclass
 class FactorExperience:
     """因子经验记录"""
-    factor_id: str
-    trajectory: List[EvolutionStep]
-    failure_patterns: List[str]     # 提取的失败模式
-    success_patterns: List[str]     # 提取的成功模式
-    lessons: List[str]              # 提炼的教训
-    category: str = 'unknown'       # 因子分类
-    created_at: str = ''
 
-    def to_dict(self) -> Dict:
+    factor_id: str
+    trajectory: list[EvolutionStep]
+    failure_patterns: list[str]  # 提取的失败模式
+    success_patterns: list[str]  # 提取的成功模式
+    lessons: list[str]  # 提炼的教训
+    category: str = "unknown"  # 因子分类
+    created_at: str = ""
+
+    def to_dict(self) -> dict:
         return {
-            'factor_id': self.factor_id,
-            'trajectory': [asdict(s) for s in self.trajectory],
-            'failure_patterns': self.failure_patterns,
-            'success_patterns': self.success_patterns,
-            'lessons': self.lessons,
-            'category': self.category,
-            'created_at': self.created_at,
+            "factor_id": self.factor_id,
+            "trajectory": [asdict(s) for s in self.trajectory],
+            "failure_patterns": self.failure_patterns,
+            "success_patterns": self.success_patterns,
+            "lessons": self.lessons,
+            "category": self.category,
+            "created_at": self.created_at,
         }
 
 
@@ -79,14 +81,12 @@ class FactorExperienceDB:
         """
         if db_path is None:
             db_path = os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                '..', '..', 'data', 'factor_experience.json'
+                os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "factor_experience.json"
             )
         self.db_path = db_path
-        self.experiences: List[FactorExperience] = self._load()
+        self.experiences: list[FactorExperience] = self._load()
 
-    def record_trajectory(self, factor_id: str, trajectory: List[Dict],
-                          category: str = 'unknown'):
+    def record_trajectory(self, factor_id: str, trajectory: list[dict], category: str = "unknown"):
         """
         记录因子演化轨迹
 
@@ -99,15 +99,15 @@ class FactorExperienceDB:
         steps = []
         for t in trajectory:
             step = EvolutionStep(
-                round=t.get('round', 0),
-                factor_name=t.get('factor_name', ''),
-                logic=t.get('logic', ''),
-                params=t.get('params', {}),
-                icir=t.get('icir', 0),
-                t_stat=t.get('t_stat', 0),
-                decision=t.get('decision', 'observe'),
-                reasons=t.get('reasons', []),
-                timestamp=t.get('timestamp', datetime.now().isoformat()),
+                round=t.get("round", 0),
+                factor_name=t.get("factor_name", ""),
+                logic=t.get("logic", ""),
+                params=t.get("params", {}),
+                icir=t.get("icir", 0),
+                t_stat=t.get("t_stat", 0),
+                decision=t.get("decision", "observe"),
+                reasons=t.get("reasons", []),
+                timestamp=t.get("timestamp", datetime.now().isoformat()),
             )
             steps.append(step)
 
@@ -137,7 +137,7 @@ class FactorExperienceDB:
 
         logger.info(f"记录经验: {factor_id}, 步骤={len(steps)}, 教训={len(lessons)}")
 
-    def record_from_evolution_result(self, evolution_result, category: str = 'unknown'):
+    def record_from_evolution_result(self, evolution_result, category: str = "unknown"):
         """
         从进化引擎结果中自动记录经验
 
@@ -147,27 +147,29 @@ class FactorExperienceDB:
         """
         for round_data in evolution_result.rounds:
             for decision in round_data.decisions:
-                factor_name = decision.get('factor_name', '')
-                if decision.get('decision') == 'eliminate':
+                factor_name = decision.get("factor_name", "")
+                if decision.get("decision") == "eliminate":
                     # 记录被淘汰因子的轨迹
-                    trajectory = [{
-                        'round': round_data.round_num,
-                        'factor_name': factor_name,
-                        'logic': '',
-                        'params': {},
-                        'icir': decision.get('metrics', {}).get('icir', 0) if 'metrics' in decision else 0,
-                        't_stat': 0,
-                        'decision': decision.get('decision', ''),
-                        'reasons': decision.get('reasons', []),
-                        'timestamp': round_data.timestamp,
-                    }]
+                    trajectory = [
+                        {
+                            "round": round_data.round_num,
+                            "factor_name": factor_name,
+                            "logic": "",
+                            "params": {},
+                            "icir": decision.get("metrics", {}).get("icir", 0) if "metrics" in decision else 0,
+                            "t_stat": 0,
+                            "decision": decision.get("decision", ""),
+                            "reasons": decision.get("reasons", []),
+                            "timestamp": round_data.timestamp,
+                        }
+                    ]
                     self.record_trajectory(
                         factor_id=f"{factor_name}_r{round_data.round_num}",
                         trajectory=trajectory,
                         category=category,
                     )
 
-    def get_failure_lessons(self, limit: int = 10) -> List[str]:
+    def get_failure_lessons(self, limit: int = 10) -> list[str]:
         """
         获取最近的失败教训（用于注入生成器提示词）
 
@@ -186,7 +188,7 @@ class FactorExperienceDB:
                 break
         return lessons[:limit]
 
-    def get_success_patterns(self, limit: int = 10) -> List[str]:
+    def get_success_patterns(self, limit: int = 10) -> list[str]:
         """
         获取最近的成功模式
 
@@ -205,7 +207,7 @@ class FactorExperienceDB:
                 break
         return patterns[:limit]
 
-    def get_failure_patterns(self, limit: int = 10) -> List[str]:
+    def get_failure_patterns(self, limit: int = 10) -> list[str]:
         """
         获取最近的失败模式
 
@@ -257,7 +259,7 @@ class FactorExperienceDB:
 
         return "\n".join(lines)
 
-    def get_summary(self) -> Dict:
+    def get_summary(self) -> dict:
         """获取经验库摘要"""
         total_experiences = len(self.experiences)
         total_lessons = sum(len(e.lessons) for e in self.experiences)
@@ -272,51 +274,51 @@ class FactorExperienceDB:
             categories[cat] += 1
 
         return {
-            'total_experiences': total_experiences,
-            'total_lessons': total_lessons,
-            'total_failure_patterns': total_failures,
-            'total_success_patterns': total_successes,
-            'categories': categories,
+            "total_experiences": total_experiences,
+            "total_lessons": total_lessons,
+            "total_failure_patterns": total_failures,
+            "total_success_patterns": total_successes,
+            "categories": categories,
         }
 
-    def _extract_failure_patterns(self, steps: List[EvolutionStep]) -> List[str]:
+    def _extract_failure_patterns(self, steps: list[EvolutionStep]) -> list[str]:
         """从演化步骤中提取失败模式"""
         patterns = []
 
         for step in steps:
-            if step.decision == 'eliminate':
+            if step.decision == "eliminate":
                 # 分析淘汰原因
                 for reason in step.reasons:
-                    if 'ICIR' in reason:
+                    if "ICIR" in reason:
                         patterns.append(f"ICIR 过低: {step.factor_name} 的 ICIR={step.icir:.2f}")
-                    if 'IC>0' in reason:
+                    if "IC>0" in reason:
                         patterns.append(f"IC 方向不稳定: {step.factor_name}")
-                    if 't=' in reason:
+                    if "t=" in reason:
                         patterns.append(f"t 统计量不显著: {step.factor_name}")
 
                 # 分析因子逻辑
-                if 'momentum' in step.factor_name.lower():
-                    patterns.append(f"简单动量因子在期货市场预测力弱")
-                if 'volatility' in step.factor_name.lower():
-                    patterns.append(f"简单波动率因子截面区分力不足")
+                if "momentum" in step.factor_name.lower():
+                    patterns.append("简单动量因子在期货市场预测力弱")
+                if "volatility" in step.factor_name.lower():
+                    patterns.append("简单波动率因子截面区分力不足")
 
         return list(set(patterns))
 
-    def _extract_success_patterns(self, steps: List[EvolutionStep]) -> List[str]:
+    def _extract_success_patterns(self, steps: list[EvolutionStep]) -> list[str]:
         """从演化步骤中提取成功模式"""
         patterns = []
 
         for step in steps:
-            if step.decision == 'promote':
+            if step.decision == "promote":
                 patterns.append(f"有效因子: {step.factor_name} (ICIR={step.icir:.2f})")
                 if step.logic:
                     patterns.append(f"有效逻辑: {step.logic}")
 
         return list(set(patterns))
 
-    def _extract_lessons(self, steps: List[EvolutionStep],
-                          failure_patterns: List[str],
-                          success_patterns: List[str]) -> List[str]:
+    def _extract_lessons(
+        self, steps: list[EvolutionStep], failure_patterns: list[str], success_patterns: list[str]
+    ) -> list[str]:
         """提炼教训"""
         lessons = []
 
@@ -338,26 +340,24 @@ class FactorExperienceDB:
 
         return lessons
 
-    def _load(self) -> List[FactorExperience]:
+    def _load(self) -> list[FactorExperience]:
         """加载经验数据库"""
         if os.path.exists(self.db_path):
             try:
-                with open(self.db_path, 'r', encoding='utf-8') as f:
+                with open(self.db_path, encoding="utf-8") as f:
                     data = json.load(f)
 
                 experiences = []
-                for item in data.get('experiences', []):
-                    trajectory = [
-                        EvolutionStep(**step) for step in item.get('trajectory', [])
-                    ]
+                for item in data.get("experiences", []):
+                    trajectory = [EvolutionStep(**step) for step in item.get("trajectory", [])]
                     exp = FactorExperience(
-                        factor_id=item['factor_id'],
+                        factor_id=item["factor_id"],
                         trajectory=trajectory,
-                        failure_patterns=item.get('failure_patterns', []),
-                        success_patterns=item.get('success_patterns', []),
-                        lessons=item.get('lessons', []),
-                        category=item.get('category', 'unknown'),
-                        created_at=item.get('created_at', ''),
+                        failure_patterns=item.get("failure_patterns", []),
+                        success_patterns=item.get("success_patterns", []),
+                        lessons=item.get("lessons", []),
+                        category=item.get("category", "unknown"),
+                        created_at=item.get("created_at", ""),
                     )
                     experiences.append(exp)
                 return experiences
@@ -370,12 +370,12 @@ class FactorExperienceDB:
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
 
         data = {
-            'experiences': [e.to_dict() for e in self.experiences],
-            'summary': self.get_summary(),
-            'updated_at': datetime.now().isoformat(),
+            "experiences": [e.to_dict() for e in self.experiences],
+            "summary": self.get_summary(),
+            "updated_at": datetime.now().isoformat(),
         }
 
-        with open(self.db_path, 'w', encoding='utf-8') as f:
+        with open(self.db_path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
         logger.debug(f"经验数据库已保存: {len(self.experiences)} 条经验")

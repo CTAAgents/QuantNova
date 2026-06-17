@@ -13,16 +13,17 @@
 创建日期：2026-06-16
 """
 
-import os
 import json
 import logging
+import os
+from collections.abc import Callable
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Callable
-from dataclasses import dataclass, field, asdict
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 from scipy import stats
+
 
 logger = logging.getLogger(__name__)
 
@@ -33,31 +34,28 @@ logger = logging.getLogger(__name__)
 
 GATE_THRESHOLDS = {
     # ICIR 阈值
-    'icir_promote': 1.0,      # |ICIR| >= 1.0 → 晋升
-    'icir_eliminate': 0.5,    # |ICIR| < 0.5 → 淘汰
+    "icir_promote": 1.0,  # |ICIR| >= 1.0 → 晋升
+    "icir_eliminate": 0.5,  # |ICIR| < 0.5 → 淘汰
     # 介于两者之间 → 观察
-
     # IC 方向一致性
-    'ic_positive_pct_promote': 0.55,   # IC > 0 比例 >= 55% → 晋升
-    'ic_positive_pct_eliminate': 0.45, # IC > 0 比例 < 45% → 淘汰
-
+    "ic_positive_pct_promote": 0.55,  # IC > 0 比例 >= 55% → 晋升
+    "ic_positive_pct_eliminate": 0.45,  # IC > 0 比例 < 45% → 淘汰
     # t 统计量
-    't_stat_promote': 2.0,
-    't_stat_eliminate': 1.0,
-
+    "t_stat_promote": 2.0,
+    "t_stat_eliminate": 1.0,
     # 多空 Sharpe
-    'ls_sharpe_promote': 1.0,
-    'ls_sharpe_eliminate': 0.5,
-
+    "ls_sharpe_promote": 1.0,
+    "ls_sharpe_eliminate": 0.5,
     # 最少样本数
-    'min_cross_section_size': 10,  # 每日最少 10 个品种
-    'min_ic_days': 30,             # 最少 30 个交易日的 IC
+    "min_cross_section_size": 10,  # 每日最少 10 个品种
+    "min_ic_days": 30,  # 最少 30 个交易日的 IC
 }
 
 
 @dataclass
 class FactorEvaluationResult:
     """因子评估结果"""
+
     factor_name: str
     ic_mean: float = 0.0
     ic_std: float = 0.0
@@ -70,14 +68,14 @@ class FactorEvaluationResult:
     long_short_sharpe: float = 0.0
     ic_days: int = 0
     cross_section_size_avg: float = 0.0
-    decision: str = 'observe'  # 'promote' / 'observe' / 'eliminate'
-    decision_reasons: List[str] = field(default_factory=list)
-    ic_series: Optional[pd.Series] = None  # 每日 IC 序列（不序列化）
+    decision: str = "observe"  # 'promote' / 'observe' / 'eliminate'
+    decision_reasons: list[str] = field(default_factory=list)
+    ic_series: pd.Series | None = None  # 每日 IC 序列（不序列化）
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         """转换为可序列化字典"""
         d = asdict(self)
-        d.pop('ic_series', None)  # 不序列化 IC 序列
+        d.pop("ic_series", None)  # 不序列化 IC 序列
         return d
 
 
@@ -104,7 +102,7 @@ class FactorEvaluator:
         result = evaluator.evaluate('momentum_20d', my_factor)
     """
 
-    def __init__(self, db_path: str = None, thresholds: Dict = None):
+    def __init__(self, db_path: str = None, thresholds: dict = None):
         """
         初始化评估器
 
@@ -113,21 +111,20 @@ class FactorEvaluator:
             thresholds: 自定义门控阈值（覆盖默认值）
         """
         self.db_path = db_path or os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), '..', '..', 'data', 'market.db'
+            os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "market.db"
         )
         self.thresholds = {**GATE_THRESHOLDS, **(thresholds or {})}
 
         # 数据存储
-        self._kline_data: Dict[str, pd.DataFrame] = {}  # {symbol: DataFrame}
-        self._returns: Optional[pd.DataFrame] = None     # 次日收益率矩阵
-        self._factor_cache: Dict[str, pd.DataFrame] = {} # {factor_name: factor_values}
+        self._kline_data: dict[str, pd.DataFrame] = {}  # {symbol: DataFrame}
+        self._returns: pd.DataFrame | None = None  # 次日收益率矩阵
+        self._factor_cache: dict[str, pd.DataFrame] = {}  # {factor_name: factor_values}
 
     # ============================================================
     # 数据加载
     # ============================================================
 
-    def load_data(self, days: int = 120, timeframe: str = 'daily',
-                  symbols: List[str] = None) -> int:
+    def load_data(self, days: int = 120, timeframe: str = "daily", symbols: list[str] = None) -> int:
         """
         从 DuckDB 加载多品种 K 线数据
 
@@ -145,12 +142,15 @@ class FactorEvaluator:
         try:
             # 获取有数据的品种列表
             if symbols is None:
-                result = conn.execute("""
+                result = conn.execute(
+                    """
                     SELECT DISTINCT symbol FROM klines
                     WHERE timeframe = ?
                     GROUP BY symbol
                     HAVING COUNT(*) >= 60
-                """, [timeframe]).fetchall()
+                """,
+                    [timeframe],
+                ).fetchall()
                 symbols = [r[0] for r in result]
 
             if not symbols:
@@ -162,17 +162,20 @@ class FactorEvaluator:
             start_date = end_date - timedelta(days=days)
 
             for symbol in symbols:
-                df = conn.execute("""
+                df = conn.execute(
+                    """
                     SELECT timestamp as date, open, high, low, close, volume, open_interest
                     FROM klines
                     WHERE symbol = ? AND timeframe = ?
                     AND timestamp >= ? AND timestamp <= ?
                     ORDER BY timestamp
-                """, [symbol, timeframe, start_date, end_date]).fetchdf()
+                """,
+                    [symbol, timeframe, start_date, end_date],
+                ).fetchdf()
 
                 if not df.empty and len(df) >= 60:
-                    df['date'] = pd.to_datetime(df['date'])
-                    df = df.set_index('date')
+                    df["date"] = pd.to_datetime(df["date"])
+                    df = df.set_index("date")
                     self._kline_data[symbol] = df
 
             # 计算次日收益率矩阵
@@ -184,7 +187,7 @@ class FactorEvaluator:
         finally:
             conn.close()
 
-    def set_data(self, kline_data: Dict[str, pd.DataFrame]):
+    def set_data(self, kline_data: dict[str, pd.DataFrame]):
         """
         直接设置 K 线数据
 
@@ -194,8 +197,8 @@ class FactorEvaluator:
         self._kline_data = {}
         for symbol, df in kline_data.items():
             df = df.copy()
-            if 'date' in df.columns:
-                df = df.set_index('date')
+            if "date" in df.columns:
+                df = df.set_index("date")
             # 统一日期精度到天（去掉时分秒）
             df.index = pd.to_datetime(df.index).normalize()
             self._kline_data[symbol] = df
@@ -208,9 +211,9 @@ class FactorEvaluator:
 
         returns_dict = {}
         for symbol, df in self._kline_data.items():
-            if 'close' in df.columns and len(df) > 1:
+            if "close" in df.columns and len(df) > 1:
                 # 次日收益率 = (明日收盘 - 今日收盘) / 今日收盘
-                returns_dict[symbol] = df['close'].pct_change().shift(-1)
+                returns_dict[symbol] = df["close"].pct_change().shift(-1)
 
         self._returns = pd.DataFrame(returns_dict)
 
@@ -218,8 +221,7 @@ class FactorEvaluator:
     # 因子计算
     # ============================================================
 
-    def compute_factor(self, factor_name: str,
-                       factor_fn: Callable[[pd.DataFrame], pd.Series]) -> pd.DataFrame:
+    def compute_factor(self, factor_name: str, factor_fn: Callable[[pd.DataFrame], pd.Series]) -> pd.DataFrame:
         """
         对所有品种计算因子值
 
@@ -256,8 +258,7 @@ class FactorEvaluator:
     # 截面 IC 计算
     # ============================================================
 
-    def compute_cross_sectional_ic(self, factor_values: pd.DataFrame,
-                                    method: str = 'spearman') -> pd.Series:
+    def compute_cross_sectional_ic(self, factor_values: pd.DataFrame, method: str = "spearman") -> pd.Series:
         """
         计算每日截面 IC
 
@@ -274,7 +275,7 @@ class FactorEvaluator:
 
         # 对齐日期
         common_dates = factor_values.index.intersection(self._returns.index)
-        if len(common_dates) < self.thresholds['min_ic_days']:
+        if len(common_dates) < self.thresholds["min_ic_days"]:
             logger.warning(f"对齐后只有 {len(common_dates)} 天数据，不足 {self.thresholds['min_ic_days']}")
             return pd.Series(dtype=float)
 
@@ -285,13 +286,13 @@ class FactorEvaluator:
             ret = self._returns.loc[date].dropna()
             common_symbols = fv.index.intersection(ret.index)
 
-            if len(common_symbols) < self.thresholds['min_cross_section_size']:
+            if len(common_symbols) < self.thresholds["min_cross_section_size"]:
                 continue
 
             fv_cs = fv[common_symbols]
             ret_cs = ret[common_symbols]
 
-            if method == 'spearman':
+            if method == "spearman":
                 # 处理常量数组（标准差为 0 时相关系数未定义）
                 if fv_cs.std() == 0 or ret_cs.std() == 0:
                     continue
@@ -307,8 +308,7 @@ class FactorEvaluator:
     # 因子评估
     # ============================================================
 
-    def evaluate(self, factor_name: str,
-                 factor_fn: Callable[[pd.DataFrame], pd.Series]) -> FactorEvaluationResult:
+    def evaluate(self, factor_name: str, factor_fn: Callable[[pd.DataFrame], pd.Series]) -> FactorEvaluationResult:
         """
         评估因子的截面预测能力
 
@@ -324,15 +324,15 @@ class FactorEvaluator:
         # 1. 计算因子值
         factor_values = self.compute_factor(factor_name, factor_fn)
         if factor_values.empty:
-            result.decision = 'eliminate'
-            result.decision_reasons.append('因子计算失败')
+            result.decision = "eliminate"
+            result.decision_reasons.append("因子计算失败")
             return result
 
         # 2. 计算截面 IC
-        ic = self.compute_cross_sectional_ic(factor_values, method='spearman')
-        if len(ic) < self.thresholds['min_ic_days']:
-            result.decision = 'observe'
-            result.decision_reasons.append(f'IC 样本不足 ({len(ic)} < {self.thresholds["min_ic_days"]})')
+        ic = self.compute_cross_sectional_ic(factor_values, method="spearman")
+        if len(ic) < self.thresholds["min_ic_days"]:
+            result.decision = "observe"
+            result.decision_reasons.append(f"IC 样本不足 ({len(ic)} < {self.thresholds['min_ic_days']})")
             result.ic_days = len(ic)
             return result
 
@@ -358,9 +358,7 @@ class FactorEvaluator:
         result.t_stat = float(ic.mean() / (ic.std() / np.sqrt(n))) if ic.std() > 0 else 0.0
 
         # 截面大小平均值
-        result.cross_section_size_avg = float(
-            factor_values.notna().sum(axis=1).mean()
-        )
+        result.cross_section_size_avg = float(factor_values.notna().sum(axis=1).mean())
 
         # 多空 Sharpe
         result.long_short_sharpe = self._compute_long_short_sharpe(factor_values)
@@ -370,7 +368,7 @@ class FactorEvaluator:
 
         return result
 
-    def evaluate_batch(self, factors: Dict[str, Callable]) -> List[FactorEvaluationResult]:
+    def evaluate_batch(self, factors: dict[str, Callable]) -> list[FactorEvaluationResult]:
         """
         批量评估多个因子
 
@@ -393,8 +391,7 @@ class FactorEvaluator:
     # 多空 Sharpe 计算
     # ============================================================
 
-    def _compute_long_short_sharpe(self, factor_values: pd.DataFrame,
-                                    quantile: float = 0.2) -> float:
+    def _compute_long_short_sharpe(self, factor_values: pd.DataFrame, quantile: float = 0.2) -> float:
         """
         计算多空组合 Sharpe
 
@@ -471,50 +468,52 @@ class FactorEvaluator:
         reasons = []
 
         # ICIR
-        if abs(result.icir) >= self.thresholds['icir_promote']:
+        if abs(result.icir) >= self.thresholds["icir_promote"]:
             promote_count += 1
-            reasons.append(f'ICIR={result.icir:.2f} >= {self.thresholds["icir_promote"]}')
-        elif abs(result.icir) < self.thresholds['icir_eliminate']:
+            reasons.append(f"ICIR={result.icir:.2f} >= {self.thresholds['icir_promote']}")
+        elif abs(result.icir) < self.thresholds["icir_eliminate"]:
             eliminate_count += 1
-            reasons.append(f'ICIR={result.icir:.2f} < {self.thresholds["icir_eliminate"]}')
+            reasons.append(f"ICIR={result.icir:.2f} < {self.thresholds['icir_eliminate']}")
 
         # IC > 0 比例
-        if result.ic_positive_pct >= self.thresholds['ic_positive_pct_promote']:
+        if result.ic_positive_pct >= self.thresholds["ic_positive_pct_promote"]:
             promote_count += 1
-            reasons.append(f'IC>0比例={result.ic_positive_pct:.1%} >= {self.thresholds["ic_positive_pct_promote"]:.0%}')
-        elif result.ic_positive_pct < self.thresholds['ic_positive_pct_eliminate']:
+            reasons.append(f"IC>0比例={result.ic_positive_pct:.1%} >= {self.thresholds['ic_positive_pct_promote']:.0%}")
+        elif result.ic_positive_pct < self.thresholds["ic_positive_pct_eliminate"]:
             eliminate_count += 1
-            reasons.append(f'IC>0比例={result.ic_positive_pct:.1%} < {self.thresholds["ic_positive_pct_eliminate"]:.0%}')
+            reasons.append(
+                f"IC>0比例={result.ic_positive_pct:.1%} < {self.thresholds['ic_positive_pct_eliminate']:.0%}"
+            )
 
         # t 统计量
-        if abs(result.t_stat) >= self.thresholds['t_stat_promote']:
+        if abs(result.t_stat) >= self.thresholds["t_stat_promote"]:
             promote_count += 1
-            reasons.append(f't={result.t_stat:.2f} >= {self.thresholds["t_stat_promote"]}')
-        elif abs(result.t_stat) < self.thresholds['t_stat_eliminate']:
+            reasons.append(f"t={result.t_stat:.2f} >= {self.thresholds['t_stat_promote']}")
+        elif abs(result.t_stat) < self.thresholds["t_stat_eliminate"]:
             eliminate_count += 1
-            reasons.append(f't={result.t_stat:.2f} < {self.thresholds["t_stat_eliminate"]}')
+            reasons.append(f"t={result.t_stat:.2f} < {self.thresholds['t_stat_eliminate']}")
 
         # 多空 Sharpe
-        if abs(result.long_short_sharpe) >= self.thresholds['ls_sharpe_promote']:
+        if abs(result.long_short_sharpe) >= self.thresholds["ls_sharpe_promote"]:
             promote_count += 1
-            reasons.append(f'多空Sharpe={result.long_short_sharpe:.2f} >= {self.thresholds["ls_sharpe_promote"]}')
-        elif abs(result.long_short_sharpe) < self.thresholds['ls_sharpe_eliminate']:
+            reasons.append(f"多空Sharpe={result.long_short_sharpe:.2f} >= {self.thresholds['ls_sharpe_promote']}")
+        elif abs(result.long_short_sharpe) < self.thresholds["ls_sharpe_eliminate"]:
             eliminate_count += 1
-            reasons.append(f'多空Sharpe={result.long_short_sharpe:.2f} < {self.thresholds["ls_sharpe_eliminate"]}')
+            reasons.append(f"多空Sharpe={result.long_short_sharpe:.2f} < {self.thresholds['ls_sharpe_eliminate']}")
 
         # 决策逻辑
         if eliminate_count >= 2:
-            return 'eliminate', reasons
+            return "eliminate", reasons
         elif promote_count >= 2:
-            return 'promote', reasons
+            return "promote", reasons
         else:
-            return 'observe', reasons
+            return "observe", reasons
 
     # ============================================================
     # 报告生成
     # ============================================================
 
-    def generate_report(self, results: List[FactorEvaluationResult]) -> str:
+    def generate_report(self, results: list[FactorEvaluationResult]) -> str:
         """
         生成评估报告
 
@@ -532,11 +531,11 @@ class FactorEvaluator:
         lines.append("=" * 70)
 
         # 分组
-        promoted = [r for r in results if r.decision == 'promote']
-        observed = [r for r in results if r.decision == 'observe']
-        eliminated = [r for r in results if r.decision == 'eliminate']
+        promoted = [r for r in results if r.decision == "promote"]
+        observed = [r for r in results if r.decision == "observe"]
+        eliminated = [r for r in results if r.decision == "eliminate"]
 
-        for group_name, group in [('晋升', promoted), ('观察', observed), ('淘汰', eliminated)]:
+        for group_name, group in [("晋升", promoted), ("观察", observed), ("淘汰", eliminated)]:
             if not group:
                 continue
             lines.append(f"\n--- {group_name} ({len(group)} 个) ---")
@@ -549,14 +548,12 @@ class FactorEvaluator:
                     lines.append(f"    原因: {', '.join(r.decision_reasons[:3])}")
 
         lines.append("\n" + "=" * 70)
-        lines.append(f"总计: {len(results)} 个因子, "
-                     f"晋升 {len(promoted)}, 观察 {len(observed)}, 淘汰 {len(eliminated)}")
+        lines.append(f"总计: {len(results)} 个因子, 晋升 {len(promoted)}, 观察 {len(observed)}, 淘汰 {len(eliminated)}")
         lines.append("=" * 70)
 
-        return '\n'.join(lines)
+        return "\n".join(lines)
 
-    def save_results(self, results: List[FactorEvaluationResult],
-                     path: str = None):
+    def save_results(self, results: list[FactorEvaluationResult], path: str = None):
         """
         保存评估结果到 JSON
 
@@ -566,18 +563,17 @@ class FactorEvaluator:
         """
         if path is None:
             path = os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                '..', '..', 'data', 'factor_evaluation.json'
+                os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "factor_evaluation.json"
             )
 
         data = {
-            'evaluation_time': datetime.now().isoformat(),
-            'symbol_count': len(self._kline_data),
-            'thresholds': self.thresholds,
-            'results': [r.to_dict() for r in results],
+            "evaluation_time": datetime.now().isoformat(),
+            "symbol_count": len(self._kline_data),
+            "thresholds": self.thresholds,
+            "results": [r.to_dict() for r in results],
         }
 
-        with open(path, 'w', encoding='utf-8') as f:
+        with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
         logger.info(f"评估结果已保存到 {path}")
@@ -587,29 +583,30 @@ class FactorEvaluator:
 # 内置因子函数（用于测试和基准评估）
 # ============================================================
 
+
 def factor_momentum_20d(df: pd.DataFrame) -> pd.Series:
     """20 日动量因子"""
-    return df['close'].pct_change(20)
+    return df["close"].pct_change(20)
 
 
 def factor_momentum_60d(df: pd.DataFrame) -> pd.Series:
     """60 日动量因子"""
-    return df['close'].pct_change(60)
+    return df["close"].pct_change(60)
 
 
 def factor_volatility_20d(df: pd.DataFrame) -> pd.Series:
     """20 日波动率因子（负号：低波动做多）"""
-    return -df['close'].pct_change().rolling(20).std()
+    return -df["close"].pct_change().rolling(20).std()
 
 
 def factor_volume_price_corr(df: pd.DataFrame) -> pd.Series:
     """量价相关性因子"""
-    return df['close'].pct_change().rolling(20).corr(df['volume'].pct_change())
+    return df["close"].pct_change().rolling(20).corr(df["volume"].pct_change())
 
 
 def factor_rsi_14d(df: pd.DataFrame) -> pd.Series:
     """RSI 因子（标准化到 [-1, 1]）"""
-    delta = df['close'].diff()
+    delta = df["close"].diff()
     gain = delta.where(delta > 0, 0).rolling(14).mean()
     loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
     rs = gain / loss.replace(0, np.nan)
@@ -619,32 +616,28 @@ def factor_rsi_14d(df: pd.DataFrame) -> pd.Series:
 
 def factor_atr_ratio(df: pd.DataFrame) -> pd.Series:
     """ATR/价格比率因子（负号：低波动做多）"""
-    high, low, close = df['high'], df['low'], df['close']
-    tr = pd.concat([
-        high - low,
-        (high - close.shift(1)).abs(),
-        (low - close.shift(1)).abs()
-    ], axis=1).max(axis=1)
+    high, low, close = df["high"], df["low"], df["close"]
+    tr = pd.concat([high - low, (high - close.shift(1)).abs(), (low - close.shift(1)).abs()], axis=1).max(axis=1)
     atr = tr.rolling(14).mean()
     return -(atr / close)
 
 
 def factor_trend_strength(df: pd.DataFrame) -> pd.Series:
     """趋势强度因子（EMA20 vs EMA60 距离）"""
-    ema20 = df['close'].ewm(span=20, adjust=False).mean()
-    ema60 = df['close'].ewm(span=60, adjust=False).mean()
-    return (ema20 - ema60) / df['close']
+    ema20 = df["close"].ewm(span=20, adjust=False).mean()
+    ema60 = df["close"].ewm(span=60, adjust=False).mean()
+    return (ema20 - ema60) / df["close"]
 
 
 # 内置因子集合
 BUILTIN_FACTORS = {
-    'momentum_20d': factor_momentum_20d,
-    'momentum_60d': factor_momentum_60d,
-    'volatility_20d': factor_volatility_20d,
-    'volume_price_corr': factor_volume_price_corr,
-    'rsi_14d': factor_rsi_14d,
-    'atr_ratio': factor_atr_ratio,
-    'trend_strength': factor_trend_strength,
+    "momentum_20d": factor_momentum_20d,
+    "momentum_60d": factor_momentum_60d,
+    "volatility_20d": factor_volatility_20d,
+    "volume_price_corr": factor_volume_price_corr,
+    "rsi_14d": factor_rsi_14d,
+    "atr_ratio": factor_atr_ratio,
+    "trend_strength": factor_trend_strength,
 }
 
 
@@ -652,16 +645,16 @@ BUILTIN_FACTORS = {
 # 命令行入口
 # ============================================================
 
+
 def main():
     """命令行入口"""
     import argparse
 
-    parser = argparse.ArgumentParser(description='截面因子评估器')
-    parser.add_argument('--db', type=str, default=None, help='DuckDB 数据库路径')
-    parser.add_argument('--days', type=int, default=120, help='数据天数')
-    parser.add_argument('--factors', type=str, default=None,
-                        help='因子名称（逗号分隔），不指定则评估所有内置因子')
-    parser.add_argument('--save', action='store_true', help='保存结果到 JSON')
+    parser = argparse.ArgumentParser(description="截面因子评估器")
+    parser.add_argument("--db", type=str, default=None, help="DuckDB 数据库路径")
+    parser.add_argument("--days", type=int, default=120, help="数据天数")
+    parser.add_argument("--factors", type=str, default=None, help="因子名称（逗号分隔），不指定则评估所有内置因子")
+    parser.add_argument("--save", action="store_true", help="保存结果到 JSON")
 
     args = parser.parse_args()
 
@@ -678,7 +671,7 @@ def main():
 
     # 选择因子
     if args.factors:
-        factor_names = [f.strip() for f in args.factors.split(',')]
+        factor_names = [f.strip() for f in args.factors.split(",")]
         factors = {n: BUILTIN_FACTORS[n] for n in factor_names if n in BUILTIN_FACTORS}
     else:
         factors = BUILTIN_FACTORS
@@ -701,5 +694,5 @@ def main():
         print("\n结果已保存到 data/factor_evaluation.json")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

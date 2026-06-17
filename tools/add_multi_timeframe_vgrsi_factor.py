@@ -7,19 +7,21 @@
 创建日期：2026-06-17
 """
 
-import sys
 import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import sys
+
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from scripts.trend_scanner.seed_factor_pool import SeedFactorPool
 
 
 def add_multi_timeframe_vgrsi_factor():
     """添加多周期 VGRSI 一致性因子到种子因子池"""
-    
+
     # 初始化种子因子池
     pool = SeedFactorPool()
-    
+
     # 多周期 VGRSI 一致性因子代码
     factor_code = '''
 import numpy as np
@@ -79,24 +81,24 @@ def factor(df, window_m1=50, window_m5=100, window_m30=150,
     
     return result
 '''
-    
+
     # 添加因子到种子因子池
     pool.add_seed(
-        name='MultiTimeframeVGRSI',
+        name="MultiTimeframeVGRSI",
         code=factor_code,
-        logic='基于可见图的多时间框架 RSI 变体，使用 M1、M5、M30 三个时间周期同时确认信号，只有三个周期同向才产生最终信号。',
-        economic_rationale='多时间框架一致性可以有效过滤噪声信号，提高信号的可靠性。只有当所有时间框架都确认趋势时，才产生交易信号。',
-        source='arXiv:2605.01300 - Visibility Graphs Can Make Money in Financial Markets',
-        category='composite'
+        logic="基于可见图的多时间框架 RSI 变体，使用 M1、M5、M30 三个时间周期同时确认信号，只有三个周期同向才产生最终信号。",
+        economic_rationale="多时间框架一致性可以有效过滤噪声信号，提高信号的可靠性。只有当所有时间框架都确认趋势时，才产生交易信号。",
+        source="arXiv:2605.01300 - Visibility Graphs Can Make Money in Financial Markets",
+        category="composite",
     )
-    
+
     # 打印摘要
     summary = pool.get_summary()
-    print(f"种子因子池摘要:")
+    print("种子因子池摘要:")
     print(f"  总因子数: {summary['total']}")
     print(f"  分类: {summary['categories']}")
     print(f"  状态: {summary['statuses']}")
-    
+
     # 获取待验证的种子
     pending = pool.get_pending_seeds()
     print(f"\n待验证的种子因子 ({len(pending)}):")
@@ -104,5 +106,5 @@ def factor(df, window_m1=50, window_m5=100, window_m30=150,
         print(f"  - {seed.name}: {seed.logic[:50]}...")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     add_multi_timeframe_vgrsi_factor()

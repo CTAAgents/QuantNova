@@ -12,11 +12,12 @@
 3. 过拟合风险：策略在历史数据上表现优异，但在新数据上失效
 """
 
-from typing import Dict, List, Optional, Tuple, Any
-from dataclasses import dataclass, field
-from enum import Enum
-from datetime import datetime, timedelta
 from collections import defaultdict
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from typing import Any
+
 import numpy as np
 
 
@@ -24,64 +25,71 @@ import numpy as np
 # 数据结构定义
 # ===========================================================================
 
+
 class AuditCheckType(Enum):
     """审计检查类型"""
-    DATA_LEAKAGE = "data_leakage"              # 数据泄漏
-    SILENT_BYPASS = "silent_bypass"            # 静默旁路
-    OVERFITTING_RISK = "overfitting_risk"      # 过拟合风险
-    PERFORMANCE_DRIFT = "performance_drift"    # 性能漂移
+
+    DATA_LEAKAGE = "data_leakage"  # 数据泄漏
+    SILENT_BYPASS = "silent_bypass"  # 静默旁路
+    OVERFITTING_RISK = "overfitting_risk"  # 过拟合风险
+    PERFORMANCE_DRIFT = "performance_drift"  # 性能漂移
 
 
 class AuditSeverity(Enum):
     """审计严重程度"""
-    INFO = "info"                              # 信息
-    WARNING = "warning"                        # 警告
-    CRITICAL = "critical"                      # 严重
+
+    INFO = "info"  # 信息
+    WARNING = "warning"  # 警告
+    CRITICAL = "critical"  # 严重
 
 
 @dataclass
 class AuditCheck:
     """审计检查项"""
+
     check_id: str
     check_type: AuditCheckType
     severity: AuditSeverity
     description: str
     passed: bool = True
-    details: Dict[str, Any] = field(default_factory=dict)
-    recommendations: List[str] = field(default_factory=list)
+    details: dict[str, Any] = field(default_factory=dict)
+    recommendations: list[str] = field(default_factory=list)
 
 
 @dataclass
 class AuditReport:
     """审计报告"""
+
     report_id: str
     skill_id: str
     skill_name: str
-    checks: List[AuditCheck] = field(default_factory=list)
-    overall_result: str = "PASS"               # PASS / WARNING / FAIL
-    risk_score: float = 0.0                    # 0-100，风险评分
+    checks: list[AuditCheck] = field(default_factory=list)
+    overall_result: str = "PASS"  # PASS / WARNING / FAIL
+    risk_score: float = 0.0  # 0-100，风险评分
     created_at: datetime = field(default_factory=datetime.now)
     summary: str = ""
-    recommendations: List[str] = field(default_factory=list)
+    recommendations: list[str] = field(default_factory=list)
 
 
 @dataclass
 class SilentBypassPattern:
     """静默旁路模式"""
+
     pattern_id: str
     skill_id: str
     skill_name: str
     trigger_condition: str
-    expected_triggers: int = 0                 # 预期触发次数
-    actual_triggers: int = 0                   # 实际触发次数
-    bypass_rate: float = 0.0                   # 旁路率 = 1 - 实际/预期
-    last_triggered: Optional[datetime] = None
-    suggestions: List[str] = field(default_factory=list)
+    expected_triggers: int = 0  # 预期触发次数
+    actual_triggers: int = 0  # 实际触发次数
+    bypass_rate: float = 0.0  # 旁路率 = 1 - 实际/预期
+    last_triggered: datetime | None = None
+    suggestions: list[str] = field(default_factory=list)
 
 
 # ===========================================================================
 # 过拟合审计器
 # ===========================================================================
+
 
 class OverfittingAuditor:
     """
@@ -95,13 +103,17 @@ class OverfittingAuditor:
     """
 
     def __init__(self):
-        self.audit_reports: List[AuditReport] = []
-        self.silent_bypass_patterns: List[SilentBypassPattern] = []
+        self.audit_reports: list[AuditReport] = []
+        self.silent_bypass_patterns: list[SilentBypassPattern] = []
 
-    def audit_skill(self, skill_id: str, skill_name: str,
-                   trades: List[Any],
-                   train_period: Tuple[datetime, datetime] = None,
-                   test_period: Tuple[datetime, datetime] = None) -> AuditReport:
+    def audit_skill(
+        self,
+        skill_id: str,
+        skill_name: str,
+        trades: list[Any],
+        train_period: tuple[datetime, datetime] = None,
+        test_period: tuple[datetime, datetime] = None,
+    ) -> AuditReport:
         """
         对技能进行全面审计
 
@@ -119,9 +131,7 @@ class OverfittingAuditor:
 
         # 1. 数据泄漏检测
         if train_period and test_period:
-            leakage_check = self._check_data_leakage(
-                skill_id, trades, train_period, test_period
-            )
+            leakage_check = self._check_data_leakage(skill_id, trades, train_period, test_period)
             checks.append(leakage_check)
 
         # 2. 静默旁路检测
@@ -159,9 +169,13 @@ class OverfittingAuditor:
         self.audit_reports.append(report)
         return report
 
-    def _check_data_leakage(self, skill_id: str, trades: List[Any],
-                           train_period: Tuple[datetime, datetime],
-                           test_period: Tuple[datetime, datetime]) -> AuditCheck:
+    def _check_data_leakage(
+        self,
+        skill_id: str,
+        trades: list[Any],
+        train_period: tuple[datetime, datetime],
+        test_period: tuple[datetime, datetime],
+    ) -> AuditCheck:
         """检查数据泄漏"""
         train_start, train_end = train_period
         test_start, test_end = test_period
@@ -171,7 +185,7 @@ class OverfittingAuditor:
         leakage_trades = []
 
         for trade in trades:
-            trade_time = trade.entry_time if hasattr(trade, 'entry_time') else None
+            trade_time = trade.entry_time if hasattr(trade, "entry_time") else None
             if not trade_time:
                 continue
 
@@ -180,24 +194,34 @@ class OverfittingAuditor:
                 # 检查该交易的信号是否在测试期间被使用
                 # 这里简化处理：检查是否有相似的交易在测试期间出现
                 for test_trade in trades:
-                    test_time = test_trade.entry_time if hasattr(test_trade, 'entry_time') else None
+                    test_time = test_trade.entry_time if hasattr(test_trade, "entry_time") else None
                     if not test_time:
                         continue
 
                     if test_start <= test_time <= test_end:
                         # 检查是否是相似交易（相同方向、相似价格）
-                        if (trade.direction == test_direction and
-                            abs(trade.entry_price - test_trade.entry_price) / trade.entry_price < 0.01):
+                        if (
+                            trade.direction == test_direction
+                            and abs(trade.entry_price - test_trade.entry_price) / trade.entry_price < 0.01
+                        ):
                             leakage_count += 1
-                            leakage_trades.append({
-                                'train_trade': trade.trade_id,
-                                'test_trade': test_trade.trade_id,
-                                'similarity': 0.95,
-                            })
+                            leakage_trades.append(
+                                {
+                                    "train_trade": trade.trade_id,
+                                    "test_trade": test_trade.trade_id,
+                                    "similarity": 0.95,
+                                }
+                            )
                             break
 
         passed = leakage_count == 0
-        severity = AuditSeverity.CRITICAL if leakage_count > 3 else AuditSeverity.WARNING if leakage_count > 0 else AuditSeverity.INFO
+        severity = (
+            AuditSeverity.CRITICAL
+            if leakage_count > 3
+            else AuditSeverity.WARNING
+            if leakage_count > 0
+            else AuditSeverity.INFO
+        )
 
         return AuditCheck(
             check_id=f"CHECK-LEAKAGE-{skill_id}",
@@ -206,21 +230,20 @@ class OverfittingAuditor:
             description=f"数据泄漏检测: 发现{leakage_count}个潜在泄漏",
             passed=passed,
             details={
-                'leakage_count': leakage_count,
-                'leakage_trades': leakage_trades[:5],  # 只显示前5个
+                "leakage_count": leakage_count,
+                "leakage_trades": leakage_trades[:5],  # 只显示前5个
             },
             recommendations=[] if passed else ["重新划分训练/测试集", "使用时间序列分割"],
         )
 
-    def _check_silent_bypass(self, skill_id: str, skill_name: str,
-                            trades: List[Any]) -> AuditCheck:
+    def _check_silent_bypass(self, skill_id: str, skill_name: str, trades: list[Any]) -> AuditCheck:
         """检查静默旁路"""
         # 统计策略触发次数
         trigger_counts = defaultdict(int)
         total_trades = len(trades)
 
         for trade in trades:
-            if hasattr(trade, 'strategy_votes_at_entry') and trade.strategy_votes_at_entry:
+            if hasattr(trade, "strategy_votes_at_entry") and trade.strategy_votes_at_entry:
                 for strategy, vote in trade.strategy_votes_at_entry.items():
                     if vote != "观望":
                         trigger_counts[strategy] += 1
@@ -230,42 +253,46 @@ class OverfittingAuditor:
         for strategy, count in trigger_counts.items():
             trigger_rate = count / total_trades if total_trades > 0 else 0
             if trigger_rate < 0.05:  # 触发率低于5%
-                bypass_patterns.append(SilentBypassPattern(
-                    pattern_id=f"BYPASS-{datetime.now().strftime('%Y%m%d')}-{strategy}",
-                    skill_id=skill_id,
-                    skill_name=skill_name,
-                    trigger_condition=f"strategy == '{strategy}'",
-                    expected_triggers=int(total_trades * 0.1),  # 预期10%的触发率
-                    actual_triggers=count,
-                    bypass_rate=1 - trigger_rate,
-                    suggestions=[
-                        f"检查{strategy}策略的触发条件是否过于严格",
-                        f"考虑调整{strategy}策略的参数",
-                        f"如果{strategy}策略不适用，考虑移除",
-                    ],
-                ))
+                bypass_patterns.append(
+                    SilentBypassPattern(
+                        pattern_id=f"BYPASS-{datetime.now().strftime('%Y%m%d')}-{strategy}",
+                        skill_id=skill_id,
+                        skill_name=skill_name,
+                        trigger_condition=f"strategy == '{strategy}'",
+                        expected_triggers=int(total_trades * 0.1),  # 预期10%的触发率
+                        actual_triggers=count,
+                        bypass_rate=1 - trigger_rate,
+                        suggestions=[
+                            f"检查{strategy}策略的触发条件是否过于严格",
+                            f"考虑调整{strategy}策略的参数",
+                            f"如果{strategy}策略不适用，考虑移除",
+                        ],
+                    )
+                )
 
         # 检查完全未触发的策略
         all_strategies = set()
         for trade in trades:
-            if hasattr(trade, 'strategy_votes_at_entry') and trade.strategy_votes_at_entry:
+            if hasattr(trade, "strategy_votes_at_entry") and trade.strategy_votes_at_entry:
                 all_strategies.update(trade.strategy_votes_at_entry.keys())
 
         untriggered_strategies = all_strategies - set(trigger_counts.keys())
         for strategy in untriggered_strategies:
-            bypass_patterns.append(SilentBypassPattern(
-                pattern_id=f"BYPASS-{datetime.now().strftime('%Y%m%d')}-{strategy}",
-                skill_id=skill_id,
-                skill_name=skill_name,
-                trigger_condition=f"strategy == '{strategy}'",
-                expected_triggers=int(total_trades * 0.05),
-                actual_triggers=0,
-                bypass_rate=1.0,
-                suggestions=[
-                    f"{strategy}策略从未触发，检查触发条件",
-                    f"考虑移除{strategy}策略或调整参数",
-                ],
-            ))
+            bypass_patterns.append(
+                SilentBypassPattern(
+                    pattern_id=f"BYPASS-{datetime.now().strftime('%Y%m%d')}-{strategy}",
+                    skill_id=skill_id,
+                    skill_name=skill_name,
+                    trigger_condition=f"strategy == '{strategy}'",
+                    expected_triggers=int(total_trades * 0.05),
+                    actual_triggers=0,
+                    bypass_rate=1.0,
+                    suggestions=[
+                        f"{strategy}策略从未触发，检查触发条件",
+                        f"考虑移除{strategy}策略或调整参数",
+                    ],
+                )
+            )
 
         self.silent_bypass_patterns.extend(bypass_patterns)
 
@@ -279,11 +306,11 @@ class OverfittingAuditor:
             description=f"静默旁路检测: 发现{len(bypass_patterns)}个未触发策略",
             passed=passed,
             details={
-                'bypass_patterns': [
+                "bypass_patterns": [
                     {
-                        'strategy': p.skill_name,
-                        'trigger_rate': 1 - p.bypass_rate,
-                        'suggestions': p.suggestions,
+                        "strategy": p.skill_name,
+                        "trigger_rate": 1 - p.bypass_rate,
+                        "suggestions": p.suggestions,
                     }
                     for p in bypass_patterns
                 ],
@@ -291,7 +318,7 @@ class OverfittingAuditor:
             recommendations=[p.suggestions[0] for p in bypass_patterns] if bypass_patterns else [],
         )
 
-    def _check_overfitting_risk(self, skill_id: str, trades: List[Any]) -> AuditCheck:
+    def _check_overfitting_risk(self, skill_id: str, trades: list[Any]) -> AuditCheck:
         """检查过拟合风险"""
         if len(trades) < 20:
             return AuditCheck(
@@ -300,7 +327,7 @@ class OverfittingAuditor:
                 severity=AuditSeverity.INFO,
                 description="过拟合风险评估: 数据不足，无法评估",
                 passed=True,
-                details={'reason': '交易数量不足'},
+                details={"reason": "交易数量不足"},
             )
 
         # 计算滚动窗口的性能指标
@@ -309,7 +336,7 @@ class OverfittingAuditor:
         rolling_pnl = []
 
         for i in range(window_size, len(trades)):
-            window_trades = trades[i-window_size:i]
+            window_trades = trades[i - window_size : i]
             winrate = sum(1 for t in window_trades if t.pnl > 0) / window_size
             avg_pnl = np.mean([t.pnl_pct for t in window_trades])
             rolling_winrates.append(winrate)
@@ -354,7 +381,13 @@ class OverfittingAuditor:
                 risk_factors.append(f"收益分布偏斜: {pnl_skew:.2f}")
 
         passed = risk_score < 50
-        severity = AuditSeverity.CRITICAL if risk_score >= 70 else AuditSeverity.WARNING if risk_score >= 50 else AuditSeverity.INFO
+        severity = (
+            AuditSeverity.CRITICAL
+            if risk_score >= 70
+            else AuditSeverity.WARNING
+            if risk_score >= 50
+            else AuditSeverity.INFO
+        )
 
         return AuditCheck(
             check_id=f"CHECK-OVERFIT-{skill_id}",
@@ -363,20 +396,22 @@ class OverfittingAuditor:
             description=f"过拟合风险评估: 风险评分 {risk_score}/100",
             passed=passed,
             details={
-                'risk_score': risk_score,
-                'risk_factors': risk_factors,
-                'winrate_std': winrate_std,
-                'pnl_std': pnl_std,
-                'max_consecutive_loss': max_consecutive_loss,
+                "risk_score": risk_score,
+                "risk_factors": risk_factors,
+                "winrate_std": winrate_std,
+                "pnl_std": pnl_std,
+                "max_consecutive_loss": max_consecutive_loss,
             },
             recommendations=[
                 "增加样本外测试",
                 "使用Walk-Forward验证",
                 "减少参数数量",
-            ] if not passed else [],
+            ]
+            if not passed
+            else [],
         )
 
-    def _check_performance_drift(self, skill_id: str, trades: List[Any]) -> AuditCheck:
+    def _check_performance_drift(self, skill_id: str, trades: list[Any]) -> AuditCheck:
         """检查性能漂移"""
         if len(trades) < 40:
             return AuditCheck(
@@ -385,7 +420,7 @@ class OverfittingAuditor:
                 severity=AuditSeverity.INFO,
                 description="性能漂移检测: 数据不足，无法检测",
                 passed=True,
-                details={'reason': '交易数量不足'},
+                details={"reason": "交易数量不足"},
             )
 
         # 将交易分为前半段和后半段
@@ -407,7 +442,13 @@ class OverfittingAuditor:
         # 判断是否存在显著漂移
         drift_detected = winrate_drift > 0.1 or pnl_drift > 0.01
 
-        severity = AuditSeverity.CRITICAL if winrate_drift > 0.2 or pnl_drift > 0.02 else AuditSeverity.WARNING if drift_detected else AuditSeverity.INFO
+        severity = (
+            AuditSeverity.CRITICAL
+            if winrate_drift > 0.2 or pnl_drift > 0.02
+            else AuditSeverity.WARNING
+            if drift_detected
+            else AuditSeverity.INFO
+        )
 
         return AuditCheck(
             check_id=f"CHECK-DRIFT-{skill_id}",
@@ -416,21 +457,23 @@ class OverfittingAuditor:
             description=f"性能漂移检测: {'检测到显著漂移' if drift_detected else '无显著漂移'}",
             passed=not drift_detected,
             details={
-                'first_half_winrate': first_winrate,
-                'second_half_winrate': second_winrate,
-                'first_half_pnl': first_pnl,
-                'second_half_pnl': second_pnl,
-                'winrate_drift': winrate_drift,
-                'pnl_drift': pnl_drift,
+                "first_half_winrate": first_winrate,
+                "second_half_winrate": second_winrate,
+                "first_half_pnl": first_pnl,
+                "second_half_pnl": second_pnl,
+                "winrate_drift": winrate_drift,
+                "pnl_drift": pnl_drift,
             },
             recommendations=[
                 "重新评估策略参数",
                 "检查市场环境变化",
                 "考虑使用自适应参数",
-            ] if drift_detected else [],
+            ]
+            if drift_detected
+            else [],
         )
 
-    def _calculate_skewness(self, data: List[float]) -> float:
+    def _calculate_skewness(self, data: list[float]) -> float:
         """计算偏度"""
         if len(data) < 3:
             return 0.0
@@ -442,10 +485,10 @@ class OverfittingAuditor:
         if std == 0:
             return 0.0
 
-        skew = (n / ((n-1) * (n-2))) * sum(((x - mean) / std) ** 3 for x in data)
+        skew = (n / ((n - 1) * (n - 2))) * sum(((x - mean) / std) ** 3 for x in data)
         return skew
 
-    def _calculate_overall_result(self, checks: List[AuditCheck]) -> Tuple[str, float]:
+    def _calculate_overall_result(self, checks: list[AuditCheck]) -> tuple[str, float]:
         """计算总体结果"""
         if not checks:
             return "PASS", 0.0
@@ -478,7 +521,7 @@ class OverfittingAuditor:
 
         return overall_result, risk_score
 
-    def _generate_recommendations(self, checks: List[AuditCheck]) -> List[str]:
+    def _generate_recommendations(self, checks: list[AuditCheck]) -> list[str]:
         """生成建议"""
         recommendations = []
 
@@ -489,8 +532,7 @@ class OverfittingAuditor:
         # 去重
         return list(set(recommendations))[:5]  # 最多返回5条建议
 
-    def _generate_summary(self, checks: List[AuditCheck], overall_result: str,
-                         risk_score: float) -> str:
+    def _generate_summary(self, checks: list[AuditCheck], overall_result: str, risk_score: float) -> str:
         """生成摘要"""
         total_checks = len(checks)
         passed_checks = sum(1 for c in checks if c.passed)
@@ -508,16 +550,16 @@ class OverfittingAuditor:
 
         return summary
 
-    def get_latest_report(self, skill_id: str) -> Optional[AuditReport]:
+    def get_latest_report(self, skill_id: str) -> AuditReport | None:
         """获取最新的审计报告"""
         reports = [r for r in self.audit_reports if r.skill_id == skill_id]
         return reports[-1] if reports else None
 
-    def get_silent_bypass_patterns(self) -> List[SilentBypassPattern]:
+    def get_silent_bypass_patterns(self) -> list[SilentBypassPattern]:
         """获取所有静默旁路模式"""
         return self.silent_bypass_patterns
 
-    def generate_audit_summary_report(self) -> Dict[str, Any]:
+    def generate_audit_summary_report(self) -> dict[str, Any]:
         """生成审计汇总报告"""
         if not self.audit_reports:
             return {"message": "无审计记录"}
@@ -541,7 +583,7 @@ class OverfittingAuditor:
             "key_findings": self._extract_key_findings(),
         }
 
-    def _extract_key_findings(self) -> List[str]:
+    def _extract_key_findings(self) -> list[str]:
         """提取关键发现"""
         findings = []
 

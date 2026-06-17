@@ -11,13 +11,14 @@
 支持 TA-Lib 加速（可选）和纯 pandas 实现。
 """
 
-from typing import Dict, Optional
-import pandas as pd
 import numpy as np
+import pandas as pd
+
 
 # 尝试导入TA-Lib
 try:
     import talib
+
     HAS_TALIB = True
 except ImportError:
     HAS_TALIB = False
@@ -26,9 +27,9 @@ except ImportError:
 class IndicatorEngine:
     """技术指标计算引擎（纯pandas + 可选TA-Lib）"""
 
-    def __init__(self, df: pd.DataFrame, ma_periods: Optional[Dict[str, int]] = None):
+    def __init__(self, df: pd.DataFrame, ma_periods: dict[str, int] | None = None):
         self.df = df.copy()
-        self.ma_periods = ma_periods or {'short': 20, 'medium': 60, 'long': 120}
+        self.ma_periods = ma_periods or {"short": 20, "medium": 60, "long": 120}
         self._ensure_ohlcv()
 
     def _ensure_ohlcv(self):
@@ -37,36 +38,33 @@ class IndicatorEngine:
         rename_map = {}
         for c in self.df.columns:
             cl = c.lower()
-            if cl in ['open', 'high', 'low', 'close', 'volume']:
+            if cl in ["open", "high", "low", "close", "volume"]:
                 rename_map[c] = cl
         self.df.rename(columns=rename_map, inplace=True)
-        for col in ['open', 'high', 'low', 'close', 'volume']:
+        for col in ["open", "high", "low", "close", "volume"]:
             if col not in self.df.columns:
                 raise ValueError(f"数据缺少必要列: {col}")
 
-    def add_ema(self, period: int = 20, col_name: Optional[str] = None):
-        col = col_name or f'ema{period}'
+    def add_ema(self, period: int = 20, col_name: str | None = None):
+        col = col_name or f"ema{period}"
         if HAS_TALIB:
-            self.df[col] = talib.EMA(self.df['close'].values, timeperiod=period)
+            self.df[col] = talib.EMA(self.df["close"].values, timeperiod=period)
         else:
-            self.df[col] = self.df['close'].ewm(span=period, adjust=False).mean()
+            self.df[col] = self.df["close"].ewm(span=period, adjust=False).mean()
         return self
 
     def add_atr(self, period: int = 14):
         if HAS_TALIB:
-            self.df['atr'] = talib.ATR(
-                self.df['high'].values,
-                self.df['low'].values,
-                self.df['close'].values,
-                timeperiod=period
+            self.df["atr"] = talib.ATR(
+                self.df["high"].values, self.df["low"].values, self.df["close"].values, timeperiod=period
             )
         else:
-            high, low, close = self.df['high'], self.df['low'], self.df['close']
+            high, low, close = self.df["high"], self.df["low"], self.df["close"]
             tr1 = high - low
             tr2 = (high - close.shift(1)).abs()
             tr3 = (low - close.shift(1)).abs()
             tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
-            self.df['atr'] = tr.rolling(period).mean()  # SMA(14)，与文华一致
+            self.df["atr"] = tr.rolling(period).mean()  # SMA(14)，与文华一致
         return self
 
     def add_adx(self, period: int = 14, adx_period: int = 6):
@@ -88,7 +86,7 @@ class IndicatorEngine:
             period: DI 计算周期 N（默认14）
             adx_period: ADX 平滑周期 M（默认6，文华标准）
         """
-        high, low, close = self.df['high'], self.df['low'], self.df['close']
+        high, low, close = self.df["high"], self.df["low"], self.df["close"]
 
         # ---- 方向运动 HD, LD ----
         hd = high - high.shift(1)
@@ -118,17 +116,22 @@ class IndicatorEngine:
         dx = (minus_di - plus_di).abs() * 100 / di_sum
 
         # ---- ADX = MA(DX, M) ----
-        self.df['adx'] = dx.rolling(adx_period).mean()
+        self.df["adx"] = dx.rolling(adx_period).mean()
 
         # ---- ADXR = (ADX + REF(ADX, M)) / 2 ----
-        self.df['adxr'] = (self.df['adx'] + self.df['adx'].shift(adx_period)) / 2
+        self.df["adxr"] = (self.df["adx"] + self.df["adx"].shift(adx_period)) / 2
 
-        self.df['plus_di'] = plus_di
-        self.df['minus_di'] = minus_di
+        self.df["plus_di"] = plus_di
+        self.df["minus_di"] = minus_di
         return self
 
-    def add_adx_pct(self, roll_window: Optional[int] = None, method: str = 'rank',
-                    timeframe: str = 'auto', holding_period: str = 'medium'):
+    def add_adx_pct(
+        self,
+        roll_window: int | None = None,
+        method: str = "rank",
+        timeframe: str = "auto",
+        holding_period: str = "medium",
+    ):
         """
         计算 ADX 滚动历史分位数（相对位置）
 
@@ -163,11 +166,11 @@ class IndicatorEngine:
                 - 'short': 短线（5-10天）
                 - 'scalping': 日内（不建议使用分位）
         """
-        if 'adx' not in self.df.columns:
+        if "adx" not in self.df.columns:
             raise ValueError("必须先调用 add_adx() 计算 ADX")
 
         # ---- 自动检测数据周期 ----
-        if timeframe == 'auto':
+        if timeframe == "auto":
             timeframe = self._detect_timeframe()
 
         # ---- 根据周期和持仓选择默认窗口 ----
@@ -183,52 +186,49 @@ class IndicatorEngine:
         if len(self.df) < roll_window:
             # K线不足时，临时切回绝对值模式
             print(f"信息: 数据量({len(self.df)}根)不足滚动窗口({roll_window}根)，")
-            print(f"       回退到ADX绝对值模式（ADX≥25为趋势，ADX<20为震荡）")
+            print("       回退到ADX绝对值模式（ADX≥25为趋势，ADX<20为震荡）")
             # 直接使用ADX绝对值作为分位数的替代
-            self.df['adx_pct'] = np.where(self.df['adx'] >= 25, 0.7,
-                                          np.where(self.df['adx'] >= 20, 0.5, 0.3))
-            self.df['adx_pct_level'] = pd.cut(
-                self.df['adx_pct'],
+            self.df["adx_pct"] = np.where(self.df["adx"] >= 25, 0.7, np.where(self.df["adx"] >= 20, 0.5, 0.3))
+            self.df["adx_pct_level"] = pd.cut(
+                self.df["adx_pct"],
                 bins=[0, 0.3, 0.65, 0.85, 1.0],
-                labels=['DEEP_RANGE', 'EMERGING', 'TRENDING', 'EXTREME']
+                labels=["DEEP_RANGE", "EMERGING", "TRENDING", "EXTREME"],
             )
             return self
 
-        adx = self.df['adx']
+        adx = self.df["adx"]
 
-        if method == 'rank':
+        if method == "rank":
             # 方法1：滚动秩分位（最常用，CTA标配）
-            self.df['adx_pct'] = adx.rolling(window=roll_window).rank(pct=True)
+            self.df["adx_pct"] = adx.rolling(window=roll_window).rank(pct=True)
 
-        elif method == 'zscore':
+        elif method == "zscore":
             # 方法2：Z-score标准化
             roll_mean = adx.rolling(window=roll_window).mean()
             roll_std = adx.rolling(window=roll_window).std()
-            self.df['adx_pct'] = (adx - roll_mean) / roll_std
-            self.df['adx_pct'] = 1 / (1 + np.exp(-self.df['adx_pct']))
+            self.df["adx_pct"] = (adx - roll_mean) / roll_std
+            self.df["adx_pct"] = 1 / (1 + np.exp(-self.df["adx_pct"]))
 
-        elif method == 'minmax':
+        elif method == "minmax":
             # 方法3：滚动极值Min-Max缩放（仅可视化）
             roll_min = adx.rolling(window=roll_window).min()
             roll_max = adx.rolling(window=roll_window).max()
             roll_range = roll_max - roll_min
-            self.df['adx_pct'] = (adx - roll_min) / roll_range.replace(0, np.nan)
+            self.df["adx_pct"] = (adx - roll_min) / roll_range.replace(0, np.nan)
 
-        elif method == 'ewma':
+        elif method == "ewma":
             # 方法4：指数加权EWMA动态分位
             ewma_rank = adx.ewm(span=roll_window, adjust=False).mean()
             ewma_std = adx.rolling(window=roll_window).std()
             z_score = (adx - ewma_rank) / ewma_std.replace(0, np.nan)
-            self.df['adx_pct'] = 1 / (1 + np.exp(-z_score))
+            self.df["adx_pct"] = 1 / (1 + np.exp(-z_score))
 
         else:
             raise ValueError(f"不支持的分位计算方法: {method}")
 
         # 标记分位数等级
-        self.df['adx_pct_level'] = pd.cut(
-            self.df['adx_pct'],
-            bins=[0, 0.3, 0.65, 0.85, 1.0],
-            labels=['DEEP_RANGE', 'EMERGING', 'TRENDING', 'EXTREME']
+        self.df["adx_pct_level"] = pd.cut(
+            self.df["adx_pct"], bins=[0, 0.3, 0.65, 0.85, 1.0], labels=["DEEP_RANGE", "EMERGING", "TRENDING", "EXTREME"]
         )
 
         return self
@@ -236,12 +236,12 @@ class IndicatorEngine:
     def _detect_timeframe(self) -> str:
         """自动检测数据周期"""
         if len(self.df) < 2:
-            return '1d'  # 默认日线
+            return "1d"  # 默认日线
 
         # 计算K线之间的时间间隔
-        if 'date' in self.df.columns:
+        if "date" in self.df.columns:
             try:
-                dates = pd.to_datetime(self.df['date'])
+                dates = pd.to_datetime(self.df["date"])
                 avg_interval = dates.diff().dt.total_seconds().mean()
             except:
                 avg_interval = 86400  # 默认1天
@@ -251,19 +251,19 @@ class IndicatorEngine:
 
         # 根据平均间隔判断周期
         if avg_interval >= 86400 * 0.8:  # 约1天
-            return '1d'
+            return "1d"
         elif avg_interval >= 3600 * 3:  # 约3小时以上
-            return '4h'
+            return "4h"
         elif avg_interval >= 3600 * 1.5:  # 约1.5-3小时
-            return '2h'
+            return "2h"
         elif avg_interval >= 3600 * 0.8:  # 约1小时
-            return '1h'
+            return "1h"
         elif avg_interval >= 1800 * 0.8:  # 约30分钟
-            return '30m'
+            return "30m"
         elif avg_interval >= 900 * 0.8:  # 约15分钟
-            return '15m'
+            return "15m"
         else:
-            return '5m'
+            return "5m"
 
     def _select_adx_window(self, timeframe: str, holding_period: str) -> int:
         """
@@ -280,21 +280,21 @@ class IndicatorEngine:
         """
         # 基础窗口映射
         base_windows = {
-            '1d': {'long': 250, 'medium': 120, 'short': 60},
-            '4h': {'long': 80, 'medium': 60, 'short': 45},
-            '2h': {'long': 70, 'medium': 50, 'short': 35},
-            '1h': {'long': 60, 'medium': 45, 'short': 30},
-            '30m': {'long': 45, 'medium': 30, 'short': 20},
-            '15m': {'long': 30, 'medium': 20, 'short': 15},
-            '5m': {'long': 20, 'medium': 15, 'short': 10},
+            "1d": {"long": 250, "medium": 120, "short": 60},
+            "4h": {"long": 80, "medium": 60, "short": 45},
+            "2h": {"long": 70, "medium": 50, "short": 35},
+            "1h": {"long": 60, "medium": 45, "short": 30},
+            "30m": {"long": 45, "medium": 30, "short": 20},
+            "15m": {"long": 30, "medium": 20, "short": 15},
+            "5m": {"long": 20, "medium": 15, "short": 10},
         }
 
         # 获取基础窗口
         window = base_windows.get(timeframe, {}).get(holding_period, 120)
 
         # 波动率微调（简化版）
-        if 'adx' in self.df.columns and len(self.df) >= 20:
-            adx_recent = self.df['adx'].iloc[-20:].mean()
+        if "adx" in self.df.columns and len(self.df) >= 20:
+            adx_recent = self.df["adx"].iloc[-20:].mean()
             if not pd.isna(adx_recent):
                 # 高波动品种（ADX中枢高）：窗口向下微调
                 if adx_recent > 30:
@@ -306,44 +306,42 @@ class IndicatorEngine:
         return window
 
     def add_donchian(self, period: int = 20):
-        self.df['dc_upper'] = self.df['high'].rolling(period).max()
-        self.df['dc_lower'] = self.df['low'].rolling(period).min()
-        self.df['dc_middle'] = (self.df['dc_upper'] + self.df['dc_lower']) / 2
+        self.df["dc_upper"] = self.df["high"].rolling(period).max()
+        self.df["dc_lower"] = self.df["low"].rolling(period).min()
+        self.df["dc_middle"] = (self.df["dc_upper"] + self.df["dc_lower"]) / 2
         return self
 
     def add_macd(self, fast: int = 12, slow: int = 26, signal: int = 9):
         if HAS_TALIB:
             macd, signal_line, hist = talib.MACD(
-                self.df['close'].values,
-                fastperiod=fast, slowperiod=slow, signalperiod=signal
+                self.df["close"].values, fastperiod=fast, slowperiod=slow, signalperiod=signal
             )
-            self.df['macd'] = macd
-            self.df['macd_signal'] = signal_line
-            self.df['macd_hist'] = hist
+            self.df["macd"] = macd
+            self.df["macd_signal"] = signal_line
+            self.df["macd_hist"] = hist
         else:
-            ema_fast = self.df['close'].ewm(span=fast, adjust=False).mean()
-            ema_slow = self.df['close'].ewm(span=slow, adjust=False).mean()
-            self.df['macd'] = ema_fast - ema_slow
-            self.df['macd_signal'] = self.df['macd'].ewm(span=signal, adjust=False).mean()
-            self.df['macd_hist'] = self.df['macd'] - self.df['macd_signal']
+            ema_fast = self.df["close"].ewm(span=fast, adjust=False).mean()
+            ema_slow = self.df["close"].ewm(span=slow, adjust=False).mean()
+            self.df["macd"] = ema_fast - ema_slow
+            self.df["macd_signal"] = self.df["macd"].ewm(span=signal, adjust=False).mean()
+            self.df["macd_hist"] = self.df["macd"] - self.df["macd_signal"]
         return self
 
     def add_bollinger(self, period: int = 20, std_dev: float = 2.0):
         if HAS_TALIB:
             upper, middle, lower = talib.BBANDS(
-                self.df['close'].values,
-                timeperiod=period, nbdevup=std_dev, nbdevdn=std_dev
+                self.df["close"].values, timeperiod=period, nbdevup=std_dev, nbdevdn=std_dev
             )
-            self.df['bb_upper'] = upper
-            self.df['bb_middle'] = middle
-            self.df['bb_lower'] = lower
+            self.df["bb_upper"] = upper
+            self.df["bb_middle"] = middle
+            self.df["bb_lower"] = lower
         else:
-            middle = self.df['close'].rolling(period).mean()
-            std = self.df['close'].rolling(period).std()
-            self.df['bb_upper'] = middle + std_dev * std
-            self.df['bb_middle'] = middle
-            self.df['bb_lower'] = middle - std_dev * std
-        self.df['bb_width'] = (self.df['bb_upper'] - self.df['bb_lower']) / self.df['bb_middle']
+            middle = self.df["close"].rolling(period).mean()
+            std = self.df["close"].rolling(period).std()
+            self.df["bb_upper"] = middle + std_dev * std
+            self.df["bb_middle"] = middle
+            self.df["bb_lower"] = middle - std_dev * std
+        self.df["bb_width"] = (self.df["bb_upper"] - self.df["bb_lower"]) / self.df["bb_middle"]
         return self
 
     # ---- 新增指标 ----
@@ -363,106 +361,106 @@ class IndicatorEngine:
         """
         # 数据不足时返回空值
         if len(self.df) < period + 2:
-            self.df['rsi'] = np.nan
+            self.df["rsi"] = np.nan
             return self
 
-        delta = self.df['close'].diff()
+        delta = self.df["close"].diff()
         gain = delta.where(delta > 0, 0)
-        loss = (-delta.where(delta < 0, 0))
+        loss = -delta.where(delta < 0, 0)
 
         # Wilder's smoothing: avg = (prev_avg * (period-1) + current) / period
         avg_gain = pd.Series(index=self.df.index, dtype=float)
         avg_loss = pd.Series(index=self.df.index, dtype=float)
 
         # 第一个值用 SMA 初始化
-        avg_gain.iloc[period] = gain.iloc[1:period+1].mean()
-        avg_loss.iloc[period] = loss.iloc[1:period+1].mean()
+        avg_gain.iloc[period] = gain.iloc[1 : period + 1].mean()
+        avg_loss.iloc[period] = loss.iloc[1 : period + 1].mean()
 
         # 后续值用 Wilder's smoothing
         for i in range(period + 1, len(self.df)):
-            avg_gain.iloc[i] = (avg_gain.iloc[i-1] * (period-1) + gain.iloc[i]) / period
-            avg_loss.iloc[i] = (avg_loss.iloc[i-1] * (period-1) + loss.iloc[i]) / period
+            avg_gain.iloc[i] = (avg_gain.iloc[i - 1] * (period - 1) + gain.iloc[i]) / period
+            avg_loss.iloc[i] = (avg_loss.iloc[i - 1] * (period - 1) + loss.iloc[i]) / period
 
         rs = avg_gain / avg_loss
-        self.df['rsi'] = 100 - (100 / (1 + rs))
+        self.df["rsi"] = 100 - (100 / (1 + rs))
         return self
 
     def add_stoch(self, k_period: int = 9, d_period: int = 6):
         """STOCH 随机指标"""
-        low_min = self.df['low'].rolling(k_period).min()
-        high_max = self.df['high'].rolling(k_period).max()
-        self.df['stoch_k'] = 100 * (self.df['close'] - low_min) / (high_max - low_min)
-        self.df['stoch_d'] = self.df['stoch_k'].rolling(d_period).mean()
+        low_min = self.df["low"].rolling(k_period).min()
+        high_max = self.df["high"].rolling(k_period).max()
+        self.df["stoch_k"] = 100 * (self.df["close"] - low_min) / (high_max - low_min)
+        self.df["stoch_d"] = self.df["stoch_k"].rolling(d_period).mean()
         return self
 
     def add_stochrsi(self, period: int = 14, smooth_k: int = 3, smooth_d: int = 3):
         """STOCHRSI 随机RSI（使用 Wilder's RSI）"""
         # 先确保 RSI 已计算
-        if 'rsi' not in self.df.columns:
+        if "rsi" not in self.df.columns:
             self.add_rsi(period)
 
-        rsi = self.df['rsi']
+        rsi = self.df["rsi"]
         rsi_min = rsi.rolling(period).min()
         rsi_max = rsi.rolling(period).max()
         stochrsi_k = 100 * (rsi - rsi_min) / (rsi_max - rsi_min)
-        self.df['stochrsi_k'] = stochrsi_k.rolling(smooth_k).mean()
-        self.df['stochrsi_d'] = self.df['stochrsi_k'].rolling(smooth_d).mean()
+        self.df["stochrsi_k"] = stochrsi_k.rolling(smooth_k).mean()
+        self.df["stochrsi_d"] = self.df["stochrsi_k"].rolling(smooth_d).mean()
         return self
 
     def add_williams_r(self, period: int = 14):
         """Williams %R 威廉指标"""
-        high_max = self.df['high'].rolling(period).max()
-        low_min = self.df['low'].rolling(period).min()
-        self.df['williams_r'] = -100 * (high_max - self.df['close']) / (high_max - low_min)
+        high_max = self.df["high"].rolling(period).max()
+        low_min = self.df["low"].rolling(period).min()
+        self.df["williams_r"] = -100 * (high_max - self.df["close"]) / (high_max - low_min)
         return self
 
     def add_cci(self, period: int = 14):
         """CCI 商品通道指数"""
-        tp = (self.df['high'] + self.df['low'] + self.df['close']) / 3
+        tp = (self.df["high"] + self.df["low"] + self.df["close"]) / 3
         tp_sma = tp.rolling(period).mean()
         tp_mad = tp.rolling(period).apply(lambda x: np.abs(x - x.mean()).mean(), raw=True)
-        self.df['cci'] = (tp - tp_sma) / (0.015 * tp_mad)
+        self.df["cci"] = (tp - tp_sma) / (0.015 * tp_mad)
         return self
 
     def add_highs_lows(self, period: int = 14):
         """Highs/Lows 新高/新低指标"""
-        highest = self.df['high'].rolling(period).max()
-        lowest = self.df['low'].rolling(period).min()
-        self.df['highs_lows'] = highest - lowest
+        highest = self.df["high"].rolling(period).max()
+        lowest = self.df["low"].rolling(period).min()
+        self.df["highs_lows"] = highest - lowest
         return self
 
     def add_ultimate_oscillator(self):
         """Ultimate Oscillator 终极震荡指标"""
-        close_prev = self.df['close'].shift(1)
-        tr1 = self.df['high'] - self.df['low']
-        tr2 = (self.df['high'] - close_prev).abs()
-        tr3 = (self.df['low'] - close_prev).abs()
+        close_prev = self.df["close"].shift(1)
+        tr1 = self.df["high"] - self.df["low"]
+        tr2 = (self.df["high"] - close_prev).abs()
+        tr3 = (self.df["low"] - close_prev).abs()
         tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
-        bp = self.df['close'] - pd.concat([self.df['low'], close_prev], axis=1).min(axis=1)
+        bp = self.df["close"] - pd.concat([self.df["low"], close_prev], axis=1).min(axis=1)
 
         avg7 = bp.rolling(7).sum() / tr.rolling(7).sum()
         avg14 = bp.rolling(14).sum() / tr.rolling(14).sum()
         avg28 = bp.rolling(28).sum() / tr.rolling(28).sum()
 
-        self.df['ultimate_osc'] = 100 * (4 * avg7 + 2 * avg14 + avg28) / 7
+        self.df["ultimate_osc"] = 100 * (4 * avg7 + 2 * avg14 + avg28) / 7
         return self
 
     def add_roc(self, period: int = 10):
         """ROC 变动率指标"""
-        self.df['roc'] = (self.df['close'] - self.df['close'].shift(period)) / self.df['close'].shift(period) * 100
+        self.df["roc"] = (self.df["close"] - self.df["close"].shift(period)) / self.df["close"].shift(period) * 100
         return self
 
     def add_bull_bear_power(self, period: int = 13):
         """Bull/Bear Power 牛熊力量"""
-        ema = self.df['close'].ewm(span=period, adjust=False).mean()
-        self.df['bull_power'] = self.df['high'] - ema
-        self.df['bear_power'] = self.df['low'] - ema
+        ema = self.df["close"].ewm(span=period, adjust=False).mean()
+        self.df["bull_power"] = self.df["high"] - ema
+        self.df["bear_power"] = self.df["low"] - ema
         return self
 
-    def add_sma(self, period: int, col_name: Optional[str] = None):
+    def add_sma(self, period: int, col_name: str | None = None):
         """SMA 简单移动平均"""
-        col = col_name or f'sma{period}'
-        self.df[col] = self.df['close'].rolling(period).mean()
+        col = col_name or f"sma{period}"
+        self.df[col] = self.df["close"].rolling(period).mean()
         return self
 
     def add_ma_slope(self, col_name: str, lookback: int = 5):
@@ -484,12 +482,12 @@ class IndicatorEngine:
         ma_prev = ma.shift(lookback)
 
         # 斜率 = (当前值 - N周期前值) / N周期前值 * 100
-        slope_col = f'{col_name}_slope'
+        slope_col = f"{col_name}_slope"
         self.df[slope_col] = (ma - ma_prev) / ma_prev.abs().replace(0, np.nan) * 100
 
         return self
 
-    def add_ma_spread(self, fast_col: str = 'ema20', slow_col: str = 'ema60', lookback: int = 5):
+    def add_ma_spread(self, fast_col: str = "ema20", slow_col: str = "ema60", lookback: int = 5):
         """
         计算均线间距及其变化率
 
@@ -509,18 +507,19 @@ class IndicatorEngine:
         slow = self.df[slow_col]
 
         # 均线间距（百分比）
-        spread_col = f'spread_{fast_col}_{slow_col}'
+        spread_col = f"spread_{fast_col}_{slow_col}"
         self.df[spread_col] = (fast - slow) / slow.abs().replace(0, np.nan) * 100
 
         # 间距变化率
-        spread_change_col = f'{spread_col}_change'
+        spread_change_col = f"{spread_col}_change"
         spread_prev = self.df[spread_col].shift(lookback)
         self.df[spread_change_col] = self.df[spread_col] - spread_prev
 
         return self
 
-    def add_ma_trend_direction(self, fast_col: str = 'ema20', slow_col: str = 'ema60',
-                                slope_lookback: int = 5, spread_lookback: int = 5):
+    def add_ma_trend_direction(
+        self, fast_col: str = "ema20", slow_col: str = "ema60", slope_lookback: int = 5, spread_lookback: int = 5
+    ):
         """
         综合判断均线趋势方向（考虑排列+走势+价格位置）
 
@@ -540,19 +539,19 @@ class IndicatorEngine:
             spread_lookback: 间距变化回溯周期
         """
         # 先确保斜率和间距已计算
-        if f'{fast_col}_slope' not in self.df.columns:
+        if f"{fast_col}_slope" not in self.df.columns:
             self.add_ma_slope(fast_col, slope_lookback)
-        if f'{slow_col}_slope' not in self.df.columns:
+        if f"{slow_col}_slope" not in self.df.columns:
             self.add_ma_slope(slow_col, slope_lookback)
-        if f'spread_{fast_col}_{slow_col}' not in self.df.columns:
+        if f"spread_{fast_col}_{slow_col}" not in self.df.columns:
             self.add_ma_spread(fast_col, slow_col, spread_lookback)
 
-        close = self.df['close']
+        close = self.df["close"]
         fast = self.df[fast_col]
         slow = self.df[slow_col]
-        fast_slope = self.df[f'{fast_col}_slope']
-        slow_slope = self.df[f'{slow_col}_slope']
-        spread_change = self.df[f'spread_{fast_col}_{slow_col}_change']
+        fast_slope = self.df[f"{fast_col}_slope"]
+        slow_slope = self.df[f"{slow_col}_slope"]
+        spread_change = self.df[f"spread_{fast_col}_{slow_col}_change"]
 
         # ---- 价格位置分析（新增）----
         # 价格相对于快速均线的位置
@@ -585,67 +584,68 @@ class IndicatorEngine:
             # 弱空头：空头排列 + 一升一降
             (fast < slow) & ((fast_slope > 0) ^ (slow_slope > 0)),
         ]
-        choices = ['STRONG_BULLISH', 'FALSE_BULLISH', 'WEAK_BULLISH',
-                   'STRONG_BEARISH', 'FALSE_BEARISH', 'WEAK_BEARISH']
+        choices = ["STRONG_BULLISH", "FALSE_BULLISH", "WEAK_BULLISH", "STRONG_BEARISH", "FALSE_BEARISH", "WEAK_BEARISH"]
 
-        self.df['ma_trend_direction'] = np.select(conditions, choices, default='NEUTRAL')
+        self.df["ma_trend_direction"] = np.select(conditions, choices, default="NEUTRAL")
 
         # 趋势强度评分（0-100）
         slope_score = (fast_slope.abs() + slow_slope.abs()) / 2 * 10
         spread_score = spread_change.abs() * 20
         # 价格位置加成：价格远离均线时趋势更强
         price_position_score = (price_vs_fast.abs() + price_vs_slow.abs()) / 2 * 2
-        self.df['ma_trend_strength'] = (slope_score + spread_score + price_position_score).clip(0, 100)
+        self.df["ma_trend_strength"] = (slope_score + spread_score + price_position_score).clip(0, 100)
 
         # 价格位置指标（供其他模块使用）
-        self.df['price_vs_ema20'] = price_vs_fast
-        self.df['price_vs_ema60'] = price_vs_slow
+        self.df["price_vs_ema20"] = price_vs_fast
+        self.df["price_vs_ema60"] = price_vs_slow
 
         return self
 
     def compute_all(self) -> pd.DataFrame:
         p = self.ma_periods
-        (self
-         # 均线（EMA20/60 用于趋势信号，SMA 用于多周期参考）
-         .add_ema(p['short'], 'ema20')
-         .add_ema(p['medium'], 'ema60')
-         .add_sma(5, 'sma5')
-         .add_sma(10, 'sma10')
-         .add_sma(20, 'sma20')
-         .add_sma(60, 'sma60')
-         .add_sma(100, 'sma100')
-         # 均线斜率和趋势方向（3根K线回溯，更敏感）
-         .add_ma_slope('ema20', 3)
-         .add_ma_slope('ema60', 3)
-         .add_ma_spread('ema20', 'ema60', 3)
-         .add_ma_trend_direction('ema20', 'ema60', 3, 3)
-         # 趋势指标
-         .add_atr(14)
-         .add_adx(14)
-         .add_adx_pct(120)  # ADX 滚动历史分位数
-         .add_donchian(20)
-         .add_macd(12, 26, 9)
-         .add_bollinger(20, 2)
-         .add_cci(14)
-         .add_highs_lows(14)
-         # 震荡指标
-         .add_rsi(14)
-         .add_stoch(9, 6)
-         .add_stochrsi(14)
-         .add_williams_r(14)
-         .add_ultimate_oscillator()
-         .add_roc(10)
-         .add_bull_bear_power(13)
-         # 高低点结构分析（趋势确认，40根K线回溯）
-         .add_swing_structure(40)
-         # 七维趋势强度指标（替代 ADX 单一指标）
-         .add_efficiency_ratio(20)
-         .add_r_squared(20)
-         .add_hurst_exponent(50)
-         .add_adx_roc(5)
-         .add_ema_slope_strength('ema20', 'atr')
-         .add_tsi(25, 13)
-         .add_atr_ratio(6, 24))
+        (
+            self
+            # 均线（EMA20/60 用于趋势信号，SMA 用于多周期参考）
+            .add_ema(p["short"], "ema20")
+            .add_ema(p["medium"], "ema60")
+            .add_sma(5, "sma5")
+            .add_sma(10, "sma10")
+            .add_sma(20, "sma20")
+            .add_sma(60, "sma60")
+            .add_sma(100, "sma100")
+            # 均线斜率和趋势方向（3根K线回溯，更敏感）
+            .add_ma_slope("ema20", 3)
+            .add_ma_slope("ema60", 3)
+            .add_ma_spread("ema20", "ema60", 3)
+            .add_ma_trend_direction("ema20", "ema60", 3, 3)
+            # 趋势指标
+            .add_atr(14)
+            .add_adx(14)
+            .add_adx_pct(120)  # ADX 滚动历史分位数
+            .add_donchian(20)
+            .add_macd(12, 26, 9)
+            .add_bollinger(20, 2)
+            .add_cci(14)
+            .add_highs_lows(14)
+            # 震荡指标
+            .add_rsi(14)
+            .add_stoch(9, 6)
+            .add_stochrsi(14)
+            .add_williams_r(14)
+            .add_ultimate_oscillator()
+            .add_roc(10)
+            .add_bull_bear_power(13)
+            # 高低点结构分析（趋势确认，40根K线回溯）
+            .add_swing_structure(40)
+            # 七维趋势强度指标（替代 ADX 单一指标）
+            .add_efficiency_ratio(20)
+            .add_r_squared(20)
+            .add_hurst_exponent(50)
+            .add_adx_roc(5)
+            .add_ema_slope_strength("ema20", "atr")
+            .add_tsi(25, 13)
+            .add_atr_ratio(6, 24)
+        )
         return self.df
 
     def add_swing_structure(self, lookback: int = 40):
@@ -668,15 +668,15 @@ class IndicatorEngine:
             lookback: 回溯周期（默认40根K线）
         """
         if len(self.df) < lookback:
-            self.df['swing_higher_highs'] = 0
-            self.df['swing_higher_lows'] = 0
-            self.df['swing_lower_highs'] = 0
-            self.df['swing_lower_lows'] = 0
-            self.df['swing_structure'] = 'NEUTRAL'
+            self.df["swing_higher_highs"] = 0
+            self.df["swing_higher_lows"] = 0
+            self.df["swing_lower_highs"] = 0
+            self.df["swing_lower_lows"] = 0
+            self.df["swing_structure"] = "NEUTRAL"
             return self
 
-        high = self.df['high']
-        low = self.df['low']
+        high = self.df["high"]
+        low = self.df["low"]
 
         # 使用2根K线窗口识别摆动点
         window = 2
@@ -691,7 +691,7 @@ class IndicatorEngine:
             # 摆动高点：比左右window根K线都高
             is_high = True
             for j in range(1, window + 1):
-                if high.iloc[i] <= high.iloc[i-j] or high.iloc[i] <= high.iloc[i+j]:
+                if high.iloc[i] <= high.iloc[i - j] or high.iloc[i] <= high.iloc[i + j]:
                     is_high = False
                     break
             if is_high:
@@ -700,7 +700,7 @@ class IndicatorEngine:
             # 摆动低点：比左右window根K线都低
             is_low = True
             for j in range(1, window + 1):
-                if low.iloc[i] >= low.iloc[i-j] or low.iloc[i] >= low.iloc[i+j]:
+                if low.iloc[i] >= low.iloc[i - j] or low.iloc[i] >= low.iloc[i + j]:
                     is_low = False
                     break
             if is_low:
@@ -715,9 +715,9 @@ class IndicatorEngine:
         lower_highs = 0
         if len(recent_highs) >= 2:
             for i in range(1, len(recent_highs)):
-                if recent_highs[i][1] > recent_highs[i-1][1]:
+                if recent_highs[i][1] > recent_highs[i - 1][1]:
                     higher_highs += 1
-                elif recent_highs[i][1] < recent_highs[i-1][1]:
+                elif recent_highs[i][1] < recent_highs[i - 1][1]:
                     lower_highs += 1
 
         # 判断低点是否依次抬高
@@ -725,30 +725,30 @@ class IndicatorEngine:
         lower_lows = 0
         if len(recent_lows) >= 2:
             for i in range(1, len(recent_lows)):
-                if recent_lows[i][1] > recent_lows[i-1][1]:
+                if recent_lows[i][1] > recent_lows[i - 1][1]:
                     higher_lows += 1
-                elif recent_lows[i][1] < recent_lows[i-1][1]:
+                elif recent_lows[i][1] < recent_lows[i - 1][1]:
                     lower_lows += 1
 
         # 写入最后一行的值
-        self.df['swing_higher_highs'] = higher_highs
-        self.df['swing_higher_lows'] = higher_lows
-        self.df['swing_lower_highs'] = lower_highs
-        self.df['swing_lower_lows'] = lower_lows
+        self.df["swing_higher_highs"] = higher_highs
+        self.df["swing_higher_lows"] = higher_lows
+        self.df["swing_lower_highs"] = lower_highs
+        self.df["swing_lower_lows"] = lower_lows
 
         # 综合判断结构
         if higher_highs > 0 and higher_lows > 0 and lower_highs == 0 and lower_lows == 0:
-            structure = 'BULLISH'  # 高点抬高 + 低点抬高 = 上升趋势
+            structure = "BULLISH"  # 高点抬高 + 低点抬高 = 上升趋势
         elif lower_highs > 0 and lower_lows > 0 and higher_highs == 0 and higher_lows == 0:
-            structure = 'BEARISH'  # 高点降低 + 低点降低 = 下降趋势
+            structure = "BEARISH"  # 高点降低 + 低点降低 = 下降趋势
         elif higher_highs > 0 and lower_lows > 0:
-            structure = 'EXPANDING'  # 高点抬高 + 低点降低 = 扩张（波动加大）
+            structure = "EXPANDING"  # 高点抬高 + 低点降低 = 扩张（波动加大）
         elif lower_highs > 0 and higher_lows > 0:
-            structure = 'CONTRACTING'  # 高点降低 + 低点抬高 = 收敛（三角形）
+            structure = "CONTRACTING"  # 高点降低 + 低点抬高 = 收敛（三角形）
         else:
-            structure = 'NEUTRAL'
+            structure = "NEUTRAL"
 
-        self.df['swing_structure'] = structure
+        self.df["swing_structure"] = structure
 
         return self
 
@@ -768,10 +768,10 @@ class IndicatorEngine:
 
         优势：无平滑，即期反应，对反转敏感
         """
-        close = self.df['close']
+        close = self.df["close"]
         direction = (close - close.shift(period)).abs()
         volatility = close.diff().abs().rolling(period).sum()
-        self.df['er'] = (direction / volatility.replace(0, np.nan)).fillna(0)
+        self.df["er"] = (direction / volatility.replace(0, np.nan)).fillna(0)
         return self
 
     def add_r_squared(self, period: int = 20):
@@ -786,11 +786,11 @@ class IndicatorEngine:
 
         优势：不依赖方向（上涨/下跌均可拟合），对反转敏感
         """
-        close = self.df['close']
+        close = self.df["close"]
         r2_values = np.full(len(close), np.nan)
 
         for i in range(period - 1, len(close)):
-            y = close.iloc[i - period + 1:i + 1].values
+            y = close.iloc[i - period + 1 : i + 1].values
             x = np.arange(period, dtype=float)
             # 线性回归
             slope, intercept = np.polyfit(x, y, 1)
@@ -802,7 +802,7 @@ class IndicatorEngine:
             else:
                 r2_values[i] = 0.0
 
-        self.df['r_squared'] = r2_values
+        self.df["r_squared"] = r2_values
         return self
 
     def add_hurst_exponent(self, period: int = 50):
@@ -818,7 +818,7 @@ class IndicatorEngine:
         2. 计算每个子序列的 R/S 值
         3. 对 log(R/S) vs log(n) 做线性回归，斜率即 H
         """
-        close = self.df['close']
+        close = self.df["close"]
         returns = close.pct_change()
         hurst_values = np.full(len(close), np.nan)
 
@@ -826,7 +826,7 @@ class IndicatorEngine:
         sub_periods = [period // 4, period // 3, period // 2, period]
 
         for i in range(period - 1, len(close)):
-            window = returns.iloc[i - period + 1:i + 1].values
+            window = returns.iloc[i - period + 1 : i + 1].values
             window = window[~np.isnan(window)]
             if len(window) < period // 2:
                 continue
@@ -842,7 +842,7 @@ class IndicatorEngine:
                     continue
                 rs_list = []
                 for c in range(num_chunks):
-                    chunk = window[c * n:(c + 1) * n]
+                    chunk = window[c * n : (c + 1) * n]
                     mean_c = np.mean(chunk)
                     cumdev = np.cumsum(chunk - mean_c)
                     r = np.max(cumdev) - np.min(cumdev)
@@ -858,7 +858,7 @@ class IndicatorEngine:
                 slope, _ = np.polyfit(log_ns, log_rs, 1)
                 hurst_values[i] = np.clip(slope, 0, 1)
 
-        self.df['hurst'] = hurst_values
+        self.df["hurst"] = hurst_values
         return self
 
     def add_adx_roc(self, period: int = 5):
@@ -873,13 +873,13 @@ class IndicatorEngine:
 
         优势：保留 ADX 信息，降低滞后
         """
-        if 'adx' not in self.df.columns:
+        if "adx" not in self.df.columns:
             raise ValueError("必须先调用 add_adx() 计算 ADX")
 
-        self.df['adx_roc'] = (self.df['adx'] - self.df['adx'].shift(period)) / period
+        self.df["adx_roc"] = (self.df["adx"] - self.df["adx"].shift(period)) / period
         return self
 
-    def add_ema_slope_strength(self, ema_col: str = 'ema20', atr_col: str = 'atr'):
+    def add_ema_slope_strength(self, ema_col: str = "ema20", atr_col: str = "atr"):
         """
         EMA 斜率强度（Slope Strength）
 
@@ -900,7 +900,7 @@ class IndicatorEngine:
 
         slope = self.df[ema_col] - self.df[ema_col].shift(1)
         atr = self.df[atr_col].replace(0, np.nan)
-        self.df['ema_slope_strength'] = (slope / atr).fillna(0)
+        self.df["ema_slope_strength"] = (slope / atr).fillna(0)
         return self
 
     def add_tsi(self, long_period: int = 25, short_period: int = 13):
@@ -922,17 +922,16 @@ class IndicatorEngine:
         - 背离是反转最强信号（价格新高+TSI不新高=顶背离）
         - 比 ADX 快 2-3 根 K 线，反转误判少一半
         """
-        close = self.df['close']
+        close = self.df["close"]
         mom = close - close.shift(1)
 
         # 双平滑动量
-        double_smoothed = mom.ewm(span=long_period, adjust=False).mean() \
-            .ewm(span=short_period, adjust=False).mean()
+        double_smoothed = mom.ewm(span=long_period, adjust=False).mean().ewm(span=short_period, adjust=False).mean()
 
         # 双平滑绝对动量
         abs_smoothed = mom.abs().ewm(span=long_period, adjust=False).mean()
 
-        self.df['tsi'] = (double_smoothed / abs_smoothed.replace(0, np.nan) * 100).fillna(0)
+        self.df["tsi"] = (double_smoothed / abs_smoothed.replace(0, np.nan) * 100).fillna(0)
         return self
 
     def add_atr_ratio(self, short_period: int = 6, long_period: int = 24):
@@ -951,7 +950,7 @@ class IndicatorEngine:
         - 波动率收缩→扩张是趋势启动最早信号
         - 趋势末期 ATR 比率先降，提前预警顶部
         """
-        high, low, close = self.df['high'], self.df['low'], self.df['close']
+        high, low, close = self.df["high"], self.df["low"], self.df["close"]
 
         # 计算 TR
         tr1 = high - low
@@ -962,10 +961,10 @@ class IndicatorEngine:
         atr_short = tr.rolling(short_period).mean()
         atr_long = tr.rolling(long_period).mean()
 
-        self.df['atr_ratio'] = (atr_short / atr_long.replace(0, np.nan)).fillna(1.0)
+        self.df["atr_ratio"] = (atr_short / atr_long.replace(0, np.nan)).fillna(1.0)
         return self
 
-    def get_trend_strength_composite(self, weights: Optional[Dict[str, float]] = None) -> pd.Series:
+    def get_trend_strength_composite(self, weights: dict[str, float] | None = None) -> pd.Series:
         """
         七维复合趋势强度评分
 
@@ -988,47 +987,52 @@ class IndicatorEngine:
             pd.Series: 复合评分 [0, 1]
         """
         default_weights = {
-            'tsi': 0.25, 'er': 0.25, 'ema_slope': 0.15,
-            'atr_ratio': 0.10, 'r2': 0.10, 'hurst': 0.08, 'adx_roc': 0.07
+            "tsi": 0.25,
+            "er": 0.25,
+            "ema_slope": 0.15,
+            "atr_ratio": 0.10,
+            "r2": 0.10,
+            "hurst": 0.08,
+            "adx_roc": 0.07,
         }
         w = weights or default_weights
 
         # === 归一化各指标到 [0, 1] ===
 
         # TSI: sigmoid 映射 [-100, 100] → [0, 1]
-        tsi = self.df.get('tsi', pd.Series(0, index=self.df.index))
+        tsi = self.df.get("tsi", pd.Series(0, index=self.df.index))
         tsi_norm = 1 / (1 + np.exp(-tsi / 20))
 
         # ER: 已经是 [0, 1]
-        er = self.df.get('er', pd.Series(0, index=self.df.index))
+        er = self.df.get("er", pd.Series(0, index=self.df.index))
 
         # EMA 斜率强度: sigmoid 映射
-        ema_slope = self.df.get('ema_slope_strength', pd.Series(0, index=self.df.index))
+        ema_slope = self.df.get("ema_slope_strength", pd.Series(0, index=self.df.index))
         ema_slope_norm = 1 / (1 + np.exp(-ema_slope * 3))
 
         # ATR 比率: 映射 [0.5, 2.0] → [0, 1]
-        atr_ratio = self.df.get('atr_ratio', pd.Series(1.0, index=self.df.index))
+        atr_ratio = self.df.get("atr_ratio", pd.Series(1.0, index=self.df.index))
         atr_ratio_norm = ((atr_ratio - 0.5) / 1.5).clip(0, 1)
 
         # R²: 已经是 [0, 1]
-        r2 = self.df.get('r_squared', pd.Series(0, index=self.df.index))
+        r2 = self.df.get("r_squared", pd.Series(0, index=self.df.index))
 
         # Hurst: 已经是 [0, 1]
-        hurst = self.df.get('hurst', pd.Series(0.5, index=self.df.index))
+        hurst = self.df.get("hurst", pd.Series(0.5, index=self.df.index))
 
         # ADX ROC: sigmoid 映射
-        adx_roc = self.df.get('adx_roc', pd.Series(0, index=self.df.index))
+        adx_roc = self.df.get("adx_roc", pd.Series(0, index=self.df.index))
         adx_roc_norm = 1 / (1 + np.exp(-adx_roc * 2))
 
         # === 加权求和 ===
         composite = (
-            w.get('tsi', 0) * tsi_norm.fillna(0.5) +
-            w.get('er', 0) * er.fillna(0) +
-            w.get('ema_slope', 0) * ema_slope_norm.fillna(0.5) +
-            w.get('atr_ratio', 0) * atr_ratio_norm.fillna(0.5) +
-            w.get('r2', 0) * r2.fillna(0) +
-            w.get('hurst', 0) * hurst.fillna(0.5) +
-            w.get('adx_roc', 0) * adx_roc_norm.fillna(0.5)
+            w.get("tsi", 0) * tsi_norm.fillna(0.5)
+            + w.get("er", 0) * er.fillna(0)
+            + w.get("ema_slope", 0) * ema_slope_norm.fillna(0.5)
+            + w.get("atr_ratio", 0) * atr_ratio_norm.fillna(0.5)
+            + w.get("r2", 0) * r2.fillna(0)
+            + w.get("hurst", 0) * hurst.fillna(0.5)
+            + w.get("adx_roc", 0) * adx_roc_norm.fillna(0.5)
         )
 
         return composite.clip(0, 1)

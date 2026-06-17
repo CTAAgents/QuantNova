@@ -23,24 +23,27 @@ StrategyPortfolio — 多策略组合管理模块 v1.0
 创建日期：2026-06-17
 """
 
+import logging
+from dataclasses import dataclass
+
 import numpy as np
 import pandas as pd
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
-import logging
+
 
 logger = logging.getLogger(__name__)
 
 
 # ===================== 数据模型 =====================
 
+
 @dataclass
 class StrategyInfo:
     """策略信息"""
+
     strategy_id: str
     weight: float
     equity_curve: pd.Series
-    returns: Optional[pd.Series] = None
+    returns: pd.Series | None = None
     sharpe: float = 0.0
     max_drawdown: float = 0.0
     win_rate: float = 0.0
@@ -79,6 +82,7 @@ class StrategyInfo:
 @dataclass
 class PortfolioStats:
     """组合统计"""
+
     total_strategies: int
     weights_sum: float
     diversification_ratio: float
@@ -86,9 +90,9 @@ class PortfolioStats:
     portfolio_max_drawdown: float
     portfolio_annual_return: float
     portfolio_volatility: float
-    correlation_matrix: Optional[pd.DataFrame] = None
+    correlation_matrix: pd.DataFrame | None = None
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         return {
             "total_strategies": self.total_strategies,
             "weights_sum": round(self.weights_sum, 4),
@@ -102,6 +106,7 @@ class PortfolioStats:
 
 # ===================== 组合管理器 =====================
 
+
 class StrategyPortfolio:
     """
     多策略组合管理器
@@ -109,9 +114,7 @@ class StrategyPortfolio:
     管理多个策略的权重、相关性、组合权益曲线。
     """
 
-    def __init__(self, max_strategies: int = 10,
-                 max_correlation: float = 0.7,
-                 rebalance_frequency: int = 30):
+    def __init__(self, max_strategies: int = 10, max_correlation: float = 0.7, rebalance_frequency: int = 30):
         """
         参数:
             max_strategies: 最大策略数
@@ -123,11 +126,9 @@ class StrategyPortfolio:
         self.rebalance_frequency = rebalance_frequency
 
         # 策略字典 {strategy_id: StrategyInfo}
-        self._strategies: Dict[str, StrategyInfo] = {}
+        self._strategies: dict[str, StrategyInfo] = {}
 
-    def add_strategy(self, strategy_id: str,
-                      weight: float,
-                      equity_curve: pd.Series) -> None:
+    def add_strategy(self, strategy_id: str, weight: float, equity_curve: pd.Series) -> None:
         """
         添加策略到组合
 
@@ -159,11 +160,11 @@ class StrategyPortfolio:
             del self._strategies[strategy_id]
             logger.info(f"移除策略 {strategy_id}")
 
-    def get_strategy(self, strategy_id: str) -> Optional[StrategyInfo]:
+    def get_strategy(self, strategy_id: str) -> StrategyInfo | None:
         """获取策略信息"""
         return self._strategies.get(strategy_id)
 
-    def get_all_strategies(self) -> Dict[str, StrategyInfo]:
+    def get_all_strategies(self) -> dict[str, StrategyInfo]:
         """获取所有策略"""
         return self._strategies.copy()
 
@@ -196,7 +197,7 @@ class StrategyPortfolio:
         for sid, strategy in self._strategies.items():
             normalized_weight = strategy.weight / total_weight
             # 对齐到共同索引
-            aligned = strategy.equity_curve.reindex(index, method='ffill')
+            aligned = strategy.equity_curve.reindex(index, method="ffill")
             portfolio_equity += normalized_weight * aligned
 
         return portfolio_equity
@@ -255,8 +256,7 @@ class StrategyPortfolio:
         returns_df = pd.DataFrame(returns_dict)
         return returns_df.corr()
 
-    def optimize_weights(self, target_vol: float = 0.15,
-                          method: str = "equal_risk") -> Dict[str, float]:
+    def optimize_weights(self, target_vol: float = 0.15, method: str = "equal_risk") -> dict[str, float]:
         """
         优化策略权重
 
@@ -363,7 +363,7 @@ class StrategyPortfolio:
         drawdown = (running_max - equity) / running_max.replace(0, np.nan)
         return float(drawdown.max()) if not drawdown.empty else 0.0
 
-    def check_correlation_warning(self) -> List[Tuple[str, str, float]]:
+    def check_correlation_warning(self) -> list[tuple[str, str, float]]:
         """
         检查策略间相关性警告
 

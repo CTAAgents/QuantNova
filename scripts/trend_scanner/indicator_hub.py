@@ -15,50 +15,98 @@ IndicatorHub — 统一指标加载层 v1.0
     dims = hub.get_dimensions('DCE.jm')  # {trend: DataFrame, momentum: DataFrame, ...}
 """
 
-import os
 import hashlib
-import json
-from datetime import datetime
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+import os
 from functools import lru_cache
+from pathlib import Path
 
 import duckdb
 import pandas as pd
-import numpy as np
 
 
 # ===================== 维度分组定义 =====================
 
-DIMENSION_GROUPS: Dict[str, List[str]] = {
+DIMENSION_GROUPS: dict[str, list[str]] = {
     "trend": [
-        "ma5", "ma10", "ma20", "ma60", "ma100",
-        "ema20", "ema60", "adx", "adxr", "plus_di", "minus_di",
-        "sar", "dkx", "madkx", "lon",
-        "ma20_slope", "ma60_slope", "spread_ma20_ma60",
+        "ma5",
+        "ma10",
+        "ma20",
+        "ma60",
+        "ma100",
+        "ema20",
+        "ema60",
+        "adx",
+        "adxr",
+        "plus_di",
+        "minus_di",
+        "sar",
+        "dkx",
+        "madkx",
+        "lon",
+        "ma20_slope",
+        "ma60_slope",
+        "spread_ma20_ma60",
     ],
     "momentum": [
-        "macd", "macd_signal", "macd_hist",
-        "rsi", "kdj_k", "kdj_d", "kdj_j",
-        "roc", "mtm", "mtm_ma",
-        "adtm", "ddi", "wr", "cci", "priceosc",
-        "dpo", "b36", "b612",
+        "macd",
+        "macd_signal",
+        "macd_hist",
+        "rsi",
+        "kdj_k",
+        "kdj_d",
+        "kdj_j",
+        "roc",
+        "mtm",
+        "mtm_ma",
+        "adtm",
+        "ddi",
+        "wr",
+        "cci",
+        "priceosc",
+        "dpo",
+        "b36",
+        "b612",
     ],
     "volume": [
-        "obv", "ad", "mfi", "vr", "vroc",
-        "wvad", "pvt", "ar", "br",
+        "obv",
+        "ad",
+        "mfi",
+        "vr",
+        "vroc",
+        "wvad",
+        "pvt",
+        "ar",
+        "br",
     ],
     "volatility": [
-        "atr", "atr_ratio",
-        "bb_upper", "bb_mid", "bb_lower", "bb_width",
-        "bbiboll", "mass",
+        "atr",
+        "atr_ratio",
+        "bb_upper",
+        "bb_mid",
+        "bb_lower",
+        "bb_width",
+        "bbiboll",
+        "mass",
     ],
     "channel": [
-        "dc_upper", "dc_mid", "dc_lower",
-        "hcl_upper", "hcl_mid", "hcl_lower",
-        "env_upper", "env_lower",
-        "mike_wr1", "mike_ws1", "mike_wr2", "mike_ws2", "mike_wr3", "mike_ws3",
-        "pubu_pb4", "pubu_pb6", "pubu_pb9", "pubu_pb13",
+        "dc_upper",
+        "dc_mid",
+        "dc_lower",
+        "hcl_upper",
+        "hcl_mid",
+        "hcl_lower",
+        "env_upper",
+        "env_lower",
+        "mike_wr1",
+        "mike_ws1",
+        "mike_wr2",
+        "mike_ws2",
+        "mike_wr3",
+        "mike_ws3",
+        "pubu_pb4",
+        "pubu_pb6",
+        "pubu_pb9",
+        "pubu_pb13",
     ],
 }
 
@@ -66,7 +114,7 @@ DIMENSION_GROUPS: Dict[str, List[str]] = {
 # ===================== 字段名映射 =====================
 
 # TqSdk/sync_indicators 输出列名 → IndicatorEngine 标准列名
-FIELD_NAME_MAP: Dict[str, str] = {
+FIELD_NAME_MAP: dict[str, str] = {
     # 均线类（一致，无需映射）
     # 趋势类
     "plus_di": "di_plus",
@@ -96,7 +144,7 @@ FIELD_NAME_MAP: Dict[str, str] = {
 }
 
 # 反向映射：IndicatorEngine 列名 → sync_indicators 列名
-REVERSE_FIELD_MAP: Dict[str, str] = {v: k for k, v in FIELD_NAME_MAP.items()}
+REVERSE_FIELD_MAP: dict[str, str] = {v: k for k, v in FIELD_NAME_MAP.items()}
 
 
 class IndicatorHub:
@@ -110,21 +158,18 @@ class IndicatorHub:
     缓存策略：同一品种同一交易日缓存，避免重复计算。
     """
 
-    def __init__(self, db_path: str = "data/market.db",
-                 cache_dir: Optional[str] = None):
+    def __init__(self, db_path: str = "data/market.db", cache_dir: str | None = None):
         """
         Args:
             db_path: DuckDB 数据库路径
             cache_dir: 缓存目录，默认 data/indicator_cache/
         """
         self.db_path = db_path
-        self.cache_dir = cache_dir or os.path.join(
-            os.path.dirname(db_path), "indicator_cache"
-        )
+        self.cache_dir = cache_dir or os.path.join(os.path.dirname(db_path), "indicator_cache")
         os.makedirs(self.cache_dir, exist_ok=True)
 
         # 内存缓存 {(symbol, latest_date_hash): DataFrame}
-        self._mem_cache: Dict[Tuple[str, str], pd.DataFrame] = {}
+        self._mem_cache: dict[tuple[str, str], pd.DataFrame] = {}
 
     # ===================== 公共接口 =====================
 
@@ -160,7 +205,7 @@ class IndicatorHub:
 
         return wide_df
 
-    def get_dimensions(self, symbol: str) -> Dict[str, pd.DataFrame]:
+    def get_dimensions(self, symbol: str) -> dict[str, pd.DataFrame]:
         """
         按维度分组获取指标。
 
@@ -184,7 +229,7 @@ class IndicatorHub:
 
         return result
 
-    def get_latest(self, symbol: str) -> Dict[str, float]:
+    def get_latest(self, symbol: str) -> dict[str, float]:
         """
         获取最新一条记录的所有指标值（扁平字典）。
 
@@ -215,7 +260,7 @@ class IndicatorHub:
 
         return result
 
-    def get_indicator_names(self) -> List[str]:
+    def get_indicator_names(self) -> list[str]:
         """返回所有可用的指标名称列表"""
         all_names = set()
         for names in DIMENSION_GROUPS.values():
@@ -248,7 +293,7 @@ class IndicatorHub:
         raw = f"{symbol}:{latest_ts}"
         return hashlib.md5(raw.encode()).hexdigest()[:16]
 
-    def _load_cache(self, symbol: str, cache_key: str) -> Optional[pd.DataFrame]:
+    def _load_cache(self, symbol: str, cache_key: str) -> pd.DataFrame | None:
         """尝试从缓存加载"""
         if (symbol, cache_key) in self._mem_cache:
             return self._mem_cache[(symbol, cache_key)]
@@ -269,7 +314,7 @@ class IndicatorHub:
         except Exception:
             pass
 
-    def _load_from_db(self, symbol: str) -> Optional[pd.DataFrame]:
+    def _load_from_db(self, symbol: str) -> pd.DataFrame | None:
         """
         从 DuckDB indicators 长表读取并转换为宽表。
         """
@@ -277,12 +322,12 @@ class IndicatorHub:
 
         try:
             # 检查是否有 indicators 表
-            tables = conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name='indicators'"
-            ).fetchall()
+            tables = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='indicators'").fetchall()
             if not tables:
                 # DuckDB 的表查询方式不同
-                tables = conn.execute("SELECT table_name FROM information_schema.tables WHERE table_name='indicators'").fetchall()
+                tables = conn.execute(
+                    "SELECT table_name FROM information_schema.tables WHERE table_name='indicators'"
+                ).fetchall()
 
             if not tables:
                 return None
@@ -299,9 +344,7 @@ class IndicatorHub:
                 return None
 
             # 长表 → 宽表 pivot
-            df_wide = df_long.pivot(
-                index='timestamp', columns='indicator_name', values='value'
-            ).reset_index()
+            df_wide = df_long.pivot(index="timestamp", columns="indicator_name", values="value").reset_index()
             df_wide.columns.name = None
 
             # 补充 K 线数据
@@ -314,7 +357,7 @@ class IndicatorHub:
                 """).fetchdf()
 
                 if len(df_klines) > 0:
-                    df_wide = pd.merge(df_wide, df_klines, on='timestamp', how='left')
+                    df_wide = pd.merge(df_wide, df_klines, on="timestamp", how="left")
             except Exception:
                 pass
 
@@ -341,6 +384,7 @@ class IndicatorHub:
 
 # ===================== 便捷函数 =====================
 
+
 @lru_cache(maxsize=32)
 def _get_hub_instance(db_path: str) -> IndicatorHub:
     """获取 IndicatorHub 单例（LRU 缓存）"""
@@ -353,13 +397,13 @@ def load_indicators(symbol: str, db_path: str = "data/market.db") -> pd.DataFram
     return hub.load(symbol)
 
 
-def get_dimensions(symbol: str, db_path: str = "data/market.db") -> Dict[str, pd.DataFrame]:
+def get_dimensions(symbol: str, db_path: str = "data/market.db") -> dict[str, pd.DataFrame]:
     """便捷函数：按维度获取指标"""
     hub = _get_hub_instance(db_path)
     return hub.get_dimensions(symbol)
 
 
-def get_latest_indicators(symbol: str, db_path: str = "data/market.db") -> Dict[str, float]:
+def get_latest_indicators(symbol: str, db_path: str = "data/market.db") -> dict[str, float]:
     """便捷函数：获取最新指标值"""
     hub = _get_hub_instance(db_path)
     return hub.get_latest(symbol)

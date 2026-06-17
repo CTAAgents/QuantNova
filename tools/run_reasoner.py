@@ -10,207 +10,204 @@ Reasoner 包装脚本 — 将 Scanner 信号转化为交易决策简报
     python tools/run_reasoner.py --scan-id scan_20260615_103000  # 处理指定扫描结果
 """
 
+import argparse
 import json
 import os
 import sys
-import argparse
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Any
+
 
 # 添加模块路径
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'scripts'))
-
-from trend_scanner.data_source import DataSourceFactory
-from trend_scanner.navigator import TradingAssistant
-from trend_scanner.models import TradingBrief
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "scripts"))
 
 # 导入数据格式工具
-from data_formats import read_scan_result, load_config
+from data_formats import load_config, read_scan_result
+
+from trend_scanner.data_source import DataSourceFactory
+from trend_scanner.models import TradingBrief
+from trend_scanner.navigator import TradingAssistant
 
 
 def normalize_symbol(symbol: str) -> str:
     """将配置格式的品种代码转换为数据源可识别的格式"""
     symbol = symbol.strip()
-    if '.' in symbol:
-        parts = symbol.split('.')
+    if "." in symbol:
+        parts = symbol.split(".")
         if len(parts) == 2:
             return parts[1].upper()
     return symbol.upper()
 
 
-def brief_to_dict(brief: TradingBrief) -> Dict[str, Any]:
+def brief_to_dict(brief: TradingBrief) -> dict[str, Any]:
     """将 TradingBrief 转换为字典格式"""
-    result = {
-        "market_assessment": {},
-        "routes": [],
-        "constraints": [],
-        "uncertainty": {},
-        "confidence": 0.0
-    }
-    
+    result = {"market_assessment": {}, "routes": [], "constraints": [], "uncertainty": {}, "confidence": 0.0}
+
     # 市场评估
-    if hasattr(brief, 'assessment') and brief.assessment:
+    if hasattr(brief, "assessment") and brief.assessment:
         a = brief.assessment
         result["market_assessment"] = {
-            "trend_direction": getattr(a, 'trend_direction', 'UNKNOWN'),
-            "trend_phase": getattr(a, 'trend_phase', 'UNKNOWN'),
-            "confidence": getattr(a, 'confidence', 0),
-            "reasoning": getattr(a, 'reasoning', '')
+            "trend_direction": getattr(a, "trend_direction", "UNKNOWN"),
+            "trend_phase": getattr(a, "trend_phase", "UNKNOWN"),
+            "confidence": getattr(a, "confidence", 0),
+            "reasoning": getattr(a, "reasoning", ""),
         }
-    
+
     # 操作方案
-    if hasattr(brief, 'routes') and brief.routes:
+    if hasattr(brief, "routes") and brief.routes:
         for route in brief.routes:
-            result["routes"].append({
-                "name": getattr(route, 'name', ''),
-                "description": getattr(route, 'description', ''),
-                "entry_condition": getattr(route, 'entry_condition', ''),
-                "stop_loss": getattr(route, 'stop_loss', ''),
-                "take_profit": getattr(route, 'take_profit', ''),
-                "position_size": getattr(route, 'position_size', ''),
-                "probability": getattr(route, 'probability', 0)
-            })
-    
+            result["routes"].append(
+                {
+                    "name": getattr(route, "name", ""),
+                    "description": getattr(route, "description", ""),
+                    "entry_condition": getattr(route, "entry_condition", ""),
+                    "stop_loss": getattr(route, "stop_loss", ""),
+                    "take_profit": getattr(route, "take_profit", ""),
+                    "position_size": getattr(route, "position_size", ""),
+                    "probability": getattr(route, "probability", 0),
+                }
+            )
+
     # 约束
-    if hasattr(brief, 'constraints') and brief.constraints:
+    if hasattr(brief, "constraints") and brief.constraints:
         for c in brief.constraints:
-            result["constraints"].append({
-                "type": getattr(c, 'type', ''),
-                "value": getattr(c, 'value', ''),
-                "reason": getattr(c, 'reason', '')
-            })
-    
+            result["constraints"].append(
+                {"type": getattr(c, "type", ""), "value": getattr(c, "value", ""), "reason": getattr(c, "reason", "")}
+            )
+
     # 不确定性
-    if hasattr(brief, 'uncertainty') and brief.uncertainty:
+    if hasattr(brief, "uncertainty") and brief.uncertainty:
         u = brief.uncertainty
-        result["uncertainty"] = {
-            "level": getattr(u, 'level', 'UNKNOWN'),
-            "factors": getattr(u, 'factors', [])
-        }
-    
+        result["uncertainty"] = {"level": getattr(u, "level", "UNKNOWN"), "factors": getattr(u, "factors", [])}
+
     # 置信度
-    if hasattr(brief, 'confidence'):
+    if hasattr(brief, "confidence"):
         result["confidence"] = brief.confidence
-    
+
     return result
 
 
-def run_reasoner_for_signal(signal: Dict[str, Any], assistant: TradingAssistant, memory_bridge=None) -> Optional[Dict[str, Any]]:
+def run_reasoner_for_signal(
+    signal: dict[str, Any], assistant: TradingAssistant, memory_bridge=None
+) -> dict[str, Any] | None:
     """
     对单个信号执行推理
-    
+
     参数:
         signal: Scanner 输出的信号字典
         assistant: TradingAssistant 实例
         memory_bridge: MemoryBridge 实例（可选）
-    
+
     返回:
         推理结果字典
     """
-    symbol = signal.get('symbol', '')
+    symbol = signal.get("symbol", "")
     data_symbol = normalize_symbol(symbol)
-    
+
     print(f"  推理中: {symbol} ({signal.get('direction', '')})...", end="", flush=True)
-    
+
     try:
         # 获取 K 线数据
         ds = DataSourceFactory.create()
         df = ds.get_kline(data_symbol, days=120)
-        
+
         if df is None or len(df) < 60:
-            print(f" 数据不足")
+            print(" 数据不足")
             return None
-        
+
         # 检索相似经验（如果记忆系统可用）
         similar_experiences = []
         if memory_bridge:
             try:
                 market_context = {
-                    'symbol': symbol,
-                    'feature_vector': signal.get('feature_vector', []),
-                    'timestamp': signal.get('scan_time', datetime.now().isoformat())
+                    "symbol": symbol,
+                    "feature_vector": signal.get("feature_vector", []),
+                    "timestamp": signal.get("scan_time", datetime.now().isoformat()),
                 }
                 similar_experiences = memory_bridge.retrieve_similar_experiences(symbol, market_context)
                 if similar_experiences:
                     print(f" [检索到 {len(similar_experiences)} 条经验]", end="", flush=True)
             except Exception as e:
                 logger.warning(f"检索经验失败: {e}")
-        
+
         # 执行推理
         brief = assistant.analyze(df, symbol=symbol)
-        
+
         # 转换为字典
         result = brief_to_dict(brief)
         result["symbol"] = symbol
-        result["direction"] = signal.get('direction', '')
-        result["signal_strength"] = signal.get('signal_strength', '')
-        result["trigger_reason"] = signal.get('trigger_reason', '')
+        result["direction"] = signal.get("direction", "")
+        result["signal_strength"] = signal.get("signal_strength", "")
+        result["trigger_reason"] = signal.get("trigger_reason", "")
         result["reasoning_time"] = datetime.now().isoformat()
         result["similar_experiences"] = similar_experiences
-        
-        confidence = result.get('confidence', 0)
+
+        confidence = result.get("confidence", 0)
         print(f" 完成 (置信度: {confidence:.2f})")
-        
+
         # 存储推理结果到记忆系统
         if memory_bridge:
             try:
                 memory_bridge.store_reasoning_result(result)
             except Exception as e:
                 logger.warning(f"存储推理结果失败: {e}")
-        
+
         return result
-    
+
     except Exception as e:
         print(f" 失败: {e}")
         return None
 
 
-def run_reasoner(symbols: List[str] = None, scan_result: Dict[str, Any] = None) -> List[Dict[str, Any]]:
+def run_reasoner(symbols: list[str] = None, scan_result: dict[str, Any] = None) -> list[dict[str, Any]]:
     """
     执行推理
-    
+
     参数:
         symbols: 品种列表（如果提供，直接推理这些品种）
         scan_result: Scanner 输出结果（如果提供，从中提取信号）
-    
+
     返回:
         推理结果列表
     """
     # 加载配置
     config = load_config()
     reasoner_config = config.get("reasoner", {})
-    
+
     # 获取信号列表
     if scan_result:
-        signals = scan_result.get('signals', [])
+        signals = scan_result.get("signals", [])
     elif symbols:
         # 直接对指定品种推理（跳过筛选）
-        signals = [{"symbol": s, "direction": "UNKNOWN", "signal_strength": "MEDIUM", "trigger_reason": "用户指定"} for s in symbols]
+        signals = [
+            {"symbol": s, "direction": "UNKNOWN", "signal_strength": "MEDIUM", "trigger_reason": "用户指定"}
+            for s in symbols
+        ]
     else:
         # 读取最新扫描结果
         scan_result = read_scan_result()
         if scan_result:
-            signals = scan_result.get('signals', [])
+            signals = scan_result.get("signals", [])
         else:
             print("错误: 无扫描结果，请先运行 Scanner")
             return []
-    
+
     if not signals:
         print("无信号需要推理")
         return []
-    
+
     print(f"开始推理 {len(signals)} 个信号...")
-    
+
     # 创建 TradingAssistant
     assistant = TradingAssistant()
-    
+
     # 对每个信号执行推理
     results = []
     for signal in signals:
         result = run_reasoner_for_signal(signal, assistant)
         if result:
             results.append(result)
-    
+
     return results
 
 
@@ -221,19 +218,19 @@ def main():
     parser.add_argument("--scan-id", type=str, help="指定扫描结果 ID（暂未实现）")
     parser.add_argument("--output", choices=["json", "text"], default="text", help="输出格式")
     parser.add_argument("--save", action="store_true", help="保存结果到 data/latest_reasoning.json")
-    
+
     args = parser.parse_args()
-    
+
     # 确定品种列表
     symbols = None
     if args.symbol:
         symbols = [args.symbol]
     elif args.symbols:
         symbols = [s.strip() for s in args.symbols.split(",")]
-    
+
     # 执行推理
     results = run_reasoner(symbols=symbols)
-    
+
     # 输出结果
     if args.output == "json":
         print(json.dumps(results, ensure_ascii=False, indent=2))
@@ -241,38 +238,40 @@ def main():
         print(f"\n推理完成: {len(results)} 个品种")
         print("=" * 60)
         for r in results:
-            symbol = r.get('symbol', '')
-            direction = r.get('direction', '')
-            confidence = r.get('confidence', 0)
+            symbol = r.get("symbol", "")
+            direction = r.get("direction", "")
+            confidence = r.get("confidence", 0)
             print(f"\n【{symbol}】{direction} 方向 | 置信度: {confidence:.2f}")
-            
+
             # 市场评估
-            ma = r.get('market_assessment', {})
+            ma = r.get("market_assessment", {})
             if ma:
                 print(f"  趋势阶段: {ma.get('trend_phase', 'N/A')}")
                 print(f"  推理: {ma.get('reasoning', 'N/A')}")
-            
+
             # 操作方案
-            routes = r.get('routes', [])
+            routes = r.get("routes", [])
             if routes:
-                print(f"  操作方案:")
+                print("  操作方案:")
                 for route in routes:
                     print(f"    - {route.get('name', '')}: {route.get('description', '')}")
-            
+
             # 约束
-            constraints = r.get('constraints', [])
+            constraints = r.get("constraints", [])
             if constraints:
-                print(f"  约束:")
+                print("  约束:")
                 for c in constraints:
                     print(f"    - {c.get('value', '')}")
-    
+
     # 保存结果
     if args.save and results:
-        output_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'latest_reasoning.json')
+        output_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "latest_reasoning.json"
+        )
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        with open(output_path, 'w', encoding='utf-8') as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             json.dump(results, f, ensure_ascii=False, indent=2)
-        print(f"\n结果已保存到 data/latest_reasoning.json")
+        print("\n结果已保存到 data/latest_reasoning.json")
 
 
 if __name__ == "__main__":

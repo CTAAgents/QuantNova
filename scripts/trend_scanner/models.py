@@ -4,19 +4,20 @@
 所有数据结构服务于"推理层"，而非"规则层"。
 """
 
-from dataclasses import dataclass, field, asdict
-from typing import Dict, List, Optional
-from datetime import datetime
 import json
+from dataclasses import asdict, dataclass, field
+from datetime import datetime
 
 
 # ──────────────────────────────────────────────
 # 感知层输出：结构化市场上下文
 # ──────────────────────────────────────────────
 
+
 @dataclass
 class IndicatorSnapshot:
     """单个时间点的指标快照"""
+
     timestamp: str
     close: float
     high: float
@@ -52,12 +53,12 @@ class IndicatorSnapshot:
     minus_di: float = 0.0
 
     # 七维趋势强度（替代 ADX 单一指标）
-    trend_strength_er: float = 0.0         # 效率比 [0, 1]
-    trend_strength_r2: float = 0.0         # 趋势拟合度 [0, 1]
-    trend_strength_hurst: float = 0.5      # Hurst 指数 [0, 1]
-    trend_strength_adx_roc: float = 0.0    # ADX 变化率（无界）
+    trend_strength_er: float = 0.0  # 效率比 [0, 1]
+    trend_strength_r2: float = 0.0  # 趋势拟合度 [0, 1]
+    trend_strength_hurst: float = 0.5  # Hurst 指数 [0, 1]
+    trend_strength_adx_roc: float = 0.0  # ADX 变化率（无界）
     trend_strength_ema_slope: float = 0.0  # EMA 斜率强度（无界）
-    trend_strength_tsi: float = 0.0        # TSI 双平滑动量 [-100, 100]
+    trend_strength_tsi: float = 0.0  # TSI 双平滑动量 [-100, 100]
     trend_strength_atr_ratio: float = 1.0  # ATR 比率 [0, +∞)
     trend_strength_composite: float = 0.0  # 复合评分 [0, 1]
 
@@ -72,23 +73,24 @@ class IndicatorSnapshot:
 @dataclass
 class MarketStructure:
     """市场结构分析（感知层输出，非判断）"""
+
     # 均线排列
-    ma_arrangement: str = "NEUTRAL"      # STRONG_BULL / WEAK_BULL / NEUTRAL / WEAK_BEAR / STRONG_BEAR
-    ma_slope_20: float = 0.0             # EMA20 斜率（百分比）
-    ma_slope_60: float = 0.0             # EMA60 斜率（百分比）
-    price_vs_ma: str = "NEUTRAL"         # ABOVE / BELOW / NEAR
+    ma_arrangement: str = "NEUTRAL"  # STRONG_BULL / WEAK_BULL / NEUTRAL / WEAK_BEAR / STRONG_BEAR
+    ma_slope_20: float = 0.0  # EMA20 斜率（百分比）
+    ma_slope_60: float = 0.0  # EMA60 斜率（百分比）
+    price_vs_ma: str = "NEUTRAL"  # ABOVE / BELOW / NEAR
 
     # 高低点结构
-    swing_structure: str = "NEUTRAL"     # HIGHER_HIGHS / LOWER_LOWS / MIXED / NEUTRAL
+    swing_structure: str = "NEUTRAL"  # HIGHER_HIGHS / LOWER_LOWS / MIXED / NEUTRAL
     recent_high: float = 0.0
     recent_low: float = 0.0
 
     # 成交量
-    volume_trend: str = "NEUTRAL"        # INCREASING / DECREASING / NEUTRAL
-    volume_ratio: float = 1.0            # 当前成交量 / 20日均量
+    volume_trend: str = "NEUTRAL"  # INCREASING / DECREASING / NEUTRAL
+    volume_ratio: float = 1.0  # 当前成交量 / 20日均量
 
     # 持仓量
-    oi_trend: str = "NEUTRAL"            # INCREASING / DECREASING / NEUTRAL
+    oi_trend: str = "NEUTRAL"  # INCREASING / DECREASING / NEUTRAL
     oi_change_pct: float = 0.0
 
     def to_dict(self) -> dict:
@@ -98,17 +100,18 @@ class MarketStructure:
 @dataclass
 class MomentumState:
     """动量状态（感知层输出，非判断）"""
-    rsi_state: str = "NEUTRAL"           # OVERBOUGHT / STRONG / NEUTRAL / WEAK / OVERSOLD
+
+    rsi_state: str = "NEUTRAL"  # OVERBOUGHT / STRONG / NEUTRAL / WEAK / OVERSOLD
     rsi_value: float = 50.0
 
-    macd_state: str = "NEUTRAL"          # BULLISH_CROSS / BULLISH / BEARISH_CROSS / BEARISH
+    macd_state: str = "NEUTRAL"  # BULLISH_CROSS / BULLISH / BEARISH_CROSS / BEARISH
     macd_histogram_trend: str = "NEUTRAL"  # EXPANDING / CONTRACTING / NEUTRAL
 
-    stoch_state: str = "NEUTRAL"         # OVERBOUGHT / STRONG / NEUTRAL / WEAK / OVERSOLD
-    cci_state: str = "NEUTRAL"           # EXTREME_HIGH / HIGH / NEUTRAL / LOW / EXTREME_LOW
+    stoch_state: str = "NEUTRAL"  # OVERBOUGHT / STRONG / NEUTRAL / WEAK / OVERSOLD
+    cci_state: str = "NEUTRAL"  # EXTREME_HIGH / HIGH / NEUTRAL / LOW / EXTREME_LOW
 
     oscillator_resonance: str = "NEUTRAL"  # BULLISH / BEARISH / MIXED / NEUTRAL
-    resonance_count: int = 0              # 同向振荡器数量
+    resonance_count: int = 0  # 同向振荡器数量
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -127,15 +130,16 @@ class TrendPhase:
     - FATIGUING：趋势衰竭，动能减弱
     - REVERSING：趋势反转，方向改变
     """
-    phase: str = "CONSOLIDATING"         # CONSOLIDATING / EMERGING / DEVELOPING / MATURE / FATIGUING / REVERSING
-    confidence: float = 0.5              # 阶段判断置信度 (0-1)
-    reasoning: str = ""                  # 判断依据
+
+    phase: str = "CONSOLIDATING"  # CONSOLIDATING / EMERGING / DEVELOPING / MATURE / FATIGUING / REVERSING
+    confidence: float = 0.5  # 阶段判断置信度 (0-1)
+    reasoning: str = ""  # 判断依据
 
     # 阶段特征（感知层输出，用于推理）
-    adx_state: str = "NEUTRAL"           # LOW / RISING / HIGH / FALLING
-    ma_slope_state: str = "NEUTRAL"      # BOTH_UP / BOTH_DOWN / MIXED / FLAT
-    macd_momentum: str = "NEUTRAL"       # EXPANDING / CONTRACTING / CROSSING
-    volume_confirmation: bool = False     # 成交量是否确认
+    adx_state: str = "NEUTRAL"  # LOW / RISING / HIGH / FALLING
+    ma_slope_state: str = "NEUTRAL"  # BOTH_UP / BOTH_DOWN / MIXED / FLAT
+    macd_momentum: str = "NEUTRAL"  # EXPANDING / CONTRACTING / CROSSING
+    volume_confirmation: bool = False  # 成交量是否确认
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -143,51 +147,52 @@ class TrendPhase:
     def to_chinese(self) -> str:
         """中文标签"""
         labels = {
-            'CONSOLIDATING': '横盘整理',
-            'EMERGING': '趋势萌芽',
-            'DEVELOPING': '趋势发展',
-            'MATURE': '趋势成熟',
-            'FATIGUING': '趋势衰竭',
-            'REVERSING': '趋势反转',
+            "CONSOLIDATING": "横盘整理",
+            "EMERGING": "趋势萌芽",
+            "DEVELOPING": "趋势发展",
+            "MATURE": "趋势成熟",
+            "FATIGUING": "趋势衰竭",
+            "REVERSING": "趋势反转",
         }
         return labels.get(self.phase, self.phase)
 
     def to_emoji(self) -> str:
         """Emoji 标签"""
         emojis = {
-            'CONSOLIDATING': '📊',
-            'EMERGING': '🆕',
-            'DEVELOPING': '🌱',
-            'MATURE': '🏆',
-            'FATIGUING': '⚠️',
-            'REVERSING': '🔄',
+            "CONSOLIDATING": "📊",
+            "EMERGING": "🆕",
+            "DEVELOPING": "🌱",
+            "MATURE": "🏆",
+            "FATIGUING": "⚠️",
+            "REVERSING": "🔄",
         }
-        return emojis.get(self.phase, '❓')
+        return emojis.get(self.phase, "❓")
 
     def to_signal_hint(self) -> str:
         """
         根据阶段给出信号倾向提示（非决策，仅提示）
         """
         hints = {
-            'CONSOLIDATING': '观望为主，等待突破',
-            'EMERGING': '关注确认信号，可小仓试探',
-            'DEVELOPING': '顺势加仓，跟踪止损',
-            'MATURE': '持仓为主，止盈上移',
-            'FATIGUING': '减仓或止盈，警惕反转',
-            'REVERSING': '平仓观望，等待新方向',
+            "CONSOLIDATING": "观望为主，等待突破",
+            "EMERGING": "关注确认信号，可小仓试探",
+            "DEVELOPING": "顺势加仓，跟踪止损",
+            "MATURE": "持仓为主，止盈上移",
+            "FATIGUING": "减仓或止盈，警惕反转",
+            "REVERSING": "平仓观望，等待新方向",
         }
-        return hints.get(self.phase, '观望')
+        return hints.get(self.phase, "观望")
 
 
 @dataclass
 class VolatilityState:
     """波动率状态（感知层输出，非判断）"""
-    atr_pct: float = 0.0                 # ATR / close * 100
-    atr_percentile: float = 50.0         # ATR 在历史中的分位数
-    bb_width: float = 0.0                # 布林带宽度
-    bb_width_percentile: float = 50.0    # 布林带宽度分位数
 
-    regime: str = "NORMAL"               # LOW / NORMAL / HIGH / EXTREME
+    atr_pct: float = 0.0  # ATR / close * 100
+    atr_percentile: float = 50.0  # ATR 在历史中的分位数
+    bb_width: float = 0.0  # 布林带宽度
+    bb_width_percentile: float = 50.0  # 布林带宽度分位数
+
+    regime: str = "NORMAL"  # LOW / NORMAL / HIGH / EXTREME
     regime_confidence: float = 0.5
 
     def to_dict(self) -> dict:
@@ -202,13 +207,14 @@ class MarketContext:
     这是推理层的输入。它只描述"市场现在是什么样"，
     不做"应该怎么做"的判断。
     """
+
     symbol: str
     timestamp: str
     timeframe: str = "daily"
 
     # 当前价格
     current_price: float = 0.0
-    price_change_pct: float = 0.0        # 日涨跌幅
+    price_change_pct: float = 0.0  # 日涨跌幅
 
     # 各维度状态（感知层输出）
     structure: MarketStructure = field(default_factory=MarketStructure)
@@ -219,8 +225,8 @@ class MarketContext:
     trend_phase: TrendPhase = field(default_factory=TrendPhase)
 
     # 最近N根K线的关键统计
-    bars_since_high: int = 0             # 距离最近高点的K线数
-    bars_since_low: int = 0              # 距离最近低点的K线数
+    bars_since_high: int = 0  # 距离最近高点的K线数
+    bars_since_low: int = 0  # 距离最近低点的K线数
     consecutive_up_days: int = 0
     consecutive_down_days: int = 0
 
@@ -228,7 +234,7 @@ class MarketContext:
     snapshot: IndicatorSnapshot = field(default_factory=IndicatorSnapshot)
 
     # 感知层原始特征向量（用于经验检索）
-    feature_vector: List[float] = field(default_factory=list)
+    feature_vector: list[float] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         d = asdict(self)
@@ -283,6 +289,7 @@ class MarketContext:
 # 经验记忆池
 # ──────────────────────────────────────────────
 
+
 @dataclass
 class Experience:
     """
@@ -291,20 +298,21 @@ class Experience:
     不是"规则"，而是"当时发生了什么，我做了什么，结果怎样"。
     用于未来类比推理。
     """
+
     experience_id: str
     timestamp: str
     symbol: str
 
     # 当时的市场上下文（快照）
-    context_snapshot: Dict = field(default_factory=dict)
+    context_snapshot: dict = field(default_factory=dict)
 
     # 当时的趋势阶段（核心状态）
-    trend_phase: str = "CONSOLIDATING"   # CONSOLIDATING / EMERGING / DEVELOPING / MATURE / FATIGUING / REVERSING
-    phase_confidence: float = 0.5        # 阶段判断置信度
+    trend_phase: str = "CONSOLIDATING"  # CONSOLIDATING / EMERGING / DEVELOPING / MATURE / FATIGUING / REVERSING
+    phase_confidence: float = 0.5  # 阶段判断置信度
 
     # 采取的动作
-    action_taken: str = "NONE"           # LONG / SHORT / HOLD / EXIT
-    action_reasoning: str = ""           # 当时的推理过程
+    action_taken: str = "NONE"  # LONG / SHORT / HOLD / EXIT
+    action_reasoning: str = ""  # 当时的推理过程
 
     # 约束设置
     stop_loss_used: float = 0.0
@@ -320,17 +328,17 @@ class Experience:
     max_profit_pct: float = 0.0
 
     # 风险调整收益
-    risk_adjusted_return: float = 0.0    # pnl / max_drawdown
+    risk_adjusted_return: float = 0.0  # pnl / max_drawdown
 
     # 上下文标签
-    market_state_label: str = ""         # 当时的市场状态标签
-    trend_phase: str = ""                # 当时的趋势阶段
+    market_state_label: str = ""  # 当时的市场状态标签
+    trend_phase: str = ""  # 当时的趋势阶段
 
     # 特征向量（用于相似度检索）
-    feature_vector: List[float] = field(default_factory=list)
+    feature_vector: list[float] = field(default_factory=list)
 
     # 用户反馈（如果有）
-    user_rating: int = 0                 # 1-5 用户评价
+    user_rating: int = 0  # 1-5 用户评价
     user_notes: str = ""
 
     def to_dict(self) -> dict:
@@ -344,26 +352,28 @@ class Experience:
 @dataclass
 class ExperienceMatch:
     """经验检索结果"""
+
     experience: Experience
-    similarity: float                    # 相似度 (0-1)
-    distance: float                      # 距离值
-    weight: float = 1.0                  # 聚合权重
+    similarity: float  # 相似度 (0-1)
+    distance: float  # 距离值
+    weight: float = 1.0  # 聚合权重
 
     def to_dict(self) -> dict:
         return {
-            'experience_id': self.experience.experience_id,
-            'similarity': round(self.similarity, 4),
-            'distance': round(self.distance, 4),
-            'weight': round(self.weight, 4),
-            'action_taken': self.experience.action_taken,
-            'pnl_pct': self.experience.pnl_pct,
-            'risk_adjusted_return': self.experience.risk_adjusted_return,
+            "experience_id": self.experience.experience_id,
+            "similarity": round(self.similarity, 4),
+            "distance": round(self.distance, 4),
+            "weight": round(self.weight, 4),
+            "action_taken": self.experience.action_taken,
+            "pnl_pct": self.experience.pnl_pct,
+            "risk_adjusted_return": self.experience.risk_adjusted_return,
         }
 
 
 # ──────────────────────────────────────────────
 # 推理层输出：路线建议
 # ──────────────────────────────────────────────
+
 
 @dataclass
 class Constraint:
@@ -373,13 +383,14 @@ class Constraint:
     不是固定规则，而是"基于当前状态和历史经验，建议这样做"。
     每个约束都附带置信度和推理依据。
     """
-    constraint_type: str                 # POSITION_SIZE / STOP_LOSS / ENTRY_CONDITION / EXIT_CONDITION
-    value: str                           # 建议值（文本描述，如"3-5%"或"3540-3560区间"）
-    numeric_value: float = 0.0           # 数值（如果可量化）
-    confidence: float = 0.5              # 置信度 (0-1)
-    reasoning: str = ""                  # 推理依据
-    historical_basis: str = ""           # 历史依据
-    uncertainty_range: str = ""          # 不确定性区间
+
+    constraint_type: str  # POSITION_SIZE / STOP_LOSS / ENTRY_CONDITION / EXIT_CONDITION
+    value: str  # 建议值（文本描述，如"3-5%"或"3540-3560区间"）
+    numeric_value: float = 0.0  # 数值（如果可量化）
+    confidence: float = 0.5  # 置信度 (0-1)
+    reasoning: str = ""  # 推理依据
+    historical_basis: str = ""  # 历史依据
+    uncertainty_range: str = ""  # 不确定性区间
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -398,10 +409,10 @@ class Constraint:
 
     def _type_label(self) -> str:
         labels = {
-            'POSITION_SIZE': '仓位',
-            'STOP_LOSS': '止损',
-            'ENTRY_CONDITION': '入场条件',
-            'EXIT_CONDITION': '离场条件',
+            "POSITION_SIZE": "仓位",
+            "STOP_LOSS": "止损",
+            "ENTRY_CONDITION": "入场条件",
+            "EXIT_CONDITION": "离场条件",
         }
         return labels.get(self.constraint_type, self.constraint_type)
 
@@ -414,35 +425,36 @@ class Route:
     不是"BUY/SELL/HOLD"，而是"如果你选这条路，这是建议的走法"。
     每条路线都有触发条件、代价和置信度。
     """
-    route_id: str                        # A / B / C
-    name: str                            # "顺势做多" / "等回调再进" / "观望等待"
-    action: str                          # 描述性动作（不是 BUY/SELL）
-    confidence: float                    # 置信度 (0-1)
-    reasoning: str                       # 推理过程（核心）
+
+    route_id: str  # A / B / C
+    name: str  # "顺势做多" / "等回调再进" / "观望等待"
+    action: str  # 描述性动作（不是 BUY/SELL）
+    confidence: float  # 置信度 (0-1)
+    reasoning: str  # 推理过程（核心）
 
     # 约束建议
-    constraints: List[Constraint] = field(default_factory=list)
+    constraints: list[Constraint] = field(default_factory=list)
 
     # 风险提示
-    risks: List[str] = field(default_factory=list)
+    risks: list[str] = field(default_factory=list)
 
     # 触发条件（什么情况下选这条路）
-    trigger_conditions: List[str] = field(default_factory=list)
+    trigger_conditions: list[str] = field(default_factory=list)
 
     # 代价（如果不选这条路会怎样）
     opportunity_cost: str = ""
 
     # 历史类比
-    historical_analog: str = ""          # "类似2024年3月螺纹钢上涨行情，相似度78%"
-    historical_outcome: str = ""         # "历史相似情境平均收益+4.2%"
+    historical_analog: str = ""  # "类似2024年3月螺纹钢上涨行情，相似度78%"
+    historical_outcome: str = ""  # "历史相似情境平均收益+4.2%"
 
     # 经验支撑
-    supporting_experiences: List[ExperienceMatch] = field(default_factory=list)
+    supporting_experiences: list[ExperienceMatch] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         d = asdict(self)
-        d['constraints'] = [c.to_dict() for c in self.constraints]
-        d['supporting_experiences'] = [e.to_dict() for e in self.supporting_experiences]
+        d["constraints"] = [c.to_dict() for c in self.constraints]
+        d["supporting_experiences"] = [e.to_dict() for e in self.supporting_experiences]
         return d
 
     def to_text(self) -> str:
@@ -477,6 +489,7 @@ class Route:
 # 交互层输出
 # ──────────────────────────────────────────────
 
+
 @dataclass
 class MarketAssessment:
     """
@@ -484,11 +497,12 @@ class MarketAssessment:
 
     基于趋势阶段、波动率、动量等维度的综合评估。
     """
-    trend_phase: str                     # 核心：CONSOLIDATING / EMERGING / DEVELOPING / MATURE / FATIGUING / REVERSING
-    phase_label: str                     # 中文标签
-    confidence: float                    # 置信度 (0-1)
-    summary: str                         # 一句话总结
-    signal_hint: str                     # 信号倾向提示
+
+    trend_phase: str  # 核心：CONSOLIDATING / EMERGING / DEVELOPING / MATURE / FATIGUING / REVERSING
+    phase_label: str  # 中文标签
+    confidence: float  # 置信度 (0-1)
+    summary: str  # 一句话总结
+    signal_hint: str  # 信号倾向提示
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -501,20 +515,21 @@ class MarketAssessment:
 @dataclass
 class Uncertainty:
     """不确定性量化"""
-    cluster_confidence: float = 0.5      # 路段判断置信度
-    retrieval_confidence: float = 0.5    # 经验检索置信度
-    constraint_confidence: float = 0.5   # 约束建议置信度
-    overall_confidence: float = 0.5      # 综合置信度
+
+    cluster_confidence: float = 0.5  # 路段判断置信度
+    retrieval_confidence: float = 0.5  # 经验检索置信度
+    constraint_confidence: float = 0.5  # 约束建议置信度
+    overall_confidence: float = 0.5  # 综合置信度
 
     def to_dict(self) -> dict:
         return asdict(self)
 
     def to_text(self) -> str:
         return (
-            f"置信度：路段{int(self.cluster_confidence*100)}% | "
-            f"经验{int(self.retrieval_confidence*100)}% | "
-            f"约束{int(self.constraint_confidence*100)}% | "
-            f"综合{int(self.overall_confidence*100)}%"
+            f"置信度：路段{int(self.cluster_confidence * 100)}% | "
+            f"经验{int(self.retrieval_confidence * 100)}% | "
+            f"约束{int(self.constraint_confidence * 100)}% | "
+            f"综合{int(self.overall_confidence * 100)}%"
         )
 
 
@@ -530,6 +545,7 @@ class TradingBrief:
     4. 动态约束建议
     5. 不确定性量化
     """
+
     symbol: str
     timestamp: str
 
@@ -540,27 +556,27 @@ class TradingBrief:
     assessment: MarketAssessment = field(default_factory=MarketAssessment)
 
     # 风险提示
-    warnings: List[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
 
     # 操作方案
-    routes: List[Route] = field(default_factory=list)
+    routes: list[Route] = field(default_factory=list)
 
     # 推荐方案
-    recommended_route: str = ""          # 推荐的方案ID
+    recommended_route: str = ""  # 推荐的方案ID
 
     # 不确定性
     uncertainty: Uncertainty = field(default_factory=Uncertainty)
 
     # 元信息
-    reasoning_model: str = ""            # 使用的推理模型
-    experience_count: int = 0            # 检索到的经验数量
-    generation_time_ms: int = 0          # 生成耗时
+    reasoning_model: str = ""  # 使用的推理模型
+    experience_count: int = 0  # 检索到的经验数量
+    generation_time_ms: int = 0  # 生成耗时
 
     def to_dict(self) -> dict:
         d = asdict(self)
-        d['assessment'] = self.assessment.to_dict()
-        d['routes'] = [r.to_dict() for r in self.routes]
-        d['uncertainty'] = self.uncertainty.to_dict()
+        d["assessment"] = self.assessment.to_dict()
+        d["routes"] = [r.to_dict() for r in self.routes]
+        d["uncertainty"] = self.uncertainty.to_dict()
         return d
 
     def to_text(self) -> str:
@@ -613,27 +629,29 @@ class TradingBrief:
 # 用户反馈
 # ──────────────────────────────────────────────
 
+
 @dataclass
 class UserFeedback:
     """用户反馈 —— 用于经验学习"""
+
     feedback_id: str
     timestamp: str
     symbol: str
-    brief_id: str                        # 对应的简报ID
+    brief_id: str  # 对应的简报ID
 
     # 用户选择
-    chosen_route: str                    # 选择的路线ID
-    actual_action: str                   # 实际采取的动作
+    chosen_route: str  # 选择的路线ID
+    actual_action: str  # 实际采取的动作
     entry_price: float = 0.0
     exit_price: float = 0.0
     holding_days: int = 0
 
     # 结果
     pnl_pct: float = 0.0
-    outcome: str = ""                    # WIN / LOSS / BREAKEVEN
+    outcome: str = ""  # WIN / LOSS / BREAKEVEN
 
     # 用户评价
-    satisfaction: int = 0                # 1-5
+    satisfaction: int = 0  # 1-5
     notes: str = ""
 
     # 偏离记录（用户是否偏离了建议）
@@ -648,19 +666,21 @@ class UserFeedback:
 # 兼容旧版测试的数据结构
 # ──────────────────────────────────────────────
 
+
 @dataclass
 class TrendPhaseInfo:
     """趋势阶段信息（兼容旧版测试）"""
+
     phase: str = "CONSOLIDATING"
     phase_confidence: float = 0.5
     confidence: float = 0.5
     reliability_score: int = 50
-    breakdown: Dict = field(default_factory=dict)
-    reliability_breakdown: Dict = field(default_factory=dict)
-    alerts: List[str] = field(default_factory=list)
-    transition_alerts: List[str] = field(default_factory=list)
-    evidence: List[str] = field(default_factory=list)
-    phase_evidence: List[str] = field(default_factory=list)
+    breakdown: dict = field(default_factory=dict)
+    reliability_breakdown: dict = field(default_factory=dict)
+    alerts: list[str] = field(default_factory=list)
+    transition_alerts: list[str] = field(default_factory=list)
+    evidence: list[str] = field(default_factory=list)
+    phase_evidence: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -669,6 +689,7 @@ class TrendPhaseInfo:
 @dataclass
 class TradeSignal:
     """交易信号（兼容旧版测试）"""
+
     symbol: str = ""
     timestamp: str = ""
     market_state: str = "RANGE_BOUND"
@@ -679,15 +700,15 @@ class TradeSignal:
     take_profit: float = 0.0
     position_pct: float = 0.0
     confidence_score: int = 50
-    supporting_evidence: List[str] = field(default_factory=list)
-    risk_metrics: Dict = field(default_factory=dict)
-    strategy_votes: Dict = field(default_factory=dict)
+    supporting_evidence: list[str] = field(default_factory=list)
+    risk_metrics: dict = field(default_factory=dict)
+    strategy_votes: dict = field(default_factory=dict)
     trend_phase: str = "CONSOLIDATING"
     phase_confidence: float = 0.5
     reliability_score: int = 50
-    reliability_breakdown: Dict = field(default_factory=dict)
-    transition_alerts: List[str] = field(default_factory=list)
-    phase_evidence: List[str] = field(default_factory=list)
+    reliability_breakdown: dict = field(default_factory=dict)
+    transition_alerts: list[str] = field(default_factory=list)
+    phase_evidence: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -700,6 +721,7 @@ class TradeSignal:
 @dataclass
 class TradeRecord:
     """交易记录（兼容旧版测试）"""
+
     trade_id: str = ""
     symbol: str = ""
     direction: str = "LONG"
@@ -709,7 +731,7 @@ class TradeRecord:
     market_state_at_entry: str = ""
     adx_at_entry: float = 0.0
     atr_at_entry: float = 0.0
-    strategy_votes_at_entry: Dict = field(default_factory=dict)
+    strategy_votes_at_entry: dict = field(default_factory=dict)
     stop_loss: float = 0.0
     take_profit: float = 0.0
     initial_risk_pct: float = 0.01
@@ -722,13 +744,13 @@ class TradeRecord:
     holding_bars: int = 0
     max_favorable_excursion: float = 0.0
     max_adverse_excursion: float = 0.0
-    market_context: Dict = field(default_factory=dict)
-    quality_tags: List[str] = field(default_factory=list)
+    market_context: dict = field(default_factory=dict)
+    quality_tags: list[str] = field(default_factory=list)
     trend_phase_at_entry: str = ""
     trend_phase_at_exit: str = ""
     phase_confidence_at_entry: float = 0.5
     reliability_score_at_entry: int = 50
-    risk_metrics: Dict = field(default_factory=dict)
+    risk_metrics: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         d = asdict(self)
@@ -746,6 +768,7 @@ class ScoringFeedback:
 
     用于记录打分结果与实际交易结果的关联，支持打分体系优化。
     """
+
     feedback_id: str
     timestamp: str
     symbol: str
@@ -757,7 +780,7 @@ class ScoringFeedback:
     confidence: float = 0.0
 
     # 维度得分
-    dimension_scores: Dict[str, float] = field(default_factory=dict)
+    dimension_scores: dict[str, float] = field(default_factory=dict)
 
     # 市场状态
     market_state: str = ""
@@ -785,13 +808,12 @@ class ScoringFeedback:
         """转换为JSON字符串"""
         return json.dumps(self.to_dict(), ensure_ascii=False, default=str)
 
-    def update_result(self, actual_direction: int, actual_return: float,
-                      holding_days: int, outcome: str):
+    def update_result(self, actual_direction: int, actual_return: float, holding_days: int, outcome: str):
         """更新实际交易结果"""
         self.actual_direction = actual_direction
         self.actual_return = actual_return
         self.holding_days = holding_days
         self.outcome = outcome
-        self.direction_correct = (self.score_direction == actual_direction)
+        self.direction_correct = self.score_direction == actual_direction
         self.status = "completed"
         self.updated_at = datetime.now().isoformat()

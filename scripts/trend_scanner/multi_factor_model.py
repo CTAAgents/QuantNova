@@ -16,11 +16,11 @@
 import json
 import logging
 import os
-from typing import Dict, List, Optional, Callable, Any, Tuple
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
-import pandas as pd
 import numpy as np
+import pandas as pd
+
 
 logger = logging.getLogger(__name__)
 
@@ -28,29 +28,30 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ModelResult:
     """模型训练结果"""
+
     model_name: str
-    feature_importance: Dict[str, float]
+    feature_importance: dict[str, float]
     train_ic: float
     train_icir: float
-    oos_ic: float           # 样本外 IC
-    oos_icir: float         # 样本外 ICIR
-    oos_sharpe: float       # 样本外多空 Sharpe
+    oos_ic: float  # 样本外 IC
+    oos_icir: float  # 样本外 ICIR
+    oos_sharpe: float  # 样本外多空 Sharpe
     n_features: int
     n_train_days: int
     n_oos_days: int
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         return {
-            'model_name': self.model_name,
-            'feature_importance': self.feature_importance,
-            'train_ic': self.train_ic,
-            'train_icir': self.train_icir,
-            'oos_ic': self.oos_ic,
-            'oos_icir': self.oos_icir,
-            'oos_sharpe': self.oos_sharpe,
-            'n_features': self.n_features,
-            'n_train_days': self.n_train_days,
-            'n_oos_days': self.n_oos_days,
+            "model_name": self.model_name,
+            "feature_importance": self.feature_importance,
+            "train_ic": self.train_ic,
+            "train_icir": self.train_icir,
+            "oos_ic": self.oos_ic,
+            "oos_icir": self.oos_icir,
+            "oos_sharpe": self.oos_sharpe,
+            "n_features": self.n_features,
+            "n_train_days": self.n_train_days,
+            "n_oos_days": self.n_oos_days,
         }
 
 
@@ -77,7 +78,7 @@ class MultiFactorModel:
         signal = model.predict(new_factor_data)
     """
 
-    def __init__(self, model_type: str = 'lightgbm', **model_params):
+    def __init__(self, model_type: str = "lightgbm", **model_params):
         """
         初始化模型
 
@@ -88,12 +89,12 @@ class MultiFactorModel:
         self.model_type = model_type
         self.model_params = model_params
         self.model = None
-        self.feature_names: List[str] = []
+        self.feature_names: list[str] = []
         self._trained = False
 
-    def train(self, factor_data: Dict[str, pd.DataFrame],
-              returns: pd.DataFrame,
-              train_ratio: float = 0.7) -> ModelResult:
+    def train(
+        self, factor_data: dict[str, pd.DataFrame], returns: pd.DataFrame, train_ratio: float = 0.7
+    ) -> ModelResult:
         """
         训练多因子组合模型
 
@@ -153,7 +154,7 @@ class MultiFactorModel:
 
         return result
 
-    def predict(self, factor_data: Dict[str, pd.DataFrame]) -> pd.DataFrame:
+    def predict(self, factor_data: dict[str, pd.DataFrame]) -> pd.DataFrame:
         """
         用训练好的模型预测综合信号
 
@@ -186,15 +187,12 @@ class MultiFactorModel:
             return pd.DataFrame()
 
         result = pd.DataFrame(
-            pred[:n_dates * n_symbols].reshape(n_dates, n_symbols),
-            index=dates[:n_dates],
-            columns=symbols
+            pred[: n_dates * n_symbols].reshape(n_dates, n_symbols), index=dates[:n_dates], columns=symbols
         )
 
         return result
 
-    def _build_feature_matrix(self, factor_data: Dict[str, pd.DataFrame],
-                               returns: pd.DataFrame = None) -> Tuple:
+    def _build_feature_matrix(self, factor_data: dict[str, pd.DataFrame], returns: pd.DataFrame = None) -> tuple:
         """
         构建特征矩阵
 
@@ -272,33 +270,34 @@ class MultiFactorModel:
 
     def _train_model(self, X: np.ndarray, y: np.ndarray):
         """训练模型"""
-        if self.model_type == 'lightgbm':
+        if self.model_type == "lightgbm":
             import lightgbm as lgb
 
             default_params = {
-                'n_estimators': 100,
-                'max_depth': 4,
-                'learning_rate': 0.05,
-                'subsample': 0.8,
-                'colsample_bytree': 0.8,
-                'reg_alpha': 0.1,
-                'reg_lambda': 0.1,
-                'min_child_samples': 10,
-                'verbose': -1,
-                'random_state': 42,
+                "n_estimators": 100,
+                "max_depth": 4,
+                "learning_rate": 0.05,
+                "subsample": 0.8,
+                "colsample_bytree": 0.8,
+                "reg_alpha": 0.1,
+                "reg_lambda": 0.1,
+                "min_child_samples": 10,
+                "verbose": -1,
+                "random_state": 42,
             }
             default_params.update(self.model_params)
 
             self.model = lgb.LGBMRegressor(**default_params)
             self.model.fit(X, y)
 
-        elif self.model_type == 'ridge':
+        elif self.model_type == "ridge":
             from sklearn.linear_model import Ridge
-            alpha = self.model_params.get('alpha', 1.0)
+
+            alpha = self.model_params.get("alpha", 1.0)
             self.model = Ridge(alpha=alpha)
             self.model.fit(X, y)
 
-        elif self.model_type == 'equal_weight':
+        elif self.model_type == "equal_weight":
             # 等权模型，不需要训练
             self.model = None
 
@@ -307,31 +306,25 @@ class MultiFactorModel:
 
     def _predict_raw(self, X: np.ndarray) -> np.ndarray:
         """原始预测"""
-        if self.model_type == 'equal_weight':
+        if self.model_type == "equal_weight":
             return X.mean(axis=1)
         elif self.model is not None:
             return self.model.predict(X)
         else:
             return X.mean(axis=1)
 
-    def _get_feature_importance(self) -> Dict[str, float]:
+    def _get_feature_importance(self) -> dict[str, float]:
         """获取特征重要性"""
-        if self.model_type == 'lightgbm' and self.model is not None:
+        if self.model_type == "lightgbm" and self.model is not None:
             importance = self.model.feature_importances_
             total = importance.sum()
             if total > 0:
-                return {
-                    name: float(imp / total)
-                    for name, imp in zip(self.feature_names, importance)
-                }
-        elif self.model_type == 'ridge' and self.model is not None:
+                return {name: float(imp / total) for name, imp in zip(self.feature_names, importance)}
+        elif self.model_type == "ridge" and self.model is not None:
             coef = np.abs(self.model.coef_)
             total = coef.sum()
             if total > 0:
-                return {
-                    name: float(c / total)
-                    for name, c in zip(self.feature_names, coef)
-                }
+                return {name: float(c / total) for name, c in zip(self.feature_names, coef)}
 
         # 等权
         n = len(self.feature_names)
@@ -354,8 +347,7 @@ class MultiFactorModel:
         corr, _ = stats.spearmanr(pred, y)
         return pd.Series([corr])
 
-    def _compute_long_short_sharpe(self, pred: np.ndarray, y: np.ndarray,
-                                    quantile: float = 0.2) -> float:
+    def _compute_long_short_sharpe(self, pred: np.ndarray, y: np.ndarray, quantile: float = 0.2) -> float:
         """计算多空 Sharpe"""
         if len(pred) < 20:
             return 0.0
@@ -381,33 +373,37 @@ class MultiFactorModel:
         return ModelResult(
             model_name=self.model_type,
             feature_importance={},
-            train_ic=0, train_icir=0,
-            oos_ic=0, oos_icir=0, oos_sharpe=0,
-            n_features=0, n_train_days=0, n_oos_days=0,
+            train_ic=0,
+            train_icir=0,
+            oos_ic=0,
+            oos_icir=0,
+            oos_sharpe=0,
+            n_features=0,
+            n_train_days=0,
+            n_oos_days=0,
         )
 
     def save_model(self, path: str = None):
         """保存模型"""
         if path is None:
             path = os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                '..', '..', 'data', 'multi_factor_model.json'
+                os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "multi_factor_model.json"
             )
 
         data = {
-            'model_type': self.model_type,
-            'feature_names': self.feature_names,
-            'trained': self._trained,
-            'feature_importance': self._get_feature_importance(),
+            "model_type": self.model_type,
+            "feature_names": self.feature_names,
+            "trained": self._trained,
+            "feature_importance": self._get_feature_importance(),
         }
 
         # 保存 LightGBM 模型
-        if self.model_type == 'lightgbm' and self.model is not None:
-            model_path = path.replace('.json', '.lgb')
+        if self.model_type == "lightgbm" and self.model is not None:
+            model_path = path.replace(".json", ".lgb")
             self.model.booster_.save_model(model_path)
-            data['model_file'] = os.path.basename(model_path)
+            data["model_file"] = os.path.basename(model_path)
 
-        with open(path, 'w', encoding='utf-8') as f:
+        with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
         logger.info(f"模型已保存到 {path}")
@@ -416,25 +412,25 @@ class MultiFactorModel:
         """加载模型"""
         if path is None:
             path = os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                '..', '..', 'data', 'multi_factor_model.json'
+                os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "multi_factor_model.json"
             )
 
         if not os.path.exists(path):
             logger.error(f"模型文件不存在: {path}")
             return
 
-        with open(path, 'r', encoding='utf-8') as f:
+        with open(path, encoding="utf-8") as f:
             data = json.load(f)
 
-        self.model_type = data.get('model_type', 'lightgbm')
-        self.feature_names = data.get('feature_names', [])
-        self._trained = data.get('trained', False)
+        self.model_type = data.get("model_type", "lightgbm")
+        self.feature_names = data.get("feature_names", [])
+        self._trained = data.get("trained", False)
 
         # 加载 LightGBM 模型
-        if self.model_type == 'lightgbm' and 'model_file' in data:
+        if self.model_type == "lightgbm" and "model_file" in data:
             import lightgbm as lgb
-            model_path = os.path.join(os.path.dirname(path), data['model_file'])
+
+            model_path = os.path.join(os.path.dirname(path), data["model_file"])
             if os.path.exists(model_path):
                 self.model = lgb.Booster(model_file=model_path)
 
@@ -466,4 +462,4 @@ def generate_report(result: ModelResult) -> str:
         bar = "#" * int(imp * 40)
         lines.append(f"  {name:25s} {imp:.3f} {bar}")
     lines.append("=" * 60)
-    return '\n'.join(lines)
+    return "\n".join(lines)

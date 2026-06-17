@@ -325,6 +325,7 @@ class TestEdgeCases:
         # 高波动序列应该有一些有效值
         assert len(valid_values) > 0
         assert np.all(valid_values >= 0)
+        # VGRSI 值可以等于 100.0（当所有可见点都有正 f(i,j) 时）
         assert np.all(valid_values <= 100)
     
     def test_monotonic_increase(self):

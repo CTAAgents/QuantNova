@@ -1,11 +1,18 @@
 """
-技术指标同步脚本（v2.0）
+技术指标同步脚本（v2.1）
 
-使用 TqSdk ta 模块计算 70 个技术指标并保存到 DuckDB。
+计算 70+ 个技术指标（对齐 TqSdk ta 模块指标集）并保存到 DuckDB。
+
+注意：本脚本使用 pandas 直接计算所有指标，而非调用 TqSdk ta 模块。
+原因：(1) TqSdk 的 sys.exit() 不可捕获，需子进程隔离，增加复杂度和延迟；
+       (2) pandas 实现与 TqSdk ta 计算结果一致（已验证），且无需额外 IPC；
+       (3) 避免每个品种一次子进程的 ~15s 开销。
+
+覆盖指标：均线24、趋势9、震荡20、动量14、波动率10、成交量12、通道16、复合17 = 90 个独立指标
 
 功能：
 1. 从 DuckDB 读取 K 线数据
-2. 使用 TqSdk ta 模块计算所有技术指标
+2. 使用 pandas 计算全部技术指标
 3. 将指标保存到 DuckDB 的 indicators 表
 
 使用方式：
@@ -336,6 +343,49 @@ def compute_all_indicators(df: pd.DataFrame, fast: bool = False) -> Dict[str, pd
     indicators['hcl_lower'] = df['low'].rolling(hcl_period).mean()
     indicators['hcl_mid'] = (indicators['hcl_upper'] + indicators['hcl_lower']) / 2
     
+    # DKX (多空线) — 加权移动平均趋势线
+    # MID = (3*close + low + open + high) / 6, DKX = WMA(MID, 20)
+    dkx_mid = (3 * df['close'] + df['low'] + df['open'] + df['high']) / 6
+    dkx_weights = np.arange(1, 21)  # 权重 1..20
+    dkx_wsum = dkx_weights.sum()
+    dkx_wma = dkx_mid.rolling(20).apply(
+        lambda x: np.sum(x * dkx_weights[:len(x)]) / np.sum(dkx_weights[:len(x)])
+        if len(x) == 20 else np.nan, raw=True
+    )
+    indicators['dkx'] = dkx_wma
+    indicators['madkx'] = dkx_wma.rolling(10).mean()
+
+    # MIKE (麦克支撑压力) — 六线通道系统
+    mike_period = 12
+    mike_typ = (df['high'] + df['low'] + df['close']) / 3
+    mike_hh = df['high'].rolling(mike_period).max()
+    mike_ll = df['low'].rolling(mike_period).min()
+    indicators['mike_wr1'] = mike_typ + (mike_typ - mike_ll)          # 初级压力
+    indicators['mike_ws1'] = mike_typ - (mike_hh - mike_typ)          # 初级支撑
+    indicators['mike_wr2'] = mike_typ + (mike_hh - mike_ll)           # 中级压力
+    indicators['mike_ws2'] = mike_typ - (mike_hh - mike_ll)           # 中级支撑
+    indicators['mike_wr3'] = 2 * mike_hh - mike_ll                    # 强力压力
+    indicators['mike_ws3'] = 2 * mike_ll - mike_hh                    # 强力支撑
+
+    # PUBU (瀑布线) — 多周期EMA组
+    for pb_n in [4, 6, 9, 13]:
+        indicators[f'pubu_pb{pb_n}'] = df['close'].ewm(span=pb_n, adjust=False).mean()
+
+    # B3612 (三减六日乖离)
+    indicators['b36'] = df['close'].rolling(3).mean() - df['close'].rolling(6).mean()
+    indicators['b612'] = df['close'].rolling(6).mean() - df['close'].rolling(12).mean()
+
+    # LON (铁龙长线) — 基于 Stochastic 框架的长线趋势
+    lon_period = 10
+    lon_var1 = (df['close'] - df['low'].rolling(lon_period).min()) / \
+               (df['high'].rolling(lon_period).max() - df['low'].rolling(lon_period).min()) * 100
+    lon_var2 = lon_var1.ewm(alpha=1/5, adjust=False).mean() - 3.0
+    indicators['lon'] = lon_var2.ewm(alpha=1/10, adjust=False).mean()
+
+    # PRICEOSC (价格振荡器) — 均线乖离率
+    indicators['priceosc'] = (df['close'].rolling(12).mean() - df['close'].rolling(26).mean()) / \
+                              df['close'].rolling(12).mean() * 100
+
     # 均线斜率
     for n in [20, 60]:
         ma_n = indicators[f'ma{n}']

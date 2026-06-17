@@ -489,7 +489,7 @@ def main():
         
         while True:
             try:
-                result = heartbeat(positions_only=args.positions_only, all_symbols=args.all)
+                result = heartbeat(positions_only=args.positions_only, all_symbols=not args.config_only)
                 
                 if result['has_events']:
                     print(f"\n[{datetime.now().strftime('%H:%M:%S')}] 检测到事件:")
@@ -519,7 +519,7 @@ def main():
     
     else:
         # 单次心跳
-        result = heartbeat(positions_only=args.positions_only, all_symbols=args.all)
+        result = heartbeat(positions_only=args.positions_only, all_symbols=not args.config_only)
         
         if args.output == "json":
             print(json.dumps(result, ensure_ascii=False, indent=2))

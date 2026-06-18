@@ -1,6 +1,6 @@
 [project]
 name = "trend-scanner-agent"
-version = "0.1.0"
+version = "1.0.0"
 description = "推理重于规则的期货趋势跟踪决策辅助系统"
 requires-python = ">=3.10"
 

@@ -22,7 +22,7 @@ from scripts.core.market_provider import MarketProvider, MarketType
 
 logger = logging.getLogger(__name__)
 
-# 期货品种列表
+# 期货品种列表（全市场非僵尸品种）
 FUTURES_SYMBOLS = [
     # 黑色系
     "RB", "HC", "SS", "I", "J", "JM", "ZC", "SF", "SM",
@@ -36,6 +36,10 @@ FUTURES_SYMBOLS = [
     "AU", "AG",
     # 股指
     "IF", "IC", "IH", "IM",
+    # 国债
+    "T", "TF", "TS",
+    # 其他活跃品种
+    "SP", "RU", "NR", "WR", "LC", "LH", "JD", "RR",
 ]
 
 # 交易所映射

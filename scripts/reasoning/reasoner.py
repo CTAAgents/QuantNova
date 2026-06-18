@@ -38,6 +38,7 @@ sys.path.insert(0, str(project_root / "scripts"))
 from reasoning.brief import BriefGenerator
 from core.context import ContextAssembler
 from core.memory.memory_bridge import MemoryBridge
+from core.memory.experience import ExperienceMemory
 from core.models import MarketContext
 from reasoning.reasoning_engine import ReasoningEngine, WorkBuddyAgentProvider
 from reasoning.narrative_generator import NarrativeGenerator

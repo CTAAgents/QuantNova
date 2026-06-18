@@ -93,7 +93,7 @@ class WorkBuddyAgentProvider(LLMProvider):
             if llm_config:
                 # 尝试创建LLM提供者
                 try:
-                    from .memory.llm_factory import LLMProviderFactory
+                    from core.memory.llm_factory import LLMProviderFactory
 
                     self._llm_provider = LLMProviderFactory.create(llm_config)
                     print(f"[LLM] 使用 {self._llm_provider.name} 提供者", flush=True)
@@ -252,7 +252,7 @@ class ReasoningEngine:
         self.llm_provider = llm_provider or WorkBuddyAgentProvider()
 
         # 波动幅度止损锚点（v6.0 新增）
-        from .volatility_anchor import VolatilityAnchor
+        from indicators.volatility_anchor import VolatilityAnchor
 
         self.volatility_anchor = VolatilityAnchor(window=20, multiplier=2.0)
 

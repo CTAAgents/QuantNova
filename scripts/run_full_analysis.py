@@ -99,12 +99,22 @@ def main():
                 print(f'1. 趋势阶段: {phase} (置信度: {confidence:.2f}, 可靠性: {reliability})')
                 
                 # 2. 创建市场上下文
+                from core.models import IndicatorSnapshot
+                snapshot = IndicatorSnapshot(
+                    timestamp=datetime.now().isoformat(),
+                    close=df['close'].iloc[-1],
+                    high=df['high'].iloc[-1],
+                    low=df['low'].iloc[-1],
+                    open=df['close'].iloc[-2] if len(df) >= 2 else df['close'].iloc[-1],
+                    volume=df['volume'].iloc[-1]
+                )
                 context = MarketContext(
                     symbol=symbol,
                     timestamp=datetime.now().isoformat(),
                     timeframe='daily',
                     current_price=df['close'].iloc[-1],
-                    price_change_pct=((df['close'].iloc[-1] - df['close'].iloc[-2]) / df['close'].iloc[-2]) * 100 if len(df) >= 2 else 0
+                    price_change_pct=((df['close'].iloc[-1] - df['close'].iloc[-2]) / df['close'].iloc[-2]) * 100 if len(df) >= 2 else 0,
+                    snapshot=snapshot
                 )
                 
                 print(f'2. 市场上下文创建成功')

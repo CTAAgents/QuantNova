@@ -1,0 +1,31 @@
+{
+  "version": "1.0",
+  "last_updated": "2026-06-18",
+  "description": "信号生成参数配置（自优化）",
+  
+  "signal_params": {
+    "bullish": {
+      "rsi_threshold": 55,
+      "ema_short": 20,
+      "ema_long": 60,
+      "macd_confirm": true,
+      "min_strength": 50
+    },
+    "bearish": {
+      "rsi_threshold": 45,
+      "ema_short": 20,
+      "ema_long": 60,
+      "macd_confirm": true,
+      "min_strength": -50
+    }
+  },
+  
+  "backtest_results": {
+    "total_tests": 0,
+    "best_win_rate": 0,
+    "best_profit_factor": 0,
+    "last_optimization": null
+  },
+  
+  "optimization_history": []
+}

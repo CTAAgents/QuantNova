@@ -18,7 +18,7 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
-from .models import Experience, ExperienceMatch, MarketContext
+from core.models import Experience, ExperienceMatch, MarketContext
 
 
 class ExperienceMemory:

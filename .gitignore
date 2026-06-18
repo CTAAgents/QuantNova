@@ -19,8 +19,9 @@ Thumbs.db
 *.log
 .workbuddy/memory/auto_git_push.log
 
-# WorkBuddy internal
-.workbuddy/
+# WorkBuddy internal (只忽略memory，保留skills和agents)
+.workbuddy/memory/
+.workbuddy/tmp/
 
 # Data (local databases, too large for git)
 data/*.db

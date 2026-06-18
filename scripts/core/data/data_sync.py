@@ -22,6 +22,7 @@ sys.path.insert(0, str(project_root / "scripts"))
 
 from core.memory.duckdb_store import DuckDBStore
 from core.memory.sqlite_store import SQLiteStore
+from core.data.unified_data_router import UnifiedDataRouter, get_router
 
 
 class DataSyncManager:
@@ -38,6 +39,7 @@ class DataSyncManager:
         self.sqlite = SQLiteStore(sqlite_path)
         self.sqlite.init_tables()
         self.duckdb = DuckDBStore(duckdb_path)
+        self.router = get_router(db_dir=str(Path(sqlite_path).parent))
 
         # TqSdk 数据源（延迟初始化）
         self._tqsdk = None
@@ -194,14 +196,15 @@ class DataSyncManager:
                             # 增量更新
                             days = min(days, days_since + 5)  # 多取几天确保覆盖
 
-                # 获取K线数据
+                # 获取K线数据（使用统一数据路由，自动降级）
                 print(f"  [{i}/{len(symbols)}] 同步 {symbol}...")
 
-                df = self.tqsdk.get_kline(symbol, days=days)
+                resp = self.router.get_kline(symbol, days=days)
+                df = resp.data if resp.ok else None
 
                 if df is None or df.empty:
-                    print("    [跳过] 无法获取数据")
-                    self.sqlite.update_sync_status(symbol, timeframe, "failed", error="无法获取数据")
+                    print(f"    [跳过] 无法获取数据 (来源: {resp.source}, 错误: {resp.error})")
+                    self.sqlite.update_sync_status(symbol, timeframe, "failed", error=resp.error or "无法获取数据")
                     failed_count += 1
                     continue
 
@@ -341,12 +344,13 @@ class DataSyncManager:
         if df is not None and len(df) >= 60:
             return df
 
-        # 2. 从 TqSdk 获取（可跳过）
+        # 2. 从远程数据源获取（使用统一数据路由，自动降级）
         if not allow_tqsdk_fallback:
             return None
 
-        print(f"  [数据源] 本地数据不足，从 TqSdk 获取 {symbol}...")
-        df = self.tqsdk.get_kline(symbol, days=days)
+        print(f"  [数据源] 本地数据不足，从远程获取 {symbol}...")
+        resp = self.router.get_kline(symbol, days=days)
+        df = resp.data if resp.ok else None
 
         if df is not None and not df.empty:
             # 保存到本地

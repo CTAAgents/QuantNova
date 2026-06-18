@@ -447,6 +447,12 @@ class MarketContext:
     # 基本面上下文（v1.0 新增）
     fundamental: FundamentalContext = field(default_factory=FundamentalContext)
 
+    # 风险评估（v1.1 新增 - Algometrics 论文实现）
+    crowding_score: float = 0.0  # 拥挤度分数 (0-1)
+    crowding_level: str = "LOW"  # 拥挤度等级 (LOW/MEDIUM/HIGH/CRITICAL)
+    deployment_risk: float = 0.0  # 部署风险 (0-1)
+    feedback_gap: float = 0.0  # 反馈间隙 (部署风险 - 历史风险)
+
     def to_dict(self) -> dict:
         d = asdict(self)
         return d
@@ -499,6 +505,16 @@ class MarketContext:
             lines.append("")
             lines.append("## 基本面信息")
             lines.append(self.fundamental.to_prompt_text())
+        
+        # 风险评估信息（v1.1 新增）
+        if self.crowding_score > 0 or self.deployment_risk > 0:
+            lines.append("")
+            lines.append("## 风险评估（Algometrics）")
+            lines.append(f"- 拥挤度：{self.crowding_level}（{self.crowding_score:.3f}）")
+            lines.append(f"- 部署风险：{self.deployment_risk:.3f}")
+            lines.append(f"- 反馈间隙：{self.feedback_gap:.3f}")
+            if self.crowding_level in ["HIGH", "CRITICAL"]:
+                lines.append("- ⚠️ 警告：信号拥挤度较高，部署后表现可能显著低于历史回测")
         
         return "\n".join(lines)
 

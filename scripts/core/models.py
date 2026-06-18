@@ -459,6 +459,13 @@ class MarketContext:
     attribution_stock_alpha: float = 0.0  # 选股Alpha（真正技能）
     attribution_r_squared: float = 0.0  # 模型解释力
 
+    # V3.0 方案新增字段
+    data_credibility_score: float = 0.0  # 数据可信度分数 (0-1)
+    anomaly_count: int = 0  # 异常数据点数量
+    conflict_resolved: bool = False  # 是否存在数据冲突并已裁决
+    hallucination_check_passed: bool = True  # 幻觉检测是否通过
+    prompt_template_type: str = "standard"  # 使用的Prompt模板类型
+
     def to_dict(self) -> dict:
         d = asdict(self)
         return d
@@ -534,6 +541,15 @@ class MarketContext:
                 lines.append("- 评估：策略具有正向选股技能")
             elif self.attribution_stock_alpha < -0.005:
                 lines.append("- 警告：选股Alpha为负，收益主要来自市场Beta")
+        
+        # V3.0 方案质量信息
+        if self.data_credibility_score > 0 or self.anomaly_count > 0:
+            lines.append("")
+            lines.append("## 数据质量（V3.0）")
+            lines.append(f"- 数据可信度：{self.data_credibility_score:.2%}")
+            lines.append(f"- 异常数据点：{self.anomaly_count}个")
+            lines.append(f"- 冲突裁决：{'已完成' if self.conflict_resolved else '无冲突'}")
+            lines.append(f"- 幻觉检测：{'通过' if self.hallucination_check_passed else '未通过'}")
         
         return "\n".join(lines)
 

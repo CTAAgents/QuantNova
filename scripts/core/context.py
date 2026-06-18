@@ -8,6 +8,7 @@
 4. 集成风险评估（Algometrics）
 5. 集成收益归因（KTD-Fin）
 6. 集成审计轨迹（TradeArena）
+7. 集成V3.0方案（数据质量、幻觉检测、自适应Prompt）
 """
 
 import logging
@@ -53,11 +54,17 @@ class ContextAssembler:
         self._deployment_risk_estimator = None
         self._return_attributor = None
         self._audit_trail = None
+        
+        # V3.0 方案模块（可选集成）
+        self._conflict_resolver = None
+        self._anomaly_weighter = None
+        self._hallucination_detector = None
+        self._prompt_router = None
 
         self._init_risk_modules()
 
     def _init_risk_modules(self):
-        """初始化风险评估模块"""
+        """初始化风险评估模块和V3.0方案模块"""
         try:
             import sys
             from pathlib import Path
@@ -73,14 +80,29 @@ class ContextAssembler:
                 ReturnAttributor,
                 AuditTrail,
             )
+            from scripts.data import (
+                DataConflictResolver,
+                AnomalyWeighter,
+            )
+            from scripts.reasoning import (
+                HallucinationDetector,
+                AdaptivePromptRouter,
+            )
 
             self._crowding_detector = CrowdingDetector()
             self._deployment_risk_estimator = DeploymentRiskEstimator()
             self._return_attributor = ReturnAttributor()
             self._audit_trail = AuditTrail()
-            logger.info("风险评估模块加载成功")
+            
+            # V3.0 方案模块
+            self._conflict_resolver = DataConflictResolver()
+            self._anomaly_weighter = AnomalyWeighter()
+            self._hallucination_detector = HallucinationDetector()
+            self._prompt_router = AdaptivePromptRouter()
+
+            logger.info("所有模块加载成功")
         except ImportError as e:
-            logger.warning(f"风险评估模块未找到，跳过集成: {e}")
+            logger.warning(f"部分模块未找到，跳过集成: {e}")
 
     def assemble(
         self,
@@ -364,12 +386,14 @@ class ContextAssembler:
         self, context: MarketContext, df: pd.DataFrame
     ) -> MarketContext:
         """
-        集成风险评估和收益归因
+        集成风险评估、收益归因和V3.0方案
 
         1. 拥挤度检测（Algometrics）
         2. 部署风险评估（Algometrics）
         3. 收益归因（KTD-Fin）
         4. 审计轨迹记录（TradeArena）
+        5. 数据质量评估（V3.0）
+        6. 异常值检测（V3.0）
         """
         if self._crowding_detector is None:
             return context
@@ -422,9 +446,20 @@ class ContextAssembler:
                 context.attribution_stock_alpha = attribution.stock_alpha
                 context.attribution_r_squared = attribution.r_squared
 
+            # V3.0 方案：数据质量评估
+            if self._anomaly_weighter is not None and len(df) > 0:
+                anomaly_results = self._anomaly_weighter.batch_detect(df)
+                context.anomaly_count = sum(1 for r in anomaly_results if r.is_anomaly)
+                
+                # 计算数据可信度分数
+                normal_count = sum(1 for r in anomaly_results if not r.is_anomaly)
+                context.data_credibility_score = normal_count / len(anomaly_results) if anomaly_results else 1.0
+
             logger.debug(
                 f"风险评估完成: 拥挤度={context.crowding_level}, "
                 f"部署风险={context.deployment_risk:.3f}, "
+                f"选股Alpha={context.attribution_stock_alpha:+.2%}, "
+                f"异常数据点={context.anomaly_count}"
                 f"选股Alpha={context.attribution_stock_alpha:+.2%}"
             )
 

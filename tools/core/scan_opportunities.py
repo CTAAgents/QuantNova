@@ -58,15 +58,17 @@ def get_symbol_display_name(symbol: str, symbol_names: dict[str, str]) -> str:
 
 
 # 添加模块路径
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "scripts"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "scripts"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "utils"))
 
 # 导入数据格式工具
 from data_formats import create_scan_result, create_signal, get_signal_filter, load_config, write_scan_result
 
-from trend_scanner.data_source import DataSourceFactory
-from trend_scanner.indicators import IndicatorEngine
-from trend_scanner.market_analysis import TrendPhaseDetector
-from trend_scanner.context import ContextAssembler
+from core.data.data_source import DataSourceFactory
+from indicators.indicator_engine import IndicatorEngine
+from reasoning.market_analysis import TrendPhaseDetector
+from core.context import ContextAssembler
+from core.data.unified_data_router import get_router
 
 
 logger = logging.getLogger(__name__)
@@ -119,7 +121,7 @@ def check_data_timeliness() -> dict[str, Any]:
 
     try:
         # 连接数据库获取最新数据时间
-        db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "market.db")
+        db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "market.db")
         conn = duckdb.connect(db_path, read_only=True)
 
         query = "SELECT MAX(timestamp) FROM klines"
@@ -164,6 +166,7 @@ def scan_symbol(
     use_multi_dimension: bool = False,
     use_rl: bool = False,
     rl_generator=None,
+    router=None,
 ) -> dict[str, Any] | None:
     """
     扫描单个品种，返回信号（如果有）
@@ -181,8 +184,9 @@ def scan_symbol(
         # 标准化品种代码
         data_symbol = normalize_symbol(symbol)
 
-        # 获取 K 线数据（根据健康检查决定是否允许 TqSdk 兜底）
-        df = data_source.get_kline(data_symbol, days=120, allow_tqsdk_fallback=allow_tqsdk_fallback)
+        # 获取 K 线数据（使用统一数据路由，自动降级）
+        resp = router.get_kline(data_symbol, days=120)
+        df = resp.data if resp.ok else None
         if df is None or len(df) < 60:
             return None
 
@@ -415,7 +419,7 @@ def scan_symbol(
                 from trend_scanner.multi_dimension_screener import MultiDimensionScreener
 
                 # 推导数据库路径
-                db_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")
+                db_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data")
                 db_path = os.path.join(db_dir, "market.db")
                 if not os.path.exists(db_path):
                     db_path = os.path.join(db_dir, "market.db")
@@ -502,7 +506,7 @@ def scan_all(
     # 宏观状态检测（可选）
     macro_state = None
     try:
-        from trend_scanner.macro_state import MacroStateDetector
+        from indicators.macro_state import MacroStateDetector
 
         macro_detector = MacroStateDetector()
         macro_state = macro_detector.detect()
@@ -517,6 +521,9 @@ def scan_all(
 
     # 获取数据源
     data_source = DataSourceFactory.create()
+    
+    # 初始化统一数据路由（自动数据源切换）
+    router = get_router()
 
     # 初始化 RL 信号生成器（如果启用）
     rl_generator = None
@@ -586,6 +593,7 @@ def scan_all(
             use_multi_dimension=use_multi_dimension,
             use_rl=use_rl,
             rl_generator=rl_generator,
+            router=router,
         )
         if result:
             signals.append(result)
@@ -602,7 +610,7 @@ def scan_all(
     # 存储到记忆系统
     if use_memory:
         try:
-            from trend_scanner.memory_bridge import MemoryBridge
+            from core.memory.memory_bridge import MemoryBridge
 
             bridge = MemoryBridge()
             bridge.store_scan_result(scan_result)
@@ -926,7 +934,7 @@ def main():
         print("策略健康度评估")
         print(f"{'=' * 60}")
         try:
-            from trend_scanner.memory_bridge import MemoryBridge
+            from core.memory.memory_bridge import MemoryBridge
             from trend_scanner.strategy_health import StrategyHealthChecker
 
             health_checker = StrategyHealthChecker()
@@ -1015,7 +1023,7 @@ def main():
         print("过拟合检测")
         print(f"{'=' * 60}")
         try:
-            from trend_scanner.memory_bridge import MemoryBridge
+            from core.memory.memory_bridge import MemoryBridge
             from trend_scanner.overfitting_detector import OverfittingDetector
 
             detector = OverfittingDetector()

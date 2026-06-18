@@ -328,6 +328,36 @@ class SQLiteStore:
         # 这个方法可能需要一个同步状态表，但目前简单实现
         pass
 
+    def get_statistics(self) -> dict[str, Any]:
+        """
+        获取统计信息
+
+        Returns:
+            统计信息字典
+        """
+        cursor = self.conn.cursor()
+        
+        # 符号统计
+        cursor.execute("SELECT COUNT(*) FROM symbols")
+        total_symbols = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM symbols WHERE is_active = 1")
+        active_symbols = cursor.fetchone()[0]
+        
+        # 经验统计
+        cursor.execute("SELECT COUNT(*) FROM experiences")
+        total_experiences = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM experiences WHERE timestamp >= date('now', '-1 day')")
+        today_experiences = cursor.fetchone()[0]
+        
+        return {
+            "total_symbols": total_symbols,
+            "active_symbols": active_symbols,
+            "total_experiences": total_experiences,
+            "today_experiences": today_experiences,
+        }
+
     # ========== 经验操作 ==========
 
     def insert_experience(self, experience: dict[str, Any]) -> str:

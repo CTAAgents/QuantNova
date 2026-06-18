@@ -314,6 +314,63 @@ class DuckDBStore:
             }
         return {}
 
+    def get_statistics(self) -> dict[str, Any]:
+        """
+        获取统计信息
+
+        Returns:
+            统计信息字典
+        """
+        if not self.conn:
+            return {}
+        
+        # K线统计
+        klines_result = self.conn.execute("SELECT COUNT(DISTINCT symbol), COUNT(*) FROM klines").fetchone()
+        klines_symbols = klines_result[0] if klines_result else 0
+        klines_records = klines_result[1] if klines_result else 0
+        
+        # 获取最早和最新数据时间
+        time_range = self.conn.execute("SELECT MIN(timestamp), MAX(timestamp) FROM klines").fetchone()
+        earliest = time_range[0] if time_range else None
+        latest = time_range[1] if time_range else None
+        
+        # 指标统计
+        indicators_result = self.conn.execute("SELECT COUNT(DISTINCT symbol), COUNT(DISTINCT indicator_name), COUNT(*) FROM indicators").fetchone()
+        indicators_symbols = indicators_result[0] if indicators_result else 0
+        indicator_types = indicators_result[1] if indicators_result else 0
+        indicators_records = indicators_result[2] if indicators_result else 0
+        
+        # 行情统计（如果存在quotes表）
+        try:
+            quotes_result = self.conn.execute("SELECT COUNT(DISTINCT symbol), COUNT(*) FROM quotes").fetchone()
+            quotes_symbols = quotes_result[0] if quotes_result else 0
+            quotes_records = quotes_result[1] if quotes_result else 0
+            quotes_latest = self.conn.execute("SELECT MAX(timestamp) FROM quotes").fetchone()[0]
+        except:
+            quotes_symbols = 0
+            quotes_records = 0
+            quotes_latest = None
+        
+        return {
+            "klines": {
+                "symbols": klines_symbols,
+                "records": klines_records,
+                "earliest": str(earliest) if earliest else None,
+                "latest": str(latest) if latest else None,
+            },
+            "indicators": {
+                "symbols": indicators_symbols,
+                "indicator_types": indicator_types,
+                "records": indicators_records,
+            },
+            "quotes": {
+                "symbols": quotes_symbols,
+                "records": quotes_records,
+                "latest": str(quotes_latest) if quotes_latest else None,
+            },
+            "db_size_mb": 0,  # 需要计算实际大小
+        }
+
     # ========== 内部方法 ==========
 
     def close(self):

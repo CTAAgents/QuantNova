@@ -6,6 +6,8 @@
 2. 组装 MarketContext
 3. 集成基本面分析
 4. 集成风险评估（Algometrics）
+5. 集成收益归因（KTD-Fin）
+6. 集成审计轨迹（TradeArena）
 """
 
 import logging
@@ -49,6 +51,8 @@ class ContextAssembler:
         # 风险评估器（可选集成）
         self._crowding_detector = None
         self._deployment_risk_estimator = None
+        self._return_attributor = None
+        self._audit_trail = None
 
         self._init_risk_modules()
 
@@ -63,10 +67,17 @@ class ContextAssembler:
             if str(project_root) not in sys.path:
                 sys.path.insert(0, str(project_root))
             
-            from scripts.risk import CrowdingDetector, DeploymentRiskEstimator
+            from scripts.risk import (
+                CrowdingDetector,
+                DeploymentRiskEstimator,
+                ReturnAttributor,
+                AuditTrail,
+            )
 
             self._crowding_detector = CrowdingDetector()
             self._deployment_risk_estimator = DeploymentRiskEstimator()
+            self._return_attributor = ReturnAttributor()
+            self._audit_trail = AuditTrail()
             logger.info("风险评估模块加载成功")
         except ImportError as e:
             logger.warning(f"风险评估模块未找到，跳过集成: {e}")
@@ -353,9 +364,12 @@ class ContextAssembler:
         self, context: MarketContext, df: pd.DataFrame
     ) -> MarketContext:
         """
-        集成风险评估（Algometrics 论文实现）
+        集成风险评估和收益归因
 
-        评估拥挤度和部署风险
+        1. 拥挤度检测（Algometrics）
+        2. 部署风险评估（Algometrics）
+        3. 收益归因（KTD-Fin）
+        4. 审计轨迹记录（TradeArena）
         """
         if self._crowding_detector is None:
             return context
@@ -396,12 +410,90 @@ class ContextAssembler:
                 context.deployment_risk = assessment.deployment_risk
                 context.feedback_gap = assessment.feedback_gap
 
+            # 收益归因（KTD-Fin）
+            if self._return_attributor is not None and len(df) > 20:
+                portfolio_returns = df["close"].pct_change().dropna()
+                market_returns = portfolio_returns  # 简化：使用自身作为市场基准
+                attribution = self._return_attributor.attribute(
+                    portfolio_returns, market_returns
+                )
+                context.attribution_market_beta = attribution.market_beta
+                context.attribution_style_exposure = attribution.style_exposure
+                context.attribution_stock_alpha = attribution.stock_alpha
+                context.attribution_r_squared = attribution.r_squared
+
             logger.debug(
                 f"风险评估完成: 拥挤度={context.crowding_level}, "
-                f"部署风险={context.deployment_risk:.3f}"
+                f"部署风险={context.deployment_risk:.3f}, "
+                f"选股Alpha={context.attribution_stock_alpha:+.2%}"
             )
 
         except Exception as e:
             logger.warning(f"风险评估失败: {e}")
 
         return context
+
+    def create_audit_record(
+        self,
+        context: MarketContext,
+        reasoning: str,
+        signal: str,
+        confidence: float,
+        orders: list,
+    ) -> Optional[str]:
+        """
+        创建审计轨迹记录
+
+        Args:
+            context: 市场上下文
+            reasoning: 推理过程
+            signal: 交易信号
+            confidence: 置信度
+            orders: 订单列表
+
+        Returns:
+            record_id: 审计记录ID
+        """
+        if self._audit_trail is None:
+            return None
+
+        try:
+            from scripts.risk.audit_trail import AuditTrailBuilder
+
+            builder = AuditTrailBuilder(self.symbol)
+            record = (
+                builder
+                .set_observation(
+                    market_data={"close": context.current_price},
+                    indicators={"rsi": context.snapshot.rsi},
+                    context=context.to_prompt_text(),
+                )
+                .set_planning(
+                    reasoning=reasoning,
+                    signal=signal,
+                    confidence=confidence,
+                )
+                .set_risk_review(
+                    risk_checks=[
+                        {"crowding_score": context.crowding_score},
+                        {"deployment_risk": context.deployment_risk},
+                    ],
+                    decision="APPROVED" if context.crowding_level != "CRITICAL" else "REJECTED",
+                )
+                .set_action(
+                    orders=orders,
+                    mode="SIMULATED",
+                )
+                .set_reflection(
+                    outcome="PENDING",
+                )
+                .build()
+            )
+
+            record_id = self._audit_trail.record(record)
+            logger.info(f"审计记录已创建: {record_id}")
+            return record_id
+
+        except Exception as e:
+            logger.warning(f"创建审计记录失败: {e}")
+            return None

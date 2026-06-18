@@ -453,6 +453,12 @@ class MarketContext:
     deployment_risk: float = 0.0  # 部署风险 (0-1)
     feedback_gap: float = 0.0  # 反馈间隙 (部署风险 - 历史风险)
 
+    # 收益归因（v1.2 新增 - KTD-Fin 论文实现）
+    attribution_market_beta: float = 0.0  # 市场Beta贡献
+    attribution_style_exposure: float = 0.0  # 风格暴露贡献
+    attribution_stock_alpha: float = 0.0  # 选股Alpha（真正技能）
+    attribution_r_squared: float = 0.0  # 模型解释力
+
     def to_dict(self) -> dict:
         d = asdict(self)
         return d
@@ -515,6 +521,19 @@ class MarketContext:
             lines.append(f"- 反馈间隙：{self.feedback_gap:.3f}")
             if self.crowding_level in ["HIGH", "CRITICAL"]:
                 lines.append("- ⚠️ 警告：信号拥挤度较高，部署后表现可能显著低于历史回测")
+        
+        # 收益归因信息（v1.2 新增 - KTD-Fin）
+        if self.attribution_r_squared > 0:
+            lines.append("")
+            lines.append("## 收益归因（Barra框架）")
+            lines.append(f"- 市场Beta贡献：{self.attribution_market_beta:+.2%}")
+            lines.append(f"- 风格暴露贡献：{self.attribution_style_exposure:+.2%}")
+            lines.append(f"- 选股Alpha：{self.attribution_stock_alpha:+.2%}")
+            lines.append(f"- 模型解释力：{self.attribution_r_squared:.2%}")
+            if self.attribution_stock_alpha > 0.005:
+                lines.append("- 评估：策略具有正向选股技能")
+            elif self.attribution_stock_alpha < -0.005:
+                lines.append("- 警告：选股Alpha为负，收益主要来自市场Beta")
         
         return "\n".join(lines)
 

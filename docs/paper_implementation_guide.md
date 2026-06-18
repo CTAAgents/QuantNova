@@ -330,7 +330,32 @@ class AuditTrail:
 
 ---
 
-## 七、哲学根基：推理重于规则
+## 七、MadEvolve: Evolutionary Optimization of Trading Systems
+
+**论文核心思想**：
+- LLM驱动的进化算法自动优化交易策略
+- MAP-Elites网格保持种群多样性
+- 参数预算约束控制过拟合
+
+**当前状态**：思想已吸纳，部分实现在因子进化引擎中
+
+**可借鉴思想**：
+- MAP-Elites网格保持策略多样性（部分实现在 FactorEvolutionEngine）
+- 适应度函数设计（夏普比率+最大回撤+胜率）
+- 参数预算约束防止过拟合（实现在 FactorParamOptimizer）
+
+**与现有模块的对应关系**：
+
+| MadEvolve 概念 | QuantNova 对应模块 |
+|----------------|-------------------|
+| MAP-Elites网格 | FactorEvolutionEngine |
+| 岛模型 | WalkForwardValidator |
+| 适应度函数 | FactorEvaluator |
+| 参数预算 | FactorParamOptimizer |
+
+---
+
+## 八、哲学根基：推理重于规则
 
 所有论文实现都遵循系统的核心哲学：**"推理重于规则"**。
 
@@ -344,6 +369,8 @@ class AuditTrail:
 | Algometrics | 拥挤度和部署风险需要动态评估，不能仅靠历史数据 |
 | KTD-Fin | 收益归因需要区分技能与运气，不能仅看总收益 |
 | TradeArena | 审计轨迹记录完整决策过程，支持事后验证 |
+| MadEvolve | 进化算法自动优化策略，参数预算约束防过拟合 |
+| Representation Signatures | 表示诊断提供故障早期预警，风险反馈需要谨慎使用 |
 
 **设计原则对照**：
 

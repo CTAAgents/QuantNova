@@ -206,7 +206,11 @@ class DataSyncManager:
                     continue
 
                 # 保存到 DuckDB
-                self.duckdb.save_klines(symbol, df, timeframe)
+                klines = df.to_dict('records')
+                for kline in klines:
+                    kline['symbol'] = symbol
+                    kline['timeframe'] = timeframe
+                self.duckdb.insert_klines(klines)
 
                 # 计算并保存技术指标
                 try:
@@ -346,7 +350,11 @@ class DataSyncManager:
 
         if df is not None and not df.empty:
             # 保存到本地
-            self.duckdb.save_klines(symbol, df, timeframe)
+            klines = df.to_dict('records')
+            for kline in klines:
+                kline['symbol'] = symbol
+                kline['timeframe'] = timeframe
+            self.duckdb.insert_klines(klines)
 
             # 更新同步状态
             min_date = df["date"].min() if "date" in df.columns else None

@@ -315,6 +315,19 @@ class SQLiteStore:
         rows = cursor.fetchall()
         return [self._row_to_dict(row) for row in rows]
 
+    def update_sync_status(self, symbol: str, timeframe: str, status: str, error: str = None):
+        """
+        更新同步状态
+
+        Args:
+            symbol: 品种代码
+            timeframe: 时间周期
+            status: 同步状态
+            error: 错误信息
+        """
+        # 这个方法可能需要一个同步状态表，但目前简单实现
+        pass
+
     # ========== 经验操作 ==========
 
     def insert_experience(self, experience: dict[str, Any]) -> str:

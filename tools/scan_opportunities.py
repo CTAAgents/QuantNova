@@ -401,7 +401,7 @@ def scan_symbol(
                 rl_signal = rl_generator.generate_signal(state_features, current_position)
                 
                 # 集成 RL 信号到 Scanner 结果
-                from trend_scanner.rl.scanner_integration import integrate_rl_signal_to_scanner
+                from rl.scanner_integration import integrate_rl_signal_to_scanner
                 signal = integrate_rl_signal_to_scanner(signal, rl_signal, rl_weight=0.3)
                 
                 logger.debug(f"RL 信号: {rl_signal['direction']}, strength={rl_signal['strength']:.2f}")
@@ -522,7 +522,7 @@ def scan_all(
     rl_generator = None
     if use_rl:
         try:
-            from trend_scanner.rl.scanner_integration import RLSignalGenerator
+            from rl.scanner_integration import RLSignalGenerator
             import os
             
             # 查找训练好的模型

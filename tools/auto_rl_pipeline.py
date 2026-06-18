@@ -33,15 +33,15 @@ import pandas as pd
 # 添加项目路径
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'scripts'))
 
-from trend_scanner.storage.duckdb_store import DuckDBStore
-from trend_scanner.rl import (
+from core.memory.duckdb_store import DuckDBStore
+from rl import (
     AgentPPO,
     FuturesTradingEnv,
     RLSignalGenerator,
     evaluate_agent,
     walk_forward_validate_rl,
 )
-from trend_scanner.rl.walk_forward_rl import RLWalkForwardValidator
+from rl.walk_forward_rl import RLWalkForwardValidator
 from trend_scanner.trend_scanner_config import (
     TrendScannerConfig,
     RLConfig,

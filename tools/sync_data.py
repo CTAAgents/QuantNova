@@ -29,7 +29,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root / "scripts"))
 
-from trend_scanner.storage.data_sync import DataSyncManager
+from core.data.data_sync import DataSyncManager
 
 
 def main():

@@ -5,6 +5,54 @@
 
 ---
 
+## v2.0.0 (2026-06-18)
+
+**双子系统版 — 期货+证券双市场支持**
+
+### 里程碑
+
+- 双子系统架构完成（期货子系统 + 证券子系统）
+- 60+ 个模块注册到模块注册中心
+- 659+ 单元测试全部通过
+- 5个Phase实施完成（市场抽象层→期货迁移→证券开发→推理适配→测试集成）
+
+### 新增
+
+- **双子系统架构**
+  - `scripts/futures/` - 期货子系统（Provider/MarketContext/FactorLibrary/RiskManager/Strategy）
+  - `scripts/securities/` - 证券子系统（Provider/MarketContext/FactorLibrary/RiskManager/Strategy）
+  - `scripts/core/market_provider.py` - MarketProvider 抽象基类
+  - `scripts/core/base_risk_manager.py` - BaseRiskManager 抽象基类
+
+- **证券子系统**
+  - `StockStrategy` - 股票策略（价值/成长/动量）
+  - `ETFStrategy` - ETF策略（趋势跟踪，不做套利）
+  - `ConvertibleBondStrategy` - 可转债策略（双低策略）
+  - `REITsStrategy` - REITs策略（分红收益率）
+  - `ConvertibleBondRiskManager` - 可转债风控（关联正股）
+
+- **推理系统适配**
+  - `scripts/reasoning/futures_prompt.py` - 期货Prompt模板
+  - `scripts/reasoning/securities_prompt.py` - 证券Prompt模板
+  - `scripts/reasoning/prompt_router.py` - Prompt路由器
+
+- **模块注册中心增强**
+  - 新增60+个模块注册
+  - 核心模块：TradingAssistant, ContextAssembler, MainProcess
+  - 推理引擎：ReasoningEngine, DebateReasoningEngine, ScenarioAnalyzer, BriefGenerator
+  - 进化模块：FactorExecutor, FactorGate, FactorValidator等
+  - 工具模块：Backtest, MonteCarlo, ScenarioAnalyzerTool等
+
+### 变更
+
+- 系统名称统一为 QuantNova
+- 版本号升级为 v2.0.0
+- 数据源配置：期货=TqSdk（首选），证券=通达信MCP（首选）
+- README.md 更新为双子系统架构描述
+- 系统架构文档重写为双子系统架构
+
+---
+
 ## v1.0.0 (2026-06-18)
 
 **正式版 — 推理重于规则的期货趋势跟踪决策辅助系统**

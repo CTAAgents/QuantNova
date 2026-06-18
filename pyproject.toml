@@ -1,7 +1,7 @@
 [project]
-name = "trend-scanner-agent"
-version = "1.0.0"
-description = "推理重于规则的期货趋势跟踪决策辅助系统"
+name = "quantnova"
+version = "2.0.0"
+description = "推理重于规则的量化交易决策辅助系统 - 期货+证券双市场支持"
 requires-python = ">=3.10"
 
 # =============================================================================

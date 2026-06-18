@@ -59,6 +59,7 @@
 | **test_market_abstraction.py** | 9 | 市场抽象层（MarketProvider/BaseRiskManager） |
 | **test_futures_subsystem.py** | 16 | 期货子系统（Provider/MarketContext/FactorLibrary/RiskManager/Strategy） |
 | **test_securities_subsystem.py** | 17 | 证券子系统（Provider/MarketContext/FactorLibrary/RiskManager/Strategy） |
+| **test_reasoning_adaptation.py** | 7 | 推理系统适配（期货/证券Prompt模板+PromptRouter） |
 
 ### 端到端测试（20 个）
 

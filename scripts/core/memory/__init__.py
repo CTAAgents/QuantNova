@@ -15,7 +15,7 @@
 from .manager import UnifiedMemoryManager
 from .duckdb_store import DuckDBStore
 from .sqlite_store import SQLiteStore
-from .retriever import Retriever
+from .retriever import MultiPathRetriever
 from .evolution import EvolutionManager
 from .llm_factory import LLMFactory
 from .vector_store import VectorStore
@@ -25,7 +25,7 @@ __all__ = [
     "UnifiedMemoryManager",
     "DuckDBStore",
     "SQLiteStore",
-    "Retriever",
+    "MultiPathRetriever",
     "EvolutionManager",
     "LLMFactory",
     "VectorStore",

@@ -20,8 +20,8 @@ import pandas as pd
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root / "scripts"))
 
-from trend_scanner.storage.duckdb_store import DuckDBStore
-from trend_scanner.storage.sqlite_store import SQLiteStore
+from core.memory.duckdb_store import DuckDBStore
+from core.memory.sqlite_store import SQLiteStore
 
 
 class DataSyncManager:
@@ -45,7 +45,7 @@ class DataSyncManager:
     def tqsdk(self):
         """延迟初始化 TqSdk 数据源"""
         if self._tqsdk is None:
-            from trend_scanner.tqsdk_bridge import TqSdkDataSource
+            from core.data.tqsdk_bridge import TqSdkDataSource
 
             self._tqsdk = TqSdkDataSource()
         return self._tqsdk
@@ -209,7 +209,7 @@ class DataSyncManager:
 
                 # 计算并保存技术指标
                 try:
-                    from trend_scanner.indicators import IndicatorEngine
+                    from indicators.indicator_engine import IndicatorEngine
 
                     engine = IndicatorEngine(df)
                     engine.compute_all()

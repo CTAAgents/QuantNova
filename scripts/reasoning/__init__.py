@@ -6,30 +6,16 @@
 - DebateEngine: 多角色辩论
 - ScenarioAnalyzer: 场景分析
 - BriefGenerator: 决策简报生成
+- HallucinationDetector: 幻觉检测
+- AdaptivePromptRouter: 自适应Prompt路由
 """
 
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from trend_scanner.reasoning import (
-    ReasoningEngine,
-    LLMProvider,
-    WorkBuddyAgentProvider,
-    CustomLLMProvider,
-    ConstraintGenerator,
-)
-from trend_scanner.debate_engine import DebateReasoningEngine
-from trend_scanner.scenario_analyzer import ScenarioAnalyzer
-from trend_scanner.brief import BriefGenerator
+from .hallucination_detector import HallucinationDetector, HallucinationType
+from .adaptive_prompt_router import AdaptivePromptRouter, PromptTemplateType
 
 __all__ = [
-    "ReasoningEngine",
-    "LLMProvider",
-    "WorkBuddyAgentProvider",
-    "CustomLLMProvider",
-    "ConstraintGenerator",
-    "DebateReasoningEngine",
-    "ScenarioAnalyzer",
-    "BriefGenerator",
+    "HallucinationDetector",
+    "HallucinationType",
+    "AdaptivePromptRouter",
+    "PromptTemplateType",
 ]

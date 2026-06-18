@@ -56,6 +56,7 @@
 | **test_v3_0_integration.py** | 18 | V3.0方案集成（数据冲突裁决+异常值加权+幻觉检测+自适应Prompt） |
 | **test_triad_debate.py** | 7 | 三方辩论引擎（论据可靠性评估） |
 | **test_module_registry.py** | 12 | 模块注册中心（模块发现、分类、加载） |
+| **test_market_abstraction.py** | 9 | 市场抽象层（MarketProvider/BaseRiskManager） |
 
 ### 端到端测试（20 个）
 

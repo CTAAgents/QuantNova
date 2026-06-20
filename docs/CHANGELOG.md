@@ -5,6 +5,45 @@
 
 ---
 
+## v2.1.0 (2026-06-20)
+
+**简化版 — 架构简化，聚焦核心闭环**
+
+### 里程碑
+
+- 架构简化完成：文件数 168→104（减少38%），代码行数 58,734→41,973（减少28.5%）
+- 核心闭环确立：扫描→推理→辩论→风控
+- 所有文档统一为v2.1.0
+
+### 简化内容
+
+- **删除模块**
+  - `scripts/rl/` - RL强化学习模块（落地难，暂不使用）
+  - `scripts/core/event_engine/` - 事件引擎（不必要）
+  - `scripts/core/meta/` - 元学习（暂不需要）
+  - `scripts/core/risk/` - 风控模块（已有risk/）
+  - `scripts/core/trading/` - 交易执行（暂不需要）
+  - `scripts/core/workers/` - Worker模式（不必要）
+  - `scripts/strategies/` - 独立策略（已整合到子系统）
+
+- **简化模块**
+  - `scripts/core/nlp/` - 简化为意图识别（保留1个文件）
+  - `scripts/evolution/` - 简化为因子评估（保留4个文件）
+  - `scripts/evolution_tools/` - 简化核心功能（保留3个文件）
+
+### 保留的核心模块
+
+- `futures/` - 期货子系统
+- `securities/` - 证券子系统
+- `reasoning/` - 推理+辩论引擎
+- `indicators/` - 指标计算
+- `fundamental/` - 基本面分析
+- `risk/` - 风控模块
+- `core/data/` - 数据层
+- `core/memory/` - 记忆系统
+
+---
+
 ## v2.0.0 (2026-06-18)
 
 **双子系统版 — 期货+证券双市场支持**

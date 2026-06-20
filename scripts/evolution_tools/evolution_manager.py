@@ -18,18 +18,14 @@ from typing import Any
 
 import pandas as pd
 
-from .evolution import EnhancedEvolutionEngine
-from .experience import ExperienceMemory
-from .meta_skill_engine import MetaSkillEngine
-from .models import (
+from core.memory.experience import ExperienceMemory
+from core.models import (
     Experience,
     MarketContext,
     TradingBrief,
     UserFeedback,
 )
 from .overfitting_audit import OverfittingAuditor
-from .silent_bypass_detector import SilentBypassDetector
-from .skill_reflection import SkillAwareReflector
 from .trade_journal import PatternDetector, RulePromoter, TradeJournal
 from .trajectory_analysis import StrategyAdapter, TradeFaultAttributor, TradeTrajectoryAnalyzer
 
@@ -57,20 +53,9 @@ class EvolutionManager:
         # 经验记忆池（与推理层共享）
         self.experience_memory = experience_memory or ExperienceMemory(db_path=db_path)
 
-        # 进化引擎
-        self.evolution_engine = EnhancedEvolutionEngine()
-
-        # 子模块
-        self.trajectory_analyzer = TradeTrajectoryAnalyzer()
-        self.fault_attributor = TradeFaultAttributor()
-        self.strategy_adapter = StrategyAdapter()
+        # 子模块（简化版本）
         self.trade_journal = TradeJournal()
-        self.pattern_detector = PatternDetector()
-        self.rule_promoter = RulePromoter()
-        self.skill_reflector = SkillAwareReflector()
-        self.meta_skill_engine = MetaSkillEngine()
         self.overfitting_auditor = OverfittingAuditor()
-        self.silent_bypass_detector = SilentBypassDetector()
 
         # 进化状态
         self.evolution_history = []

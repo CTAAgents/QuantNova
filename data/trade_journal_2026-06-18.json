@@ -1,0 +1,113 @@
+{
+  "date": "2026-06-18",
+  "account_size": 300000,
+  "account_currency": "CNY",
+  "trader": "User",
+  "system": "QuantNova",
+  "market_analysis": {
+    "analysis_date": "2026-06-18",
+    "system_version": "v2.0.0",
+    "data_source": "AKShare",
+    "data_freshness": "2026-06-18",
+    "trend_detection_method": "TrendPhaseDetector",
+    "debate_method": "WorkBuddyLLM"
+  },
+  "positions": [
+    {
+      "id": "POS-2026-06-18-001",
+      "symbol": "A",
+      "symbol_name": "豆一",
+      "exchange": "DCE",
+      "contract": "A2409",
+      "direction": "SHORT",
+      "entry_price": 4695.00,
+      "entry_date": "2026-06-18",
+      "entry_time": "09:30:00",
+      "quantity": 1,
+      "margin_per_lot": 4695.00,
+      "total_margin": 4695.00,
+      "margin_ratio": 0.10,
+      "stop_loss_price": 4789.00,
+      "target_price": 4460.00,
+      "status": "OPEN",
+      "analysis": {
+        "user_judgment": "偏空",
+        "system_trend_phase": "CONSOLIDATING",
+        "system_confidence": 0.50,
+        "system_reliability": 60,
+        "debate_result": "观望",
+        "debate_confidence": 0.00,
+        "risk_reward_ratio": 2.5,
+        "position_size_pct": 1.56
+      },
+      "notes": "用户判断偏空，系统显示盘整期，保证金比例10%"
+    },
+    {
+      "id": "POS-2026-06-18-002",
+      "symbol": "AO",
+      "symbol_name": "氧化铝",
+      "exchange": "SHFE",
+      "contract": "AO2408",
+      "direction": "LONG",
+      "entry_price": 2925.00,
+      "entry_date": "2026-06-18",
+      "entry_time": "09:35:00",
+      "quantity": 1,
+      "margin_per_lot": 9945.00,
+      "total_margin": 9945.00,
+      "margin_ratio": 0.17,
+      "stop_loss_price": 2866.50,
+      "target_price": 3071.25,
+      "status": "OPEN",
+      "analysis": {
+        "user_judgment": "震荡偏多",
+        "system_trend_phase": "CONSOLIDATING",
+        "system_confidence": 0.50,
+        "system_reliability": 60,
+        "debate_result": "观望",
+        "debate_confidence": 0.00,
+        "risk_reward_ratio": 2.5,
+        "position_size_pct": 3.32
+      },
+      "notes": "用户判断震荡偏多，系统显示盘整期，保证金比例17%"
+    }
+  ],
+  "closed_positions": [],
+  "daily_summary": {
+    "total_positions": 2,
+    "total_margin_used": 14640.00,
+    "margin_usage_pct": 4.88,
+    "available_capital": 285360.00,
+    "risk_exposure": 14640.00,
+    "risk_pct": 4.88
+  },
+  "lessons_learned": [
+    {
+      "date": "2026-06-18",
+      "lesson": "保证金比例需要准确计算，弘业期货比例与交易所基础不同",
+      "category": "BEST_PRACTICE",
+      "impact": "避免保证金计算错误导致仓位过大"
+    },
+    {
+      "date": "2026-06-18",
+      "lesson": "所有交易建议必须经过多方辩论验证",
+      "category": "BEST_PRACTICE",
+      "impact": "提高建议可靠性"
+    },
+    {
+      "date": "2026-06-18",
+      "lesson": "多空判断方法需要系统自优化，不能使用固定阈值",
+      "category": "INSIGHT",
+      "impact": "提高多空判断准确率"
+    }
+  ],
+  "performance_metrics": {
+    "win_rate": 0.0,
+    "profit_loss_ratio": 0.0,
+    "max_drawdown": 0.0,
+    "sharpe_ratio": 0.0,
+    "total_trades": 0,
+    "profitable_trades": 0,
+    "losing_trades": 0
+  }
+}

@@ -14,12 +14,12 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from trend_scanner.evolution_manager import EvolutionManager
-from trend_scanner.trajectory_analysis import TradeTrajectoryAnalyzer
-from trend_scanner.trade_journal import TradeJournal
-from trend_scanner.strategy_health import StrategyHealthChecker
-from trend_scanner.overfitting_detector import OverfittingDetector
-from trend_scanner.circuit_breaker import CircuitBreaker
+from evolution_tools.evolution_manager import EvolutionManager
+from evolution_tools.trajectory_analysis import TradeTrajectoryAnalyzer
+from evolution_tools.trade_journal import TradeJournal
+from evolution_tools.strategy_health import StrategyHealthChecker
+from evolution_tools.overfitting_detector import OverfittingDetector
+from evolution_tools.circuit_breaker import CircuitBreaker
 
 __all__ = [
     "EvolutionManager",
